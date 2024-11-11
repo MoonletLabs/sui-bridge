@@ -57,6 +57,7 @@ jobs:
   deploy-prod:
     name: Deploy prod
     runs-on: ubuntu-latest
+    environment: Production
     needs: build
 
     env:
