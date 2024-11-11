@@ -8,17 +8,6 @@ The **Sui Bridge Public Dashboard** is a web application designed to provide com
 
 [Preview Dashboard Analytics](https://sui-indexer.moonlet.cloud/dashboard)
 
-## Features
-
-1. **Comprehensive Analytics**
-   Gain insights into inflows, outflows, asset volumes, and stock levels of bridged assets.
-
-2. **Data Accessibility**
-   Data is presented in an accessible format, suitable for both technical and non-technical users.
-
-3. **User-Friendly Interface**
-   The dashboard includes a mock UI to showcase functionality and layout, ensuring a seamless user experience before the public launch..
-
 ## Screenshots
 
 <img width="1512" alt="image" src="https://github.com/user-attachments/assets/7c735223-2f39-44b9-a097-d82aa67a49f8">
