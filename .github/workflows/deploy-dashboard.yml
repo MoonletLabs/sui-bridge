@@ -5,7 +5,7 @@ on:
     branches:
       - main
 
-  workflow_dispatch:
+  # workflow_dispatch:
 
 env:
   GITHUB_IMAGE: ghcr.io/moonlet/sui-bridge:v${{ github.run_number }}
