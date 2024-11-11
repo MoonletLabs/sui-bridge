@@ -17,18 +17,7 @@ The **Sui Bridge Public Dashboard** is a web application designed to provide com
    Data is presented in an accessible format, suitable for both technical and non-technical users.
 
 3. **User-Friendly Interface**
-   The dashboard includes a mock UI to showcase functionality and layout, ensuring a seamless user experience before the public launch.
-
-## Deliverables
-
-1. **Dashboard Proof of Concept**
-   A functional prototype demonstrating the core analytics features.
-
-2. **Mock UI in Testing Environment**
-   A fully designed user interface available for testing prior to the official release.
-
-3. **Public Launch**
-   The dashboard is publicly accessible for all users.
+   The dashboard includes a mock UI to showcase functionality and layout, ensuring a seamless user experience before the public launch..
 
 ## Screenshots
 
