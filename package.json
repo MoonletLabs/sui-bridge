@@ -1,7 +1,8 @@
 {
-    "name": "@moonlet/sui-bridge-dashboard",
+    "name": "@moonlet/sui-bridge",
     "version": "1.0.0",
-    "private": true,
+    "private": false,
+    "license": "MIT",
     "scripts": {
         "prepare": "husky install",
         "build-dashboard-image": "docker build . --file Dockerfile",
