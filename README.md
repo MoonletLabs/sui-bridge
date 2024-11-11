@@ -18,4 +18,5 @@ The **Sui Bridge Public Dashboard** is a web application designed to provide com
 
 
 ## Contributing
+
 We welcome contributions! Please feel free to submit issues or pull requests.
