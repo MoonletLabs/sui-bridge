@@ -39,8 +39,8 @@ const CustomWidgets: React.FC = () => {
                 ? Array.from(new Array(4)).map((_, index) => (
                       <Grid xs={6} md={4} lg={3} key={index} padding={1}>
                           <CardWidget
-                              title={<Skeleton width={160} height={35} />}
-                              total={<Skeleton width={100} height={48} />}
+                              title={<Skeleton width={180} height={22} />}
+                              total={<Skeleton width={140} height={48} />}
                               color={''}
                           />
                       </Grid>
