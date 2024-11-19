@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Insert or update the token prices in the database
         const queries = tokenPrices.map(
             ({ token_id, price }: any) =>
-                db[NETWORK.TESTNET]`
+                db[networkConfig.network]`
                 INSERT INTO public.token_prices (token_id, price)
                 VALUES (${token_id}, ${price})
                 ON CONFLICT (token_id)
