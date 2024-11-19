@@ -27,7 +27,11 @@ export const calculateStartDate = (timePeriod: string) => {
     }
 }
 
-const getInflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
+const getInflows = (
+    networkConfig: INetworkConfig,
+    timePeriod: TimePeriod,
+    prices: { token_id: number; price: number }[],
+) =>
     db[networkConfig.network]`
         SELECT
             destination_chain,
@@ -43,9 +47,13 @@ const getInflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
         GROUP BY
             destination_chain,
             token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+    `.then(query => transformAmount(networkConfig, query as any[], prices))
 
-const getOutflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
+const getOutflows = (
+    networkConfig: INetworkConfig,
+    timePeriod: TimePeriod,
+    prices: { token_id: number; price: number }[],
+) =>
     db[networkConfig.network]`
         SELECT
             destination_chain,
@@ -61,9 +69,13 @@ const getOutflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
         GROUP by
             destination_chain,
             token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+    `.then(query => transformAmount(networkConfig, query as any[], prices))
 
-const getVolume = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
+const getVolume = (
+    networkConfig: INetworkConfig,
+    timePeriod: TimePeriod,
+    prices: { token_id: number; price: number }[],
+) =>
     db[networkConfig.network]`
         SELECT
             token_id,
@@ -76,9 +88,13 @@ const getVolume = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
             AND timestamp_ms >= ${calculateStartDate(timePeriod)}
         GROUP by
             token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+    `.then(query => transformAmount(networkConfig, query as any[], prices))
 
-const getAddresses = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
+const getAddresses = (
+    networkConfig: INetworkConfig,
+    timePeriod: TimePeriod,
+    prices: { token_id: number; price: number }[],
+) =>
     db[networkConfig.network]`
         SELECT
             token_id,
@@ -106,7 +122,7 @@ const getAddresses = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
 
         ) AS unique_addresses
         GROUP BY token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+    `.then(query => transformAmount(networkConfig, query as any[], prices))
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
@@ -114,11 +130,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const timePeriod = req.query.timePeriod as TimePeriod
 
+        const prices: any = await db[networkConfig.network]`
+            SELECT token_id, price
+            FROM public.token_prices;
+        `.then((prices: any) =>
+            prices.map((row: { token_id: string; price: string }) => ({
+                token_id: row.token_id,
+                price: Number(row.price),
+            })),
+        )
+
         const [inflows, outflows, volume, addresses] = await Promise.all([
-            getInflows(networkConfig, timePeriod),
-            getOutflows(networkConfig, timePeriod),
-            getVolume(networkConfig, timePeriod),
-            getAddresses(networkConfig, timePeriod),
+            getInflows(networkConfig, timePeriod, prices),
+            getOutflows(networkConfig, timePeriod, prices),
+            getVolume(networkConfig, timePeriod, prices),
+            getAddresses(networkConfig, timePeriod, prices),
         ])
 
         sendReply(res, {

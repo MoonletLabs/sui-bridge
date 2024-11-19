@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
-import { TokenColorInfo } from './types'
+import { CoinType } from './types'
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
 
@@ -23,7 +23,7 @@ export type ChartDataItem = {
 export function formatChartData(
     apiData: ApiDataItem[],
     selectedSeries: 'Monthly' | 'Weekly' | 'Daily',
-    tokensList: TokenColorInfo[],
+    tokensList: CoinType[],
 ) {
     const groupedData: { [key: string]: { [token: string]: number } } = {}
 
@@ -50,7 +50,7 @@ export function formatChartData(
     const periods = Object.keys(groupedData).sort()
 
     const chartData: ChartDataItem[] = tokens.map(token => {
-        const colorData = tokensList.find(info => info.ticker === token)
+        const colorData = tokensList.find(info => info.name === token)
         return {
             name: token,
             color: colorData?.color || '#000000', // Default color if not found

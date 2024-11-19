@@ -30,9 +30,9 @@ import { NetworkPopover } from '../components/network-popover'
 import { Grid } from '@mui/material'
 import { ChartSelect } from 'src/components/chart'
 import { MultiSelect } from 'src/components/selectors/multi-select'
-import { getTokensList } from 'src/utils/types'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { getNetwork } from 'src/hooks/get-network-storage'
+import { getNetworkConfig } from 'src/config/helper'
 // ----------------------------------------------------------------------
 
 export type DashboardLayoutProps = {
@@ -48,6 +48,7 @@ export type DashboardLayoutProps = {
 
 export function DashboardLayout({ sx, children, header, data }: DashboardLayoutProps) {
     const network = getNetwork()
+    const networkConfig = getNetworkConfig({ network })
 
     const { timePeriod, setTimePeriod, selectedTokens, setSelectedTokens } = useGlobalContext()
 
@@ -167,10 +168,7 @@ export function DashboardLayout({ sx, children, header, data }: DashboardLayoutP
                                 <MultiSelect
                                     options={[
                                         { name: 'All' },
-                                        ...getTokensList(network).map(i => ({
-                                            name: i.ticker,
-                                            icon: i.icon,
-                                        })),
+                                        ...Object.values(networkConfig?.config?.coins),
                                     ]}
                                     allOption="All"
                                     value={selectedTokens}

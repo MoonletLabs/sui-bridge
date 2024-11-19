@@ -160,15 +160,20 @@ export const transformAmount = (
         total_count: string
         total_volume: string
     }[],
+    tokenPrices: { token_id: number; price: number }[],
 ) => {
     return data.map(it => {
         const tokenData = networkConfig?.config?.coins?.[it.token_id]
+        const tokenPrice = tokenPrices.find(price => price.token_id === it.token_id)
+
         if (tokenData) {
             return {
                 ...it,
                 total_count: Number(it.total_count),
                 total_volume: Number(it.total_volume) / tokenData.deno,
-                total_volume_usd: (Number(it.total_volume) / tokenData.deno) * tokenData.priceUSD,
+                total_volume_usd: tokenPrice?.price
+                    ? (Number(it.total_volume) / tokenData.deno) * tokenPrice.price
+                    : 0,
                 token_info: tokenData,
                 destination_chain: getNetworkName(
                     it.destination_chain,

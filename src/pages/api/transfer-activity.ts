@@ -13,6 +13,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          *
          *  To analyze transfer activity across different chains:
          */
+        const prices: any = await db[networkConfig.network]`
+            SELECT token_id, price
+            FROM public.token_prices;
+        `.then((prices: any) =>
+            prices.map((row: { token_id: string; price: string }) => ({
+                token_id: row.token_id,
+                price: Number(row.price),
+            })),
+        )
+
         const query = await db[networkConfig.network]`
             SELECT
                 chain_id,
@@ -29,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ORDER BY
                 total_count DESC`
 
-        sendReply(res, transformAmount(networkConfig, query as any[]))
+        sendReply(res, transformAmount(networkConfig, query as any[], prices))
     } catch (error) {
         sendError(res, error)
     }

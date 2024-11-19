@@ -8,10 +8,11 @@ import dayjs from 'dayjs'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { calculateStartDate } from 'src/utils/format-chart-data'
-import { getTokensList } from 'src/utils/types'
+import { getNetworkConfig } from 'src/config/helper'
 
 export default function TokenVolumePieChart() {
     const network = getNetwork()
+    const networkConfig = getNetworkConfig({ network })
     const { timePeriod, selectedTokens } = useGlobalContext()
 
     const [inflowData, setInflowData] = useState<{
@@ -54,8 +55,9 @@ export default function TokenVolumePieChart() {
                 const tokenName = item.token_info.name
                 const volume = item.total_volume_usd
                 const color =
-                    getTokensList(network).find(token => token.ticker === tokenName)?.color ||
-                    '#000000' // Fallback color if not found
+                    Object.values(networkConfig?.config?.coins).find(
+                        token => token.name === tokenName,
+                    )?.color || '#000000' // Fallback color if not found
 
                 if (item.direction === 'inflow') {
                     inflowVolumes[tokenName] = {
@@ -115,6 +117,20 @@ export default function TokenVolumePieChart() {
                 y: {
                     formatter: (value: number) =>
                         `$${value?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+                },
+                custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+                    const label = w.globals.labels[seriesIndex]
+                    const value = series[seriesIndex]
+                    return `
+                        <div style="
+                            padding: 8px; 
+                            background-color: #e0e0e0; 
+                            border-radius: 4px; 
+                            color: #000; 
+                            font-size: 12px; 
+                            text-align: center;">
+                            <strong>${label}</strong>: $${value?.toLocaleString()}
+                        </div>`
                 },
             },
             colors: data.colors,

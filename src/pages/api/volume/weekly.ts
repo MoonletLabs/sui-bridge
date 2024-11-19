@@ -12,6 +12,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          * To track the volume of assets moving across the bridge over time, you can aggregate data by day, week, or month using timestamps.
          *
          */
+        const prices: any = await db[networkConfig.network]`
+            SELECT token_id, price
+            FROM public.token_prices;
+        `.then((prices: any) =>
+            prices.map((row: { token_id: string; price: string }) => ({
+                token_id: row.token_id,
+                price: Number(row.price),
+            })),
+        )
+
         const query = await db[networkConfig.network]`
             SELECT
                 DATE_TRUNC('month', TO_TIMESTAMP(timestamp_ms / 1000)) AS transfer_date,
@@ -29,7 +39,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ORDER BY
                 transfer_date;`
 
-        sendReply(res, transformAmount(networkConfig, setFlowDirection(networkConfig, query)))
+        sendReply(
+            res,
+            transformAmount(networkConfig, setFlowDirection(networkConfig, query), prices),
+        )
     } catch (error) {
         sendError(res, error)
     }

@@ -16,6 +16,7 @@ import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/component
 
 import { AuthProvider } from 'src/auth/context/jwt'
 import { GlobalProvider } from 'src/provider/global-provider'
+import { PriceUpdateProvider } from 'src/provider/price-update-provider'
 
 // ----------------------------------------------------------------------
 
@@ -49,15 +50,17 @@ export default async function RootLayout({ children }: Props) {
 
                 <AuthProvider>
                     <GlobalProvider>
-                        <SettingsProvider settings={defaultSettings}>
-                            <ThemeProvider>
-                                <MotionLazy>
-                                    <ProgressBar />
-                                    <SettingsDrawer />
-                                    {children}
-                                </MotionLazy>
-                            </ThemeProvider>
-                        </SettingsProvider>
+                        <PriceUpdateProvider>
+                            <SettingsProvider settings={defaultSettings}>
+                                <ThemeProvider>
+                                    <MotionLazy>
+                                        <ProgressBar />
+                                        <SettingsDrawer />
+                                        {children}
+                                    </MotionLazy>
+                                </ThemeProvider>
+                            </SettingsProvider>
+                        </PriceUpdateProvider>
                     </GlobalProvider>
                 </AuthProvider>
             </body>

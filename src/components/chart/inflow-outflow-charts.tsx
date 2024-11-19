@@ -13,10 +13,11 @@ import {
 import { getNetwork } from 'src/hooks/get-network-storage'
 import dayjs from 'dayjs'
 import { useGlobalContext } from 'src/provider/global-provider'
-import { getTokensList } from 'src/utils/types'
+import { getNetworkConfig } from 'src/config/helper'
 
 export default function InflowOutflowCharts() {
     const network = getNetwork()
+    const networkConfig = getNetworkConfig({ network })
     const { timePeriod, selectedTokens } = useGlobalContext()
 
     const [chartData, setChartData] = useState<ChartDataItem[]>([])
@@ -46,7 +47,7 @@ export default function InflowOutflowCharts() {
             const formattedData = formatChartData(
                 filteredData,
                 selectedSeries as any,
-                getTokensList(network),
+                Object.values(networkConfig?.config?.coins),
             )
             setChartData(formattedData)
         }
@@ -69,12 +70,12 @@ export default function InflowOutflowCharts() {
             const inflowData = formatChartData(
                 filteredData.filter((item: any) => item.direction === 'inflow'),
                 selectedSeriesInflow as any,
-                getTokensList(network),
+                Object.values(networkConfig?.config?.coins),
             )
             const outflowData = formatChartData(
                 filteredData.filter((item: any) => item.direction === 'outflow'),
                 selectedSeriesInflow as any,
-                getTokensList(network),
+                Object.values(networkConfig?.config?.coins),
             )
 
             setInflowSeries(inflowData)
