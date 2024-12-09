@@ -31,6 +31,12 @@ export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: N
                   color: '#5c6bc0',
                   icon: '/assets/icons/brands/eth.svg',
               },
+              {
+                  ticker: 'USDT',
+                  name: 'USDT',
+                  color: '#26A17B',
+                  icon: '/assets/icons/brands/usdt.svg',
+              },
           ]
         : [
               {
