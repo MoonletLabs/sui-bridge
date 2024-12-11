@@ -65,7 +65,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Update image name in env file
         run: |
@@ -77,7 +77,7 @@ jobs:
         with:
           portainer_url: https://portainer.moonlet.cloud
           portainer_access_token: ${{ secrets.PORTAINER_ACCESS_TOKEN }}
-          endpoint: devops
+          endpoint: devops-worker
           stack_name: ${{ env.STACK_NAME }}
           compose_file: ${{ env.DEPLOYMENT_PATH }}/dashboard.yml
           env_file: ${{ env.DEPLOYMENT_PATH }}/${{ env.ENV_NAME_SHORT }}.env
