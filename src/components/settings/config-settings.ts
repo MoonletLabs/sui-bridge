@@ -4,7 +4,7 @@ import type { SettingsState } from './types'
 
 // ----------------------------------------------------------------------
 
-export const STORAGE_KEY = 'moonlet-sui-bridge-default-settings'
+export const STORAGE_KEY = 'sui-analytics-default-settings'
 
 export const defaultSettings: SettingsState = {
     colorScheme: 'dark',
