@@ -218,25 +218,25 @@ export const calculateCardsTotals = (apiData: any, selectedTokens: string[]) => 
         {
             title: 'Total Inflow (USD)',
             value: inflowTotal,
-            color: '#00a76f', // Light green,
+            color: '#38B137', // green
             dollars: true,
         },
         {
             title: 'Total Outflow (USD)',
             value: outflowTotal,
-            color: '#8e33ff', // Light red,
+            color: '#FCBD05', // yellow
             dollars: true,
         },
         {
             title: 'Total Volume (USD)',
             value: volumeTotal,
-            color: '#ffab00', // Light yellow,
+            color: '#FA3913', // red
             dollars: true,
         },
         {
             title: 'Unique Addresses',
             value: uniqueAddressTotal,
-            color: '#ff5630', // Light blue,
+            color: '#3780FF', // blue
             dollars: false,
         },
     ]
