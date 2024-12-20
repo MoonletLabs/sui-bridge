@@ -6,7 +6,7 @@ The **Sui Bridge Public Dashboard** is a web application designed to provide com
 
 ### Project URL
 
-[Preview Dashboard Analytics](https://sui-indexer.moonlet.cloud/dashboard)
+[Preview Dashboard Analytics](https://suianalytics.io)
 
 ## Screenshots
 
