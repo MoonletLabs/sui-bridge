@@ -47,8 +47,6 @@ export const Logo = forwardRef<HTMLDivElement, LogoProps>(
                     alignSelf: 'center',
                     placeSelf: 'center',
                 }}
-                width="50%"
-                height="50%"
             />
         )
 
@@ -66,6 +64,8 @@ export const Logo = forwardRef<HTMLDivElement, LogoProps>(
                     verticalAlign: 'middle',
                     ...(disableLink && { pointerEvents: 'none' }),
                     ...sx,
+                    width: '150px',
+                    height: '150px',
                 }}
                 {...other}
             >
