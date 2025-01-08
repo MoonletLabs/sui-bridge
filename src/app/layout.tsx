@@ -29,7 +29,7 @@ export const metadata = {
     icons: [
         {
             rel: 'icon',
-            url: `${CONFIG.assetsDir}/sui.svg`,
+            url: `${CONFIG.assetsDir}/favicon.ico`,
         },
     ],
 }
