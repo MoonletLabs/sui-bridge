@@ -6,7 +6,7 @@ const TOKEN_LIST: Record<number, CoinType> = {
     2: {
         name: 'ETH',
         deno: Math.pow(10, 8),
-        priceUSD: 2441, // todo: get dynamically
+        priceUSD: 3191, // TODO: get dynamically @SergiuT
         id: 2,
     },
     4: {
@@ -19,22 +19,22 @@ const TOKEN_LIST: Record<number, CoinType> = {
     1: {
         name: 'WBTC',
         deno: Math.pow(10, 8),
-        priceUSD: 68747,
-        id: 4,
+        priceUSD: 105048,
+        id: 1,
     },
 
     3: {
         name: 'USDC',
         deno: Math.pow(10, 6),
         priceUSD: 1,
-        id: 4,
+        id: 3,
     },
 
     5: {
         name: 'Pepe',
         deno: Math.pow(10, 8), // teoretic are 18 decimals dar aici se seteaza doar 8 ??
-        priceUSD: 0.000008251,
-        id: 4,
+        priceUSD: 0.00001278,
+        id: 5,
     },
 }
 
