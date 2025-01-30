@@ -18,6 +18,7 @@ services:
       placement:
         constraints:
           - node.role == worker
+          # - node.hostname == swarm-devops-01
 
 networks:
   net:
