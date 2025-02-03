@@ -194,27 +194,37 @@ export default function InflowOutflowCharts() {
                         series={[
                             {
                                 name: 'Inflow',
-                                data: inflowSeries.length
-                                    ? inflowSeries[0].data.map((_, index) =>
-                                          inflowSeries.reduce(
-                                              (sum, seriesItem) =>
-                                                  sum + seriesItem.data[index]?.value || 0,
-                                              0,
-                                          ),
-                                      )
-                                    : [],
+                                data: (() => {
+                                    const weekSums: { [key: string]: number } = {}
+
+                                    inflowSeries.forEach(seriesItem => {
+                                        seriesItem.data.forEach(point => {
+                                            weekSums[point.period] =
+                                                (weekSums[point.period] || 0) + point.value
+                                        })
+                                    })
+
+                                    return Object.entries(weekSums)
+                                        .sort(([a], [b]) => a.localeCompare(b)) // Ensure weeks are sorted correctly
+                                        .map(([, value]) => value)
+                                })(),
                             },
                             {
                                 name: 'Outflow',
-                                data: outflowSeries.length
-                                    ? outflowSeries[0].data.map((_, index) =>
-                                          outflowSeries.reduce(
-                                              (sum, seriesItem) =>
-                                                  sum + seriesItem.data[index]?.value || 0,
-                                              0,
-                                          ),
-                                      )
-                                    : [],
+                                data: (() => {
+                                    const weekSums: { [key: string]: number } = {}
+
+                                    outflowSeries.forEach(seriesItem => {
+                                        seriesItem.data.forEach(point => {
+                                            weekSums[point.period] =
+                                                (weekSums[point.period] || 0) + point.value
+                                        })
+                                    })
+
+                                    return Object.entries(weekSums)
+                                        .sort(([a], [b]) => a.localeCompare(b)) // Ensure weeks are sorted correctly
+                                        .map(([, value]) => value)
+                                })(),
                             },
                         ]}
                         options={chartOptions(true)}
