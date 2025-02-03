@@ -194,11 +194,27 @@ export default function InflowOutflowCharts() {
                         series={[
                             {
                                 name: 'Inflow',
-                                data: inflowSeries[0]?.data.map(point => point.value) || [],
+                                data: inflowSeries.length
+                                    ? inflowSeries[0].data.map((_, index) =>
+                                          inflowSeries.reduce(
+                                              (sum, seriesItem) =>
+                                                  sum + seriesItem.data[index]?.value || 0,
+                                              0,
+                                          ),
+                                      )
+                                    : [],
                             },
                             {
                                 name: 'Outflow',
-                                data: outflowSeries[0]?.data.map(point => point.value) || [],
+                                data: outflowSeries.length
+                                    ? outflowSeries[0].data.map((_, index) =>
+                                          outflowSeries.reduce(
+                                              (sum, seriesItem) =>
+                                                  sum + seriesItem.data[index]?.value || 0,
+                                              0,
+                                          ),
+                                      )
+                                    : [],
                             },
                         ]}
                         options={chartOptions(true)}
