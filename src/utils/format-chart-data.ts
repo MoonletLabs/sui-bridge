@@ -31,10 +31,10 @@ export function formatChartData(
         const date = dayjs(item.transfer_date)
         let periodKey: string
 
-        if (selectedSeries === 'Monthly') {
+        if (selectedSeries === 'Weekly') {
+            periodKey = `${date.isoWeekYear()}-W${date.isoWeek()}` // FIXED
+        } else if (selectedSeries === 'Monthly') {
             periodKey = date.format('YYYY-MM') // Group by month
-        } else if (selectedSeries === 'Weekly') {
-            periodKey = `${date.year()}-W${date.isoWeek()}` // Group by week
         } else {
             periodKey = date.format('YYYY-MM-DD') // Group by day
         }
