@@ -108,6 +108,11 @@ export default function InflowOutflowCharts() {
             legend: {
                 show: true,
             },
+            plotOptions: {
+                bar: {
+                    borderRadius: 0,
+                },
+            },
             xaxis: {
                 categories: formatCategories(
                     isInflowOutflow ? inflowSeries : chartData,

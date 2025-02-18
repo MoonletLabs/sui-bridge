@@ -79,6 +79,11 @@ export default function StockOfAssetsChart() {
             legend: {
                 show: true,
             },
+            plotOptions: {
+                bar: {
+                    borderRadius: 0,
+                },
+            },
             xaxis: {
                 categories: formatCategories(chartData, selectedSeries),
                 labels: {
