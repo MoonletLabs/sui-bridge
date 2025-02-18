@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Grid, Card, CardHeader } from '@mui/material'
 import {
     ChartDataItem,
+    buildTooltip,
     calculateStartDate,
     formatCategories,
     formatChartData,
@@ -105,38 +106,7 @@ export default function StockOfAssetsChart() {
                     },
                 },
             },
-            tooltip: {
-                custom: ({ series, seriesIndex, dataPointIndex, w }) => {
-                    const seriesName = w.globals.seriesNames[seriesIndex]
-                    const value = series[seriesIndex][dataPointIndex]
-                    const color = w.globals.colors[seriesIndex]
-
-                    const formattedValue = value.toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                    })
-                    return value !== undefined
-                        ? `<div style="
-                        display: flex;
-                        align-items: center;
-                        padding: 8px;
-                        background-color: #e0e0e0;
-                        color: #333;
-                        border-radius: 4px;
-                        text-align: left;">
-                        <span style="
-                            display: inline-block;
-                            width: 8px;
-                            height: 8px;
-                            background-color: ${color};
-                            border-radius: 50%;
-                            margin-right: 8px;">
-                        </span>
-                        <strong>${seriesName}</strong>: $${formattedValue}
-                      </div>`
-                        : ''
-                },
-            },
+            tooltip: buildTooltip(),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
