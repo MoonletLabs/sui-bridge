@@ -5,6 +5,7 @@ import { DashboardContent } from 'src/layouts/dashboard'
 import CustomWidgets from 'src/components/widgets/custom-widgets'
 import InflowOutflowCharts from 'src/components/chart/inflow-outflow-charts'
 import TokenVolumePieChart from 'src/components/chart/pie-charts'
+import StockOfAssetsChart from 'src/components/chart/total-stock-assets'
 
 type Props = CardProps & {
     title?: string
@@ -28,6 +29,7 @@ export default function Page() {
         <DashboardContent maxWidth="xl">
             <CustomWidgets />
             <InflowOutflowCharts />
+            <StockOfAssetsChart />
             <TokenVolumePieChart />
         </DashboardContent>
     )

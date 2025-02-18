@@ -100,3 +100,74 @@ export const calculateStartDate = (timePeriod: string) => {
             return dayjs().subtract(30, 'day')
     }
 }
+
+export const buildTooltip = () => {
+    return {
+        shared: true,
+        followCursor: true,
+        intersect: false,
+        custom: ({
+            series,
+            seriesIndex,
+            dataPointIndex,
+            w,
+        }: {
+            series: any
+            seriesIndex: any
+            dataPointIndex: any
+            w: any
+        }) => {
+            const xLabel = w.globals.labels[dataPointIndex] || 'Unknown'
+            const activeSeriesIndices = w.globals.series
+                .map((_: any, i: any) => i)
+                .filter((i: any) => !w.globals.collapsedSeriesIndices.includes(i))
+
+            const tooltips = activeSeriesIndices
+                .map((i: string | number) => {
+                    const seriesName = w.globals.seriesNames[i] || 'Unknown'
+                    let value = series[i][dataPointIndex]
+                    const color = w.globals.colors[i]
+
+                    const formattedValue =
+                        value < 0
+                            ? ` -$${Math.abs(value).toLocaleString()}`
+                            : ` $${value.toLocaleString()}`
+
+                    return value !== undefined && value !== 0
+                        ? `
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            padding: 6px;
+                            background-color: rgba(255, 255, 255, 0.8); /* Transparent background */
+                            color: #333;
+                            border-radius: 4px;
+                            text-align: left;
+                            font-size: 12px;
+                            border-left: 4px solid ${color};
+                            margin-bottom: 4px;">
+                            <span style="margin-left: 8px;"><strong>${seriesName}:</strong>${formattedValue}</span>
+                        </div>
+                    `
+                        : ''
+                })
+                .join('')
+
+            return tooltips.trim()
+                ? `
+                    <div style="
+                        padding: 8px;
+                        background-color: #e0e0e0;
+                        border-radius: 6px;
+                        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+                        min-width: 120px;
+                        text-align: left;
+                        color: white;">
+                        <strong style="color: black">${xLabel}</strong>
+                        ${tooltips}
+                    </div>
+                `
+                : ''
+        },
+    }
+}

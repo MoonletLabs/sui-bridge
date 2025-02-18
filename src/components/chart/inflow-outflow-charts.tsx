@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Grid, Card, CardHeader } from '@mui/material'
 import {
     ChartDataItem,
+    buildTooltip,
     calculateStartDate,
     formatCategories,
     formatChartData,
@@ -72,7 +73,13 @@ export default function InflowOutflowCharts() {
                 getTokensList(network),
             )
             const outflowData = formatChartData(
-                filteredData.filter((item: any) => item.direction === 'outflow'),
+                filteredData
+                    .filter((item: any) => item.direction === 'outflow')
+                    .map((item: any) => ({
+                        ...item,
+                        total_volume: -item.total_volume,
+                        total_volume_usd: -item.total_volume_usd,
+                    })),
                 selectedSeriesInflow as any,
                 getTokensList(network),
             )
@@ -92,9 +99,11 @@ export default function InflowOutflowCharts() {
                     type: 'x',
                 },
             },
-            colors: isInflowOutflow ? ['#00A76F', '#FF5630'] : chartData.map(item => item.color),
+            colors: isInflowOutflow
+                ? ['#00A76F', '#FF5630', '#007BFF']
+                : chartData.map(item => item.color),
             stroke: {
-                width: 0,
+                width: 2,
             },
             legend: {
                 show: true,
@@ -131,38 +140,7 @@ export default function InflowOutflowCharts() {
                     },
                 },
             },
-            tooltip: {
-                custom: ({ series, seriesIndex, dataPointIndex, w }) => {
-                    const seriesName = w.globals.seriesNames[seriesIndex]
-                    const value = series[seriesIndex][dataPointIndex]
-                    const color = w.globals.colors[seriesIndex]
-
-                    const formattedValue = value.toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                    })
-                    return value !== undefined
-                        ? `<div style="
-                        display: flex;
-                        align-items: center;
-                        padding: 8px;
-                        background-color: #e0e0e0;
-                        color: #333;
-                        border-radius: 4px;
-                        text-align: left;">
-                        <span style="
-                            display: inline-block;
-                            width: 8px;
-                            height: 8px;
-                            background-color: ${color};
-                            border-radius: 50%;
-                            margin-right: 8px;">
-                        </span>
-                        <strong>${seriesName}</strong>: $${formattedValue}
-                      </div>`
-                        : ''
-                },
-            },
+            tooltip: buildTooltip(),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
@@ -178,7 +156,7 @@ export default function InflowOutflowCharts() {
             <Grid item xs={12}>
                 <Card>
                     <CardHeader
-                        title="Sui Inflow/Outflow Volume"
+                        title="Inflow/Outflow Volume"
                         subheader=""
                         action={
                             <ChartSelect
@@ -226,6 +204,37 @@ export default function InflowOutflowCharts() {
                                         .map(([, value]) => value)
                                 })(),
                             },
+                            ...(inflowSeries?.[0]?.data?.length > 2
+                                ? [
+                                      {
+                                          name: 'Net Flow',
+                                          type: 'line',
+                                          data: (() => {
+                                              const weekSums: { [key: string]: number } = {}
+
+                                              inflowSeries.forEach(seriesItem => {
+                                                  seriesItem.data.forEach(point => {
+                                                      weekSums[point.period] =
+                                                          (weekSums[point.period] || 0) +
+                                                          point.value
+                                                  })
+                                              })
+
+                                              outflowSeries.forEach(seriesItem => {
+                                                  seriesItem.data.forEach(point => {
+                                                      weekSums[point.period] =
+                                                          (weekSums[point.period] || 0) +
+                                                          point.value
+                                                  })
+                                              })
+
+                                              return Object.entries(weekSums)
+                                                  .sort(([a], [b]) => a.localeCompare(b))
+                                                  .map(([, value]) => value)
+                                          })(),
+                                      },
+                                  ]
+                                : []),
                         ]}
                         options={chartOptions(true)}
                         height={370}
@@ -237,7 +246,7 @@ export default function InflowOutflowCharts() {
             <Grid item xs={12}>
                 <Card>
                     <CardHeader
-                        title="Sui Total Volume"
+                        title="Total Volume (inflow + outflow)"
                         subheader=""
                         action={
                             <ChartSelect

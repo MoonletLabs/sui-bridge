@@ -196,12 +196,7 @@ export const calculateCardsTotals = (apiData: any, selectedTokens: string[]) => 
         )
         .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
 
-    const volumeTotal = apiData.volume
-        .filter(
-            (item: { token_info: { name: string } }) =>
-                selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
-        )
-        .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
+    const volumeTotal = inflowTotal - outflowTotal
 
     const uniqueAddressTotal = apiData.addresses
         .filter(
@@ -228,7 +223,7 @@ export const calculateCardsTotals = (apiData: any, selectedTokens: string[]) => 
             dollars: true,
         },
         {
-            title: 'Total Volume (USD)',
+            title: 'Net flow (USD)',
             value: volumeTotal,
             color: '#FA3913', // red
             dollars: true,
