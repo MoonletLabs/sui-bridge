@@ -72,7 +72,13 @@ export default function InflowOutflowCharts() {
                 getTokensList(network),
             )
             const outflowData = formatChartData(
-                filteredData.filter((item: any) => item.direction === 'outflow'),
+                filteredData
+                    .filter((item: any) => item.direction === 'outflow')
+                    .map((item: any) => ({
+                        ...item,
+                        total_volume: -item.total_volume,
+                        total_volume_usd: -item.total_volume_usd,
+                    })),
                 selectedSeriesInflow as any,
                 getTokensList(network),
             )
@@ -92,9 +98,11 @@ export default function InflowOutflowCharts() {
                     type: 'x',
                 },
             },
-            colors: isInflowOutflow ? ['#00A76F', '#FF5630'] : chartData.map(item => item.color),
+            colors: isInflowOutflow
+                ? ['#00A76F', '#FF5630', '#007BFF']
+                : chartData.map(item => item.color),
             stroke: {
-                width: 0,
+                width: 2,
             },
             legend: {
                 show: true,
@@ -226,6 +234,37 @@ export default function InflowOutflowCharts() {
                                         .map(([, value]) => value)
                                 })(),
                             },
+                            ...(inflowSeries?.[0]?.data?.length > 2
+                                ? [
+                                      {
+                                          name: 'Net Flow',
+                                          type: 'line',
+                                          data: (() => {
+                                              const weekSums: { [key: string]: number } = {}
+
+                                              inflowSeries.forEach(seriesItem => {
+                                                  seriesItem.data.forEach(point => {
+                                                      weekSums[point.period] =
+                                                          (weekSums[point.period] || 0) +
+                                                          point.value
+                                                  })
+                                              })
+
+                                              outflowSeries.forEach(seriesItem => {
+                                                  seriesItem.data.forEach(point => {
+                                                      weekSums[point.period] =
+                                                          (weekSums[point.period] || 0) +
+                                                          point.value
+                                                  })
+                                              })
+
+                                              return Object.entries(weekSums)
+                                                  .sort(([a], [b]) => a.localeCompare(b))
+                                                  .map(([, value]) => value)
+                                          })(),
+                                      },
+                                  ]
+                                : []),
                         ]}
                         options={chartOptions(true)}
                         height={370}
@@ -234,7 +273,7 @@ export default function InflowOutflowCharts() {
                     />
                 </Card>
             </Grid>
-            <Grid item xs={12}>
+            {/* <Grid item xs={12}>
                 <Card>
                     <CardHeader
                         title="Sui Total Volume"
@@ -260,7 +299,7 @@ export default function InflowOutflowCharts() {
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
                     />
                 </Card>
-            </Grid>
+            </Grid> */}
         </Grid>
     )
 }
