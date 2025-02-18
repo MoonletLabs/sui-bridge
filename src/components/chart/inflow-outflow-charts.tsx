@@ -186,7 +186,7 @@ export default function InflowOutflowCharts() {
             <Grid item xs={12}>
                 <Card>
                     <CardHeader
-                        title="Sui Inflow/Outflow Volume"
+                        title="Inflow/Outflow Volume"
                         subheader=""
                         action={
                             <ChartSelect
@@ -273,10 +273,10 @@ export default function InflowOutflowCharts() {
                     />
                 </Card>
             </Grid>
-            {/* <Grid item xs={12}>
+            <Grid item xs={12}>
                 <Card>
                     <CardHeader
-                        title="Sui Total Volume"
+                        title="Total Volume (inflow + outflow)"
                         subheader=""
                         action={
                             <ChartSelect
@@ -299,7 +299,7 @@ export default function InflowOutflowCharts() {
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
                     />
                 </Card>
-            </Grid> */}
+            </Grid>
         </Grid>
     )
 }
