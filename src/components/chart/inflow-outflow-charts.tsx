@@ -194,7 +194,7 @@ export default function InflowOutflowCharts() {
                                 ${tooltips}
                             </div>
                         `
-                        : '' // If no valid tooltips, return empty string (no tooltip displayed)
+                        : ''
                 },
             },
         })
