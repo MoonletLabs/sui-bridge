@@ -132,6 +132,7 @@ export const buildTooltip = () => {
                         value < 0
                             ? ` -$${Math.abs(value).toLocaleString()}`
                             : ` $${value.toLocaleString()}`
+                    const textColor = value < 0 ? '#FF5630' : ''
 
                     return value !== undefined && value !== 0
                         ? `
@@ -146,7 +147,7 @@ export const buildTooltip = () => {
                             font-size: 12px;
                             border-left: 4px solid ${color};
                             margin-bottom: 4px;">
-                            <span style="margin-left: 8px;"><strong>${seriesName}:</strong>${formattedValue}</span>
+                            <span style="margin-left: 8px;"><strong>${seriesName}:</strong><span style="color: ${textColor}">${formattedValue}</span></span>
                         </div>
                     `
                         : ''
