@@ -1,17 +1,34 @@
-import React from 'react'
 import { Box, Card } from '@mui/material'
-import { useTheme } from '@mui/material/styles'
 import { alpha } from '@mui/material/styles'
+import { isNumber } from '@mui/x-data-grid/internals'
+import React from 'react'
+import AnimatedNumbers from 'react-animated-numbers'
 
 interface ICardWidget {
     title: React.ReactNode
-    total: React.ReactNode
+    total: React.ReactNode | number
+    isDollar?: boolean
     icon?: string
     color: string
 }
 
-const CardWidget: React.FC<ICardWidget> = ({ title, total, icon, color }) => {
-    const theme = useTheme() as any
+const CardWidget: React.FC<ICardWidget> = ({ title, total, isDollar, icon, color }) => {
+    const textStyle = {
+        fontSize: '2rem',
+        fontWeight: 'bold',
+        fontFamily: 'Barlow',
+    }
+
+    const getCurrency = () => {
+        return (
+            <div>
+                <span style={textStyle}>
+                    {Number(total) < 0 ? '-' : ''}
+                    {isDollar ? '$' : ''}{' '}
+                </span>
+            </div>
+        )
+    }
     return (
         <Card
             sx={{
@@ -40,7 +57,16 @@ const CardWidget: React.FC<ICardWidget> = ({ title, total, icon, color }) => {
                         />
                     ) : null}
                 </Box>
-                <Box sx={{ mt: 1.5, mb: 1, typography: 'h3' }}>{total}</Box>
+                {(isNumber(total) && (
+                    <div style={{ display: 'flex', flexDirection: 'row' }}>
+                        {getCurrency()}
+                        <AnimatedNumbers
+                            includeComma
+                            animateToNumber={Number(total.toFixed(0))}
+                            fontStyle={textStyle}
+                        />
+                    </div>
+                )) || <Box sx={{ mt: 1.5, mb: 1, typography: 'h3' }}>{total}</Box>}
             </Box>
         </Card>
     )

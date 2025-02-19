@@ -130,8 +130,8 @@ export const buildTooltip = () => {
 
                     const formattedValue =
                         value < 0
-                            ? ` -$${Math.abs(value).toLocaleString()}`
-                            : ` $${value.toLocaleString()}`
+                            ? ` -$${Math.abs(Number(value.toFixed(0))).toLocaleString()}`
+                            : ` $${Number(value.toFixed(0)).toLocaleString()}`
                     const textColor = value < 0 ? '#FF5630' : ''
 
                     return value !== undefined && value !== 0

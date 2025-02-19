@@ -50,7 +50,8 @@ const CustomWidgets: React.FC = () => {
                           <Grid xs={12} sm={6} md={4} lg={3} key={it?.color} padding={1}>
                               <CardWidget
                                   title={it?.title}
-                                  total={`${it?.dollars ? '$' : ''}${fNumber(it?.value)}`}
+                                  total={it?.value}
+                                  isDollar={it.dollars}
                                   color={it?.color}
                               />
                           </Grid>
