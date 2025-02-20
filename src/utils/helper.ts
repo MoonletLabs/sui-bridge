@@ -4,7 +4,7 @@
  */
 
 import { getNetworkConfig, INetworkConfig } from 'src/config/helper'
-import { NetworkConfigType } from './types'
+import { CardType, NetworkConfigType, TokenRespType } from './types'
 
 // ----------------------------------------------------------------------
 
@@ -108,6 +108,10 @@ export function isEqual(a: any, b: any): boolean {
     return false
 }
 
+const numberToFixed = (value: number, decimals: number = 2) => {
+    return Number(value?.toFixed(decimals))
+}
+
 // ----------------------------------------------------------------------
 
 function isObject(item: any) {
@@ -181,33 +185,64 @@ export const transformAmount = (
     })
 }
 
-export const calculateCardsTotals = (apiData: any, selectedTokens: string[]) => {
+export const calculateCardsTotals = (
+    apiData: {
+        inflows: TokenRespType[]
+        outflows: TokenRespType[]
+        addresses: TokenRespType[]
+        previousInflows: TokenRespType[]
+        previousOutflows: TokenRespType[]
+        previousAddresses: TokenRespType[]
+    },
+    selectedTokens: string[],
+): CardType[] => {
     const inflowTotal = apiData.inflows
         .filter(
-            (item: { token_info: { name: string } }) =>
-                selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
+            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
         )
         .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
 
     const outflowTotal = apiData.outflows
         .filter(
-            (item: { token_info: { name: string } }) =>
-                selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
+            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
         )
         .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
 
-    const volumeTotal = inflowTotal - outflowTotal
-
     const uniqueAddressTotal = apiData.addresses
         .filter(
-            (item: { token_info: { name: string } }) =>
-                selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
+            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
         )
         .reduce(
             (acc: number, item: { total_unique_addresses: any }) =>
                 acc + parseInt(item.total_unique_addresses || 0),
             0,
         )
+    const netFlow = inflowTotal - outflowTotal
+
+    // compute previous
+
+    const inflowTotalPrevious = apiData.previousInflows
+        .filter(
+            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
+        )
+        .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
+
+    const outflowTotalPrevious = apiData.previousOutflows
+        .filter(
+            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
+        )
+        .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
+
+    const uniqueAddressTotalPrevious = apiData.previousAddresses
+        .filter(
+            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
+        )
+        .reduce(
+            (acc: number, item: { total_unique_addresses: any }) =>
+                acc + parseInt(item.total_unique_addresses || 0),
+            0,
+        )
+    const netFlowPrevious = inflowTotalPrevious - outflowTotalPrevious
 
     return [
         {
@@ -215,24 +250,35 @@ export const calculateCardsTotals = (apiData: any, selectedTokens: string[]) => 
             value: inflowTotal,
             color: '#38B137', // green
             dollars: true,
+            percentageChange: numberToFixed(
+                ((inflowTotal - inflowTotalPrevious) / inflowTotalPrevious) * 100,
+            ),
         },
         {
             title: 'Total Outflow (USD)',
             value: outflowTotal,
             color: '#FCBD05', // yellow
             dollars: true,
+            percentageChange: numberToFixed(
+                ((outflowTotal - outflowTotalPrevious) / outflowTotalPrevious) * 100,
+            ),
         },
         {
             title: 'Net flow (USD)',
-            value: volumeTotal,
+            value: netFlow,
             color: '#FA3913', // red
             dollars: true,
+            percentageChange: numberToFixed(((netFlow - netFlowPrevious) / netFlowPrevious) * 100),
         },
         {
             title: 'Unique Addresses',
             value: uniqueAddressTotal,
             color: '#3780FF', // blue
             dollars: false,
+            percentageChange: numberToFixed(
+                ((uniqueAddressTotal - uniqueAddressTotalPrevious) / uniqueAddressTotalPrevious) *
+                    100,
+            ),
         },
     ]
 }

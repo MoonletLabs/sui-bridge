@@ -63,7 +63,7 @@ export interface INetworkConfig {
     network: NETWORK
 }
 
-export type TimePeriod = 'Last 24h' | 'Last Week' | 'Last Month' | 'Year to date' | 'All time'
+export type TimePeriod = 'Last 24h' | 'Last Week' | 'Last Month' | 'Last year' | 'All time'
 
 export const getNetworkConfig = (options: {
     req?: NextApiRequest

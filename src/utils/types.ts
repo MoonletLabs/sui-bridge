@@ -77,3 +77,26 @@ export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: N
               },
           ]
 }
+
+export type TokenRespType = {
+    token_id: number
+    total_unique_addresses: string
+    total_count: number | null
+    total_volume: number | null
+    total_volume_usd: number | null
+    token_info: {
+        name: string
+        deno: number
+        priceUSD: number
+        id: number
+    }
+    destination_chain: string | null
+}
+
+export type CardType = {
+    title: string
+    value: any
+    color: string
+    dollars: boolean
+    percentageChange?: number // percentage change
+}

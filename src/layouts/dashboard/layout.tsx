@@ -158,7 +158,7 @@ export function DashboardLayout({ sx, children, header, data }: DashboardLayoutP
                                         'Last 24h',
                                         'Last Week',
                                         'Last Month',
-                                        'Year to date',
+                                        'Last year',
                                         'All time',
                                     ]}
                                     value={timePeriod}

@@ -10,25 +10,43 @@ import weekOfYear from 'dayjs/plugin/weekOfYear'
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
 
-export const calculateStartDate = (timePeriod: string) => {
+export const calculateStartDate = (timePeriod: string, currentDate?: dayjs.Dayjs) => {
+    let day = currentDate || dayjs()
     switch (timePeriod) {
         case 'Last 24h':
-            return dayjs().subtract(1, 'day').valueOf()
+            return day.subtract(1, 'day').valueOf()
         case 'Last Week':
-            return dayjs().subtract(7, 'day').valueOf()
+            return day.subtract(7, 'day').valueOf()
         case 'Last Month':
-            return dayjs().subtract(30, 'day').valueOf()
-        case 'Year to date':
-            return dayjs().subtract(365, 'day').valueOf()
+            return day.subtract(30, 'day').valueOf()
+        case 'Last year':
+            return day.subtract(365, 'day').valueOf()
         case 'All time':
-            return dayjs().subtract(1000, 'day').valueOf()
+            return day.subtract(1000, 'day').valueOf()
         default:
-            return dayjs().subtract(30, 'day').valueOf()
+            return day.subtract(30, 'day').valueOf()
     }
 }
 
-const getInflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
-    db[networkConfig.network]`
+export const computerIntervals = (timePeriod: TimePeriod, computePrevious?: boolean) => {
+    const startDate = calculateStartDate(timePeriod)
+
+    const fromInterval = computePrevious
+        ? calculateStartDate(timePeriod, dayjs(startDate))
+        : startDate
+    const toInterval = computePrevious ? startDate : new Date().getTime()
+
+    return { fromInterval, toInterval }
+}
+
+const getInflows = (
+    networkConfig: INetworkConfig,
+    timePeriod: TimePeriod,
+    computePrevious?: boolean,
+) => {
+    const { fromInterval, toInterval } = computerIntervals(timePeriod, computePrevious)
+
+    return db[networkConfig.network]`
         SELECT
             destination_chain,
             token_id,
@@ -39,14 +57,21 @@ const getInflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
         WHERE
             destination_chain = ${networkConfig.config.networkId.SUI}
             AND is_finalized = true
-            AND timestamp_ms >= ${calculateStartDate(timePeriod)}
+            AND timestamp_ms >= ${fromInterval}
+            AND timestamp_ms <= ${toInterval}
         GROUP BY
             destination_chain,
             token_id
     `.then(query => transformAmount(networkConfig, query as any[]))
+}
 
-const getOutflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
-    db[networkConfig.network]`
+const getOutflows = (
+    networkConfig: INetworkConfig,
+    timePeriod: TimePeriod,
+    computePrevious?: boolean,
+) => {
+    const { fromInterval, toInterval } = computerIntervals(timePeriod, computePrevious)
+    return db[networkConfig.network]`
         SELECT
             destination_chain,
             token_id,
@@ -57,29 +82,36 @@ const getOutflows = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
         WHERE
             destination_chain = ${networkConfig.config.networkId.ETH}
             AND is_finalized = true
-            AND timestamp_ms >= ${calculateStartDate(timePeriod)}
+            AND timestamp_ms >= ${fromInterval}
+            AND timestamp_ms <= ${toInterval}
         GROUP by
             destination_chain,
             token_id
     `.then(query => transformAmount(networkConfig, query as any[]))
+}
 
-const getVolume = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
-    db[networkConfig.network]`
-        SELECT
-            token_id,
-            COUNT(*) AS total_count,
-            SUM(amount) AS total_volume
-        FROM
-            public.token_transfer_data
-        WHERE
-            is_finalized = true
-            AND timestamp_ms >= ${calculateStartDate(timePeriod)}
-        GROUP by
-            token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+// const getVolume = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
+//     db[networkConfig.network]`
+//         SELECT
+//             token_id,
+//             COUNT(*) AS total_count,
+//             SUM(amount) AS total_volume
+//         FROM
+//             public.token_transfer_data
+//         WHERE
+//             is_finalized = true
+//             AND timestamp_ms >= ${calculateStartDate(timePeriod)}
+//         GROUP by
+//             token_id
+//     `.then(query => transformAmount(networkConfig, query as any[]))
 
-const getAddresses = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
-    db[networkConfig.network]`
+const getAddresses = (
+    networkConfig: INetworkConfig,
+    timePeriod: TimePeriod,
+    computePrevious?: boolean,
+) => {
+    const { fromInterval, toInterval } = computerIntervals(timePeriod, computePrevious)
+    return db[networkConfig.network]`
         SELECT
             token_id,
             COUNT(DISTINCT address) AS total_unique_addresses
@@ -91,7 +123,8 @@ const getAddresses = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
                 public.token_transfer_data
             WHERE
                 is_finalized = true
-                AND timestamp_ms >= ${calculateStartDate(timePeriod)}
+                AND timestamp_ms >= ${fromInterval}
+                AND timestamp_ms <= ${toInterval}
 
             UNION
 
@@ -102,11 +135,13 @@ const getAddresses = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
                 public.token_transfer_data
             WHERE
                 is_finalized = true
-                AND timestamp_ms >= ${calculateStartDate(timePeriod)}
+                AND timestamp_ms >= ${fromInterval}
+                AND timestamp_ms <= ${toInterval}
 
         ) AS unique_addresses
         GROUP BY token_id
     `.then(query => transformAmount(networkConfig, query as any[]))
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
@@ -114,20 +149,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const timePeriod = req.query.timePeriod as TimePeriod
 
-        const [inflows, outflows, volume, addresses] = await Promise.all([
-            getInflows(networkConfig, timePeriod),
-            getOutflows(networkConfig, timePeriod),
-            getVolume(networkConfig, timePeriod),
-            getAddresses(networkConfig, timePeriod),
-        ])
+        const [inflows, outflows, addresses, previousInflows, previousOutflows, previousAddresses] =
+            await Promise.all([
+                getInflows(networkConfig, timePeriod),
+                getOutflows(networkConfig, timePeriod),
+                getAddresses(networkConfig, timePeriod),
+                getInflows(networkConfig, timePeriod, true),
+                getOutflows(networkConfig, timePeriod, true),
+                getAddresses(networkConfig, timePeriod, true),
+            ])
 
         sendReply(res, {
             inflows,
             outflows,
-            volume,
             addresses,
+            previousInflows,
+            previousOutflows,
+            previousAddresses,
         })
     } catch (error) {
+        console.log(error)
         sendError(res, error)
     }
 }

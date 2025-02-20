@@ -7,6 +7,7 @@ import { fNumber } from 'src/utils/format-number'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { calculateCardsTotals } from 'src/utils/helper'
+import { CardType } from 'src/utils/types'
 
 const CustomWidgets: React.FC = () => {
     const network = getNetwork()
@@ -17,14 +18,7 @@ const CustomWidgets: React.FC = () => {
         `${endpoints.cards}?network=${network}&timePeriod=${timePeriod}`,
         fetcher,
     )
-    const [totals, setTotals] = useState<
-        {
-            title: string
-            value: any
-            color: string
-            dollars: boolean
-        }[]
-    >([])
+    const [totals, setTotals] = useState<CardType[]>([])
 
     useEffect(() => {
         if (data) {
@@ -53,6 +47,8 @@ const CustomWidgets: React.FC = () => {
                                   total={it?.value}
                                   isDollar={it.dollars}
                                   color={it?.color}
+                                  percentageChange={it?.percentageChange}
+                                  timePeriod={timePeriod}
                               />
                           </Grid>
                       )
