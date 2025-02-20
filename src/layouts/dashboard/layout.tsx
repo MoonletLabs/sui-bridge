@@ -33,6 +33,7 @@ import { MultiSelect } from 'src/components/selectors/multi-select'
 import { getTokensList } from 'src/utils/types'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { getNetwork } from 'src/hooks/get-network-storage'
+import { TIME_PERIODS, TimePeriod } from 'src/config/helper'
 // ----------------------------------------------------------------------
 
 export type DashboardLayoutProps = {
@@ -154,15 +155,9 @@ export function DashboardLayout({ sx, children, header, data }: DashboardLayoutP
                         rightArea: (
                             <>
                                 <ChartSelect
-                                    options={[
-                                        'Last 24h',
-                                        'Last Week',
-                                        'Last Month',
-                                        'Last year',
-                                        'All time',
-                                    ]}
+                                    options={TIME_PERIODS}
                                     value={timePeriod}
-                                    onChange={newVal => setTimePeriod(newVal)}
+                                    onChange={newVal => setTimePeriod(newVal as TimePeriod)}
                                 />
                                 <MultiSelect
                                     options={[

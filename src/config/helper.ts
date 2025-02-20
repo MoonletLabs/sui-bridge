@@ -65,6 +65,43 @@ export interface INetworkConfig {
 
 export type TimePeriod = 'Last 24h' | 'Last Week' | 'Last Month' | 'Last year' | 'All time'
 
+export const TIME_PERIODS: TimePeriod[] = [
+    'Last 24h',
+    'Last Week',
+    'Last Month',
+    'Last year',
+    'All time',
+]
+
+export type TimeInterval = 'Daily' | 'Weekly' | 'Monthly'
+
+export const TIME_INTERVALS: TimeInterval[] = ['Daily', 'Weekly', 'Monthly']
+
+export const getTimeIntervalForPeriod = (period: TimePeriod): TimeInterval[] => {
+    switch (period) {
+        case 'Last 24h':
+            return ['Daily'] // todo: replace with Hourly
+        case 'Last Week':
+            return ['Daily'] // todo: add hourly also
+        case 'Last Month':
+            return ['Daily', 'Weekly']
+
+        default:
+            return TIME_INTERVALS
+    }
+}
+
+export const getDefaultTimeIntervalForPeriod = (period: TimePeriod): TimeInterval => {
+    switch (period) {
+        case 'Last 24h':
+        case 'Last Week':
+        case 'Last Month':
+            return 'Daily'
+        default:
+            return 'Weekly'
+    }
+}
+
 export const getNetworkConfig = (options: {
     req?: NextApiRequest
     network?: NETWORK

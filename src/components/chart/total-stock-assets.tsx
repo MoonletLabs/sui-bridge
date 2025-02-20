@@ -15,14 +15,31 @@ import { getNetwork } from 'src/hooks/get-network-storage'
 import dayjs from 'dayjs'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { getTokensList } from 'src/utils/types'
+import {
+    getDefaultTimeIntervalForPeriod,
+    getTimeIntervalForPeriod,
+    TimeInterval,
+} from 'src/config/helper'
 
 export default function StockOfAssetsChart() {
     const network = getNetwork()
     const { timePeriod, selectedTokens } = useGlobalContext()
 
     const [chartData, setChartData] = useState<ChartDataItem[]>([])
-    const [selectedSeries, setSelectedSeries] = useState('Weekly')
-    const [selectedSeriesInflow, setSelectedSeriesInflow] = useState('Weekly')
+    const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
+        getDefaultTimeIntervalForPeriod(timePeriod),
+    )
+
+    useEffect(() => {
+        const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
+        const valuesValues = getTimeIntervalForPeriod(timePeriod)
+
+        if (selectedSeries !== defaultValue) {
+            if (!valuesValues?.find(it => it === selectedSeries)) {
+                setSelectedSeries(defaultValue)
+            }
+        }
+    }, [timePeriod])
 
     const volumeEndpoint = `${endpoints.volume.daily}?network=${network}`
     const { data } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
@@ -115,11 +132,7 @@ export default function StockOfAssetsChart() {
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
-        setSelectedSeries(newValue)
-    }, [])
-
-    const handleChangeSeriesInflow = useCallback((newValue: string) => {
-        setSelectedSeriesInflow(newValue)
+        setSelectedSeries(newValue as TimeInterval)
     }, [])
 
     return (
@@ -131,7 +144,7 @@ export default function StockOfAssetsChart() {
                         subheader=""
                         action={
                             <ChartSelect
-                                options={['Daily', 'Weekly', 'Monthly']}
+                                options={getTimeIntervalForPeriod(timePeriod)}
                                 value={selectedSeries}
                                 onChange={handleChangeSeries}
                             />

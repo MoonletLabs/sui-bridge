@@ -2,6 +2,7 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
 import { TokenColorInfo } from './types'
+import { TimeInterval } from 'src/config/helper'
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
 
@@ -22,7 +23,7 @@ export type ChartDataItem = {
 
 export function formatChartData(
     apiData: ApiDataItem[],
-    selectedSeries: 'Monthly' | 'Weekly' | 'Daily',
+    selectedSeries: TimeInterval,
     tokensList: TokenColorInfo[],
 ) {
     const groupedData: { [key: string]: { [token: string]: number } } = {}

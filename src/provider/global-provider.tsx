@@ -1,13 +1,14 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { TimePeriod } from 'src/config/helper'
 import { NETWORK } from 'src/hooks/get-network-storage'
 
 interface GlobalContextProps {
     network: NETWORK
-    timePeriod: string
+    timePeriod: TimePeriod
     selectedTokens: string[]
-    setTimePeriod: (timePeriod: string) => void
+    setTimePeriod: (timePeriod: TimePeriod) => void
     setSelectedTokens: (tokens: string[]) => void
     toggleNetwork: () => void
     setNetwork: (network: NETWORK) => void
@@ -18,11 +19,11 @@ const GlobalContext = createContext<GlobalContextProps | undefined>(undefined)
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     const [network, setNetworkState] = useState<NETWORK>(NETWORK.MAINNET)
     const [isMounted, setIsMounted] = useState(false)
-    const [timePeriod, setTimePeriodState] = useState<string>('All time')
+    const [timePeriod, setTimePeriodState] = useState<TimePeriod>('All time')
     const [selectedTokens, setSelectedTokensState] = useState<string[]>(['All'])
 
     // Update local storage and state when timePeriod changes
-    const setTimePeriod = (newTimePeriod: string) => {
+    const setTimePeriod = (newTimePeriod: TimePeriod) => {
         setTimePeriodState(newTimePeriod)
         localStorage.setItem('timePeriod', newTimePeriod)
     }
@@ -37,7 +38,7 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
         // Load initial values from local storage when the component mounts
         const tokens = localStorage.getItem('selectedTokens')
 
-        setTimePeriodState(localStorage.getItem('timePeriod') || 'All time')
+        setTimePeriodState((localStorage.getItem('timePeriod') || 'All time') as TimePeriod)
         setSelectedTokensState(tokens ? JSON.parse(tokens) : ['All'])
     }, [])
 

@@ -15,6 +15,11 @@ import { getNetwork } from 'src/hooks/get-network-storage'
 import dayjs from 'dayjs'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { getTokensList } from 'src/utils/types'
+import {
+    getDefaultTimeIntervalForPeriod,
+    getTimeIntervalForPeriod,
+    TimeInterval,
+} from 'src/config/helper'
 
 export default function InflowOutflowCharts() {
     const network = getNetwork()
@@ -23,11 +28,32 @@ export default function InflowOutflowCharts() {
     const [chartData, setChartData] = useState<ChartDataItem[]>([])
     const [inflowSeries, setInflowSeries] = useState<ChartDataItem[]>([])
     const [outflowSeries, setOutflowSeries] = useState<ChartDataItem[]>([])
-    const [selectedSeries, setSelectedSeries] = useState('Weekly')
-    const [selectedSeriesInflow, setSelectedSeriesInflow] = useState('Weekly')
+    const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
+        getDefaultTimeIntervalForPeriod(timePeriod),
+    )
+    const [selectedSeriesInflow, setSelectedSeriesInflow] = useState<TimeInterval>(
+        getDefaultTimeIntervalForPeriod(timePeriod),
+    )
 
     const volumeEndpoint = `${endpoints.volume.daily}?network=${network}`
     const { data } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
+
+    useEffect(() => {
+        const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
+        const valuesValues = getTimeIntervalForPeriod(timePeriod)
+
+        if (selectedSeries !== defaultValue) {
+            if (!valuesValues?.find(it => it === selectedSeries)) {
+                setSelectedSeries(defaultValue)
+            }
+        }
+
+        if (selectedSeriesInflow !== defaultValue) {
+            if (!valuesValues?.find(it => it === selectedSeriesInflow)) {
+                setSelectedSeriesInflow(defaultValue)
+            }
+        }
+    }, [timePeriod])
 
     useEffect(() => {
         if (data?.length > 0) {
@@ -46,7 +72,7 @@ export default function InflowOutflowCharts() {
 
             const formattedData = formatChartData(
                 filteredData,
-                selectedSeries as any,
+                selectedSeries,
                 getTokensList(network),
             )
             setChartData(formattedData)
@@ -149,11 +175,11 @@ export default function InflowOutflowCharts() {
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
-        setSelectedSeries(newValue)
+        setSelectedSeries(newValue as TimeInterval)
     }, [])
 
     const handleChangeSeriesInflow = useCallback((newValue: string) => {
-        setSelectedSeriesInflow(newValue)
+        setSelectedSeriesInflow(newValue as TimeInterval)
     }, [])
 
     return (
@@ -165,7 +191,7 @@ export default function InflowOutflowCharts() {
                         subheader=""
                         action={
                             <ChartSelect
-                                options={['Daily', 'Weekly', 'Monthly']}
+                                options={getTimeIntervalForPeriod(timePeriod)}
                                 value={selectedSeriesInflow}
                                 onChange={handleChangeSeriesInflow}
                             />
@@ -255,7 +281,7 @@ export default function InflowOutflowCharts() {
                         subheader=""
                         action={
                             <ChartSelect
-                                options={['Daily', 'Weekly', 'Monthly']}
+                                options={getTimeIntervalForPeriod(timePeriod)}
                                 value={selectedSeries}
                                 onChange={handleChangeSeries}
                             />
