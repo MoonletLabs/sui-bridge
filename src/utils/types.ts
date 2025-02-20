@@ -98,5 +98,6 @@ export type CardType = {
     value: any
     color: string
     dollars: boolean
+    icon?: string
     percentageChange?: number // percentage change
 }

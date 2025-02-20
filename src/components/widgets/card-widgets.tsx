@@ -4,6 +4,8 @@ import { isNumber } from '@mui/x-data-grid/internals'
 import React from 'react'
 import AnimatedNumbers from 'react-animated-numbers'
 import { Iconify } from '../iconify'
+import { SvgColor } from '../svg-color'
+import { CONFIG } from 'src/config-global'
 
 interface ICardWidget {
     title: React.ReactNode
@@ -54,21 +56,21 @@ const CardWidget: React.FC<ICardWidget> = ({
             }}
         >
             <Box sx={{ flexGrow: 1 }}>
-                <Box sx={{ typography: 'subtitle2' }}>
-                    {title}
+                <Box sx={{ typography: 'subtitle2', flexDirection: 'row', display: 'flex' }}>
                     {icon ? (
-                        <Box
-                            component="img"
-                            src={icon}
-                            alt="My Icon"
-                            sx={{
-                                width: 35,
-                                marginLeft: 2,
-                                height: 35,
-                                color: 'primary.main',
-                            }}
-                        />
+                        <div>
+                            <Iconify
+                                width={20}
+                                icon={icon}
+                                sx={{
+                                    flexShrink: 0,
+                                    color,
+                                    marginRight: 1,
+                                }}
+                            />
+                        </div>
                     ) : null}
+                    {title}
                 </Box>
                 {(isNumber(total) && (
                     <div style={{ display: 'flex', flexDirection: 'row' }}>

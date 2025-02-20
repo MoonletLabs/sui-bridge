@@ -49,6 +49,7 @@ const CustomWidgets: React.FC = () => {
                                   color={it?.color}
                                   percentageChange={it?.percentageChange}
                                   timePeriod={timePeriod}
+                                  icon={it?.icon}
                               />
                           </Grid>
                       )

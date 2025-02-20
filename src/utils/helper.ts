@@ -250,6 +250,7 @@ export const calculateCardsTotals = (
             value: inflowTotal,
             color: '#38B137', // green
             dollars: true,
+            icon: 'solar:round-arrow-right-bold-duotone',
             percentageChange: numberToFixed(
                 ((inflowTotal - inflowTotalPrevious) / inflowTotalPrevious) * 100,
             ),
@@ -257,8 +258,9 @@ export const calculateCardsTotals = (
         {
             title: 'Total Outflow (USD)',
             value: outflowTotal,
-            color: '#FCBD05', // yellow
+            color: '#FA3913', // yellow
             dollars: true,
+            icon: 'solar:round-arrow-left-bold-duotone',
             percentageChange: numberToFixed(
                 ((outflowTotal - outflowTotalPrevious) / outflowTotalPrevious) * 100,
             ),
@@ -266,7 +268,8 @@ export const calculateCardsTotals = (
         {
             title: 'Net flow (USD)',
             value: netFlow,
-            color: '#FA3913', // red
+            color: '#FCBD05', // red
+            icon: 'solar:square-transfer-horizontal-bold-duotone',
             dollars: true,
             percentageChange: numberToFixed(((netFlow - netFlowPrevious) / netFlowPrevious) * 100),
         },
@@ -275,6 +278,7 @@ export const calculateCardsTotals = (
             value: uniqueAddressTotal,
             color: '#3780FF', // blue
             dollars: false,
+            icon: 'solar:pause-bold-duotone',
             percentageChange: numberToFixed(
                 ((uniqueAddressTotal - uniqueAddressTotalPrevious) / uniqueAddressTotalPrevious) *
                     100,
