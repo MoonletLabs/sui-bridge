@@ -10,6 +10,7 @@ import {
     calculateStartDate,
     formatCategories,
     formatChartData,
+    labelFormatted,
 } from 'src/utils/format-chart-data'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import dayjs from 'dayjs'
@@ -118,17 +119,7 @@ export default function StockOfAssetsChart() {
             },
             yaxis: {
                 labels: {
-                    formatter: (value: number) => {
-                        const isMobile = window.innerWidth <= 600 // Adjust breakpoint as needed
-                        if (isMobile) {
-                            // Abbreviate value for mobile (e.g., 150000 becomes 150k)
-                            if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(0)}M`
-                            if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}k`
-                            return `$${value}`
-                        }
-                        // Full format for larger screens
-                        return `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                    },
+                    formatter: labelFormatted,
                 },
             },
             tooltip: buildTooltip(),
