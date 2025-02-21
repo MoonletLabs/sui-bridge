@@ -35,7 +35,7 @@ export default function InflowOutflowCharts() {
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
 
-    const volumeEndpoint = `${endpoints.volume.daily}?network=${network}`
+    const volumeEndpoint = `${endpoints.volume.hourly}?network=${network}`
     const { data } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
 
     useEffect(() => {
@@ -74,6 +74,7 @@ export default function InflowOutflowCharts() {
                 filteredData,
                 selectedSeries,
                 getTokensList(network),
+                timePeriod,
             )
             setChartData(formattedData)
         }
@@ -97,6 +98,7 @@ export default function InflowOutflowCharts() {
                 filteredData.filter((item: any) => item.direction === 'inflow'),
                 selectedSeriesInflow as any,
                 getTokensList(network),
+                timePeriod,
             )
             const outflowData = formatChartData(
                 filteredData
@@ -108,6 +110,7 @@ export default function InflowOutflowCharts() {
                     })),
                 selectedSeriesInflow as any,
                 getTokensList(network),
+                timePeriod,
             )
 
             setInflowSeries(inflowData)
@@ -182,6 +185,7 @@ export default function InflowOutflowCharts() {
         setSelectedSeriesInflow(newValue as TimeInterval)
     }, [])
 
+    console.log(inflowSeries, outflowSeries)
     return (
         <Grid container spacing={4} marginTop={2}>
             <Grid item xs={12}>
