@@ -73,16 +73,16 @@ export const TIME_PERIODS: TimePeriod[] = [
     'All time',
 ]
 
-export type TimeInterval = 'Daily' | 'Weekly' | 'Monthly'
+export type TimeInterval = 'Hourly' | 'Daily' | 'Weekly' | 'Monthly'
 
 export const TIME_INTERVALS: TimeInterval[] = ['Daily', 'Weekly', 'Monthly']
 
 export const getTimeIntervalForPeriod = (period: TimePeriod): TimeInterval[] => {
     switch (period) {
         case 'Last 24h':
-            return ['Daily'] // todo: replace with Hourly
+            return ['Hourly', 'Daily'] // todo: replace with Hourly
         case 'Last Week':
-            return ['Daily'] // todo: add hourly also
+            return ['Hourly', 'Daily'] // todo: add hourly also
         case 'Last Month':
             return ['Daily', 'Weekly']
 

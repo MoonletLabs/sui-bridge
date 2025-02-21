@@ -2,7 +2,7 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
 import { TokenColorInfo } from './types'
-import { TimeInterval } from 'src/config/helper'
+import { TimeInterval, TimePeriod } from 'src/config/helper'
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
 
@@ -25,14 +25,29 @@ export function formatChartData(
     apiData: ApiDataItem[],
     selectedSeries: TimeInterval,
     tokensList: TokenColorInfo[],
+    timePeriod: TimePeriod,
 ) {
     const groupedData: { [key: string]: { [token: string]: number } } = {}
+    const now = dayjs()
+    const startDate = calculateStartDate(timePeriod)
+
+    // Determine number of hours needed
+    const totalHours = timePeriod === 'Last Week' && selectedSeries === 'Hourly' ? 168 : 24
+    const fullHours = Array.from({ length: totalHours }, (_, i) =>
+        now.subtract(totalHours - 1 - i, 'hour').format('YYYY-MM-DD HH:00'),
+    )
 
     apiData.forEach(item => {
         const date = dayjs(item.transfer_date)
         let periodKey: string
 
-        if (selectedSeries === 'Weekly') {
+        if (selectedSeries === 'Hourly') {
+            if (date.isAfter(startDate)) {
+                periodKey = date.format('YYYY-MM-DD HH:00')
+            } else {
+                return
+            }
+        } else if (selectedSeries === 'Weekly') {
             periodKey = `${date.isoWeekYear()}-W${date.isoWeek()}` // FIXED
         } else if (selectedSeries === 'Monthly') {
             periodKey = date.format('YYYY-MM') // Group by month
@@ -48,7 +63,7 @@ export function formatChartData(
     })
 
     const tokens = Array.from(new Set(apiData.map(item => item.token_info.name)))
-    const periods = Object.keys(groupedData).sort()
+    const periods = selectedSeries === 'Hourly' ? fullHours : Object.keys(groupedData).sort()
 
     const chartData: ChartDataItem[] = tokens.map(token => {
         const colorData = tokensList.find(info => info.ticker === token)
@@ -57,7 +72,7 @@ export function formatChartData(
             color: colorData?.color || '#000000', // Default color if not found
             data: periods.map(period => ({
                 period,
-                value: parseFloat((groupedData[period][token] || 0).toFixed(6)),
+                value: parseFloat(((groupedData[period] ?? {})[token] || 0).toFixed(6)),
             })),
         }
     })
@@ -70,6 +85,9 @@ export const formatCategories = (data: ChartDataItem[], timePeriod: string) => {
     return data[0].data.map(item => {
         let date
 
+        if (timePeriod === 'Hourly') {
+            return item.period
+        }
         // Handle weekly format like "2024-W44"
         if (item.period.includes('-W')) {
             const [year, week] = item.period.split('-W')

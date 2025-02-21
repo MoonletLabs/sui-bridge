@@ -73,6 +73,7 @@ export default function StockOfAssetsChart() {
                 }),
                 selectedSeries as any,
                 getTokensList(network),
+                timePeriod,
             )
 
             setChartData(formattedData)
