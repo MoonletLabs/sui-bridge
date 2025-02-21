@@ -18,6 +18,7 @@ import { getTokensList } from 'src/utils/types'
 import {
     getDefaultTimeIntervalForPeriod,
     getTimeIntervalForPeriod,
+    getVolumeEndpointForPeriod,
     TimeInterval,
 } from 'src/config/helper'
 
@@ -41,8 +42,9 @@ export default function StockOfAssetsChart() {
         }
     }, [timePeriod])
 
-    const volumeEndpoint = `${endpoints.volume.daily}?network=${network}`
-    const { data } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
+    const { data } = useSWR<any>(getVolumeEndpointForPeriod(timePeriod, network), fetcher, {
+        revalidateOnFocus: false,
+    })
 
     useEffect(() => {
         if (data?.length > 0) {

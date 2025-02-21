@@ -1,6 +1,7 @@
 import { CoinType, NetworkConfigType } from 'src/utils/types'
 import { NETWORK } from 'src/hooks/get-network-storage'
 import { NextApiRequest } from 'next'
+import { endpoints } from 'src/utils/axios'
 
 const TOKEN_LIST: Record<number, CoinType> = {
     2: {
@@ -80,9 +81,9 @@ export const TIME_INTERVALS: TimeInterval[] = ['Daily', 'Weekly', 'Monthly']
 export const getTimeIntervalForPeriod = (period: TimePeriod): TimeInterval[] => {
     switch (period) {
         case 'Last 24h':
-            return ['Hourly', 'Daily'] // todo: replace with Hourly
+            return ['Hourly']
         case 'Last Week':
-            return ['Hourly', 'Daily'] // todo: add hourly also
+            return ['Hourly', 'Daily']
         case 'Last Month':
             return ['Daily', 'Weekly']
 
@@ -94,11 +95,22 @@ export const getTimeIntervalForPeriod = (period: TimePeriod): TimeInterval[] => 
 export const getDefaultTimeIntervalForPeriod = (period: TimePeriod): TimeInterval => {
     switch (period) {
         case 'Last 24h':
+            return 'Hourly'
         case 'Last Week':
         case 'Last Month':
             return 'Daily'
         default:
             return 'Weekly'
+    }
+}
+
+export const getVolumeEndpointForPeriod = (period: TimePeriod, network: NETWORK): string => {
+    switch (period) {
+        case 'Last 24h':
+        case 'Last Week':
+            return `${endpoints.volume.hourly}?network=${network}`
+        default:
+            return `${endpoints.volume.daily}?network=${network}`
     }
 }
 

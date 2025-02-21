@@ -3,10 +3,13 @@ import { sendError, sendReply } from '../utils'
 import db from '../dabatase'
 import { getNetworkConfig } from 'src/config/helper'
 import { setFlowDirection, transformAmount } from 'src/utils/helper'
+import dayjs from 'dayjs'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
+
+        const maxOneWeek = dayjs().subtract(7, 'day').valueOf() // for hourly data get maximum 1 week (too much data)
 
         /**
          * To track the volume of assets moving across the bridge over time, you can aggregate data by day, week, or month using timestamps.
@@ -22,6 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             FROM
                 public.token_transfer_data
             WHERE is_finalized=true
+                AND timestamp_ms >= ${maxOneWeek}
             GROUP BY
                 transfer_date,
                 destination_chain,

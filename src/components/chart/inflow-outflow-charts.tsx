@@ -18,6 +18,7 @@ import { getTokensList } from 'src/utils/types'
 import {
     getDefaultTimeIntervalForPeriod,
     getTimeIntervalForPeriod,
+    getVolumeEndpointForPeriod,
     TimeInterval,
 } from 'src/config/helper'
 
@@ -35,8 +36,9 @@ export default function InflowOutflowCharts() {
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
 
-    const volumeEndpoint = `${endpoints.volume.hourly}?network=${network}`
-    const { data } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
+    const { data } = useSWR<any>(getVolumeEndpointForPeriod(timePeriod, network), fetcher, {
+        revalidateOnFocus: false,
+    })
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
@@ -185,7 +187,6 @@ export default function InflowOutflowCharts() {
         setSelectedSeriesInflow(newValue as TimeInterval)
     }, [])
 
-    console.log(inflowSeries, outflowSeries)
     return (
         <Grid container spacing={4} marginTop={2}>
             <Grid item xs={12}>
