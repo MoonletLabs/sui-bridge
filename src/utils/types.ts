@@ -38,6 +38,12 @@ export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: N
                   icon: '/assets/icons/brands/btc.svg',
               },
               {
+                  ticker: 'WLBTC',
+                  name: 'Bitcoin',
+                  color: '#f7941a',
+                  icon: '/assets/icons/brands/btc.svg',
+              },
+              {
                   ticker: 'USDT',
                   name: 'USDT',
                   color: '#26A17B',

@@ -36,10 +36,11 @@ const CustomWidgets: React.FC = () => {
                               title={<Skeleton width={180} height={22} />}
                               total={<Skeleton width={140} height={48} />}
                               color={''}
+                              key={`card-widget-${index}`}
                           />
                       </Grid>
                   ))
-                : totals?.map(it => {
+                : totals?.map((it, index) => {
                       return (
                           <Grid xs={12} sm={6} md={4} lg={3} key={it?.color} padding={1}>
                               <CardWidget
@@ -50,6 +51,7 @@ const CustomWidgets: React.FC = () => {
                                   percentageChange={it?.percentageChange}
                                   timePeriod={timePeriod}
                                   icon={it?.icon}
+                                  key={`card-widget-${index}-${it?.title}`}
                               />
                           </Grid>
                       )
