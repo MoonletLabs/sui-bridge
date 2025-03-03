@@ -25,6 +25,13 @@ const TOKEN_LIST: Record<number, CoinType> = {
         id: 1,
     },
 
+    6: {
+        name: 'WLBTC',
+        deno: Math.pow(10, 8),
+        priceUSD: 95000,
+        id: 6,
+    },
+
     3: {
         name: 'USDC',
         deno: Math.pow(10, 6),
