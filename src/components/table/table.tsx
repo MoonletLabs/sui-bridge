@@ -20,7 +20,7 @@ type RowComponentProps<T> = {
 }
 
 type Props<T> = CardProps & {
-    title?: ReactNode
+    title?: ReactNode | any
     subheader?: string
     headLabel: { id: string; label: string }[]
     tableData: T[]

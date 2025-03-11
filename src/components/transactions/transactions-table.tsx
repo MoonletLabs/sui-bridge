@@ -43,18 +43,14 @@ export function TransactionsTable() {
                 loading={isLoading}
                 title={
                     (
-                        <Box
-                            display="flex"
-                            position={'relative'}
-                            alignItems="center"
-                            justifyContent="space-between"
-                        >
-                            <Typography variant="h6">Transactions</Typography>
+                        <Box display="flex" alignItems="center" justifyContent="space-between">
+                            <Typography variant="h6" fontWeight="bold" color="primary">
+                                Latest Transactions
+                            </Typography>
                         </Box>
                     ) as any
                 }
-                // rows={pageSize}
-                rowHeight={77}
+                rowHeight={85}
                 RowComponent={ActivitiesRow}
                 pagination={{
                     count: totalItems,
@@ -73,13 +69,24 @@ const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
     const isInflow = row.destination_chain === 'SUI'
 
     return (
-        <TableRow hover sx={{ height: 77 }}>
+        <TableRow
+            hover
+            sx={{
+                height: 85,
+                borderRadius: 2,
+                transition: 'all 0.3s ease-in-out',
+                '&:hover': {
+                    transform: 'scale(1.01)',
+                },
+            }}
+        >
+            {/* Flow Column with Icons & Stylish Arrow */}
             <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <img
-                        src={`/assets/icons/brands/eth.svg`}
+                        src={`/assets/icons/brands/${row.from_chain.toLowerCase()}.svg`}
                         alt={row.from_chain}
-                        style={{ width: 25, height: 25 }}
+                        style={{ width: 28, height: 28 }}
                     />
 
                     <Iconify
@@ -93,30 +100,33 @@ const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
                     />
 
                     <img
-                        src={`/assets/icons/brands/sui.svg`}
+                        src={`/assets/icons/brands/${row.destination_chain.toLowerCase()}.svg`}
                         alt={row.destination_chain}
-                        style={{ width: 25, height: 25 }}
+                        style={{ width: 28, height: 28 }}
                     />
                 </Box>
             </TableCell>
 
+            {/* Sender with Improved Visibility */}
             <TableCell>
                 <Link
                     href={formatExplorerUrl({
                         network,
                         address: row.sender_address,
                         isAccount: true,
-                        chain: isInflow ? 'ETH' : 'SUI',
+                        chain: row.from_chain,
                     })}
                     target="_blank"
                     rel="noopener noreferrer"
                     underline="hover"
-                    color="inherit"
+                    color="primary"
+                    fontWeight="bold"
                 >
                     {truncateAddress(row.sender_address)}
                 </Link>
             </TableCell>
 
+            {/* Recipient with Improved Visibility */}
             <TableCell>
                 <Link
                     href={formatExplorerUrl({
@@ -128,14 +138,23 @@ const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
                     target="_blank"
                     rel="noopener noreferrer"
                     underline="hover"
-                    color="inherit"
+                    color="primary"
+                    fontWeight="bold"
                 >
                     {truncateAddress(row.recipient_address)}
                 </Link>
             </TableCell>
 
+            {/* Amount with Token Icon */}
             <TableCell>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'start',
+                        padding: '4px 8px',
+                    }}
+                >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         {row.token_info.name && (
                             <img
@@ -145,35 +164,44 @@ const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
                                     )?.icon
                                 }
                                 alt={row.token_info.name}
-                                style={{ width: 16, height: 16, marginRight: 4 }}
+                                style={{ width: 20, height: 20, marginRight: 6 }}
                             />
                         )}
-                        <Typography variant="body2">{fNumber(row.amount)}</Typography>
+                        <Typography variant="h6" fontWeight="bold">
+                            {fNumber(row.amount)}
+                        </Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary">
-                        ${fNumber(row.amount_usd)}
+                        ≈ ${fNumber(row.amount_usd)}
                     </Typography>
                 </Box>
             </TableCell>
 
+            {/* Transaction Link */}
             <TableCell>
                 <Link
                     href={formatExplorerUrl({
                         network,
                         address: row.tx_hash,
                         isAccount: false,
-                        chain: isInflow ? 'ETH' : 'SUI',
+                        chain: row.from_chain,
                     })}
                     target="_blank"
                     rel="noopener noreferrer"
                     underline="hover"
-                    color="inherit"
+                    color="primary"
+                    fontWeight="bold"
                 >
                     {truncateAddress(row.tx_hash)}
                 </Link>
             </TableCell>
 
-            <TableCell>{relativeTime}</TableCell>
+            {/* Timestamp */}
+            <TableCell>
+                <Typography variant="caption" fontWeight="bold" color="text.secondary">
+                    {relativeTime}
+                </Typography>
+            </TableCell>
         </TableRow>
     )
 }
