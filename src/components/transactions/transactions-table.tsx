@@ -1,17 +1,19 @@
 import { Box, Link, TableCell, TableRow, Typography } from '@mui/material'
-import { formatDistanceToNow, formatDistanceToNowStrict } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
-import { getNetwork } from 'src/hooks/get-network-storage'
+import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
 import { getTokensList, TransactionType } from 'src/utils/types'
 import useSWR from 'swr'
 import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
+import { useRouter } from 'src/routes/hooks'
 
 export function TransactionsTable() {
     const network = getNetwork()
+    const router = useRouter()
     const [page, setPage] = useState(0)
     const [totalItems, setTotalItems] = useState(0)
     const pageSize = 48
@@ -28,6 +30,10 @@ export function TransactionsTable() {
         }
     }, [data?.total])
 
+    const onNavigateTx = (tx: string) => {
+        router.push(`/transactions/${tx}`)
+    }
+
     return (
         <Box>
             <CustomTable
@@ -38,6 +44,7 @@ export function TransactionsTable() {
                     { id: 'amount', label: 'Amount' },
                     { id: 'tx', label: 'Tx' },
                     { id: 'timestamp_ms', label: 'Date' },
+                    { id: 'view', label: 'More details' },
                 ]}
                 tableData={data?.transactions || []}
                 loading={isLoading}
@@ -51,7 +58,9 @@ export function TransactionsTable() {
                     ) as any
                 }
                 rowHeight={85}
-                RowComponent={ActivitiesRow}
+                RowComponent={props => (
+                    <ActivitiesRow {...props} network={network} onNavigateTx={onNavigateTx} />
+                )}
                 pagination={{
                     count: totalItems,
                     page,
@@ -63,8 +72,11 @@ export function TransactionsTable() {
     )
 }
 
-const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
-    const network = getNetwork()
+const ActivitiesRow: React.FC<{
+    row: TransactionType
+    network: NETWORK
+    onNavigateTx: (tx: string) => void
+}> = ({ row, network, onNavigateTx }) => {
     const relativeTime = formatDistanceToNow(Number(row.timestamp_ms), { addSuffix: true })
     const isInflow = row.destination_chain === 'SUI'
 
@@ -201,6 +213,9 @@ const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
                 <Typography variant="caption" fontWeight="bold" color="text.secondary">
                     {relativeTime}
                 </Typography>
+            </TableCell>
+            <TableCell onClick={() => onNavigateTx(row.tx_hash)} style={{ cursor: 'pointer' }}>
+                <Iconify icon="solar:eye-bold" />
             </TableCell>
         </TableRow>
     )

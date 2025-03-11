@@ -134,9 +134,9 @@ export const getNetworkConfig = (options: {
     }
 }
 
-export function truncateAddress(str: string) {
+export function truncateAddress(str: string, chars: number = 4) {
     if (!str || str.length <= 6) return str
-    return `${str.slice(0, 3)}...${str.slice(-3)}`
+    return `${str.slice(0, chars)}...${str.slice(-chars)}`
 }
 
 export const formatExplorerUrl = (opt: {

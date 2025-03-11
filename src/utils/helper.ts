@@ -4,7 +4,7 @@
  */
 
 import { getNetworkConfig, INetworkConfig } from 'src/config/helper'
-import { CardType, NetworkConfigType, TokenRespType } from './types'
+import { CardType, NetworkConfigType, TokenRespType, TransactionHistoryType } from './types'
 
 // ----------------------------------------------------------------------
 
@@ -112,6 +112,11 @@ const numberToFixed = (value: number, decimals: number = 2) => {
     return Number(value?.toFixed(decimals))
 }
 
+export const removePrefix = (tx?: string) => {
+    let finalTx = tx?.toString() || ''
+    return finalTx?.startsWith('0x') ? finalTx?.slice(2) : finalTx
+}
+
 // ----------------------------------------------------------------------
 
 function isObject(item: any) {
@@ -200,42 +205,75 @@ export const transformTransfers = (
         amount: number
     }[],
 ) => {
-    return data
-        .map(it => {
-            const tokenData = networkConfig?.config?.coins?.[it.token_id]
-            if (tokenData) {
-                const destination_chain = getNetworkName(
-                    it.destination_chain,
-                    networkConfig.config.networkId,
-                )
-                const from_chain = getNetworkName(it.chain_id, networkConfig.config.networkId)
+    return transformNumberFields(
+        data
+            .map(it => {
+                const tokenData = networkConfig?.config?.coins?.[it.token_id]
+                if (tokenData) {
+                    const destination_chain = getNetworkName(
+                        it.destination_chain,
+                        networkConfig.config.networkId,
+                    )
+                    const from_chain = getNetworkName(it.chain_id, networkConfig.config.networkId)
 
-                let tx_hash = it.tx_hash // todo: fix hash for SUI
-                let sender_address = it.sender_address
-                let recipient_address = it.recipient_address
+                    let tx_hash = it.tx_hash // todo: fix hash for SUI
+                    let sender_address = it.sender_address
+                    let recipient_address = it.recipient_address
 
-                if (it.chain_id === networkConfig.config.networkId.ETH) {
-                    tx_hash = `0x${it.tx_hash}`
-                    sender_address = `0x${it.sender_address}`
+                    if (it.chain_id === networkConfig.config.networkId.ETH) {
+                        tx_hash = `0x${it.tx_hash}`
+                        sender_address = `0x${it.sender_address}`
+                    } else {
+                        recipient_address = `0x${it.recipient_address}`
+                    }
+                    return {
+                        ...it,
+                        amount: Number(it.amount) / tokenData.deno,
+                        amount_usd: (Number(it.amount) / tokenData.deno) * tokenData.priceUSD,
+                        token_info: tokenData,
+                        destination_chain,
+                        from_chain,
+                        tx_hash,
+                        sender_address,
+                        recipient_address,
+                    }
                 } else {
-                    recipient_address = `0x${it.recipient_address}`
+                    console.warn(`Cannot find tokenData for token_id: ${it.token_id}`)
                 }
-                return {
-                    ...it,
-                    amount: Number(it.amount) / tokenData.deno,
-                    amount_usd: (Number(it.amount) / tokenData.deno) * tokenData.priceUSD,
-                    token_info: tokenData,
-                    destination_chain,
-                    from_chain,
-                    tx_hash,
-                    sender_address,
-                    recipient_address,
-                }
-            } else {
-                console.warn(`Cannot find tokenData for token_id: ${it.token_id}`)
+            })
+            ?.filter(it => !!it),
+    )
+}
+
+export const transformHistory = (data: TransactionHistoryType[]) => {
+    return transformNumberFields(data)
+        ?.map(it => {
+            let tx_hash = it.tx_hash // todo: fix hash for SUI
+            let txn_sender = it.txn_sender
+            if (it.data_source === 'ETH') {
+                tx_hash = `0x${it.tx_hash}`
+                txn_sender = `0x${it.txn_sender}`
+            }
+            return {
+                ...it,
+                tx_hash,
+                txn_sender,
             }
         })
-        ?.filter(it => !!it)
+        ?.sort((a, b) => a.timestamp_ms - b.timestamp_ms)
+}
+
+export const transformNumberFields = <T extends Record<string, any>>(data: T[]) => {
+    const fieldsToTransform = ['nonce', 'block_height', 'timestamp_ms', 'gas_usage']
+
+    return data.map(obj => ({
+        ...obj,
+        ...Object.fromEntries(
+            fieldsToTransform
+                .filter(field => field in obj) // Check if the field exists in the object
+                .map(field => [field, Number(obj[field])]),
+        ),
+    }))
 }
 
 export const calculateCardsTotals = (

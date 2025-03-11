@@ -130,3 +130,16 @@ export type TransactionType = {
     }
     from_chain: ChainType
 }
+
+export type TransactionHistoryType = {
+    tx_hash: string
+    txn_sender: string
+    chain_id: number
+    nonce: string
+    status: string
+    block_height: number
+    timestamp_ms: number
+    gas_usage: number
+    data_source: ChainType
+    is_finalized: boolean
+}
