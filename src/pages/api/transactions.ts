@@ -32,7 +32,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 ORDER BY timestamp_ms 
                 DESC OFFSET ${offset} LIMIT ${limit}`
 
-        sendReply(res, transformTransfers(networkConfig, query as any[]))
+        const queryCount = await db[networkConfig.network]`
+                SELECT 
+                	COUNT(*)
+                FROM token_transfer_data 
+                WHERE 
+                	is_finalized=true`
+
+        sendReply(res, {
+            transactions: transformTransfers(networkConfig, query as any[]),
+            total: Number(queryCount?.[0]?.count),
+        })
     } catch (error) {
         sendError(res, error)
     }

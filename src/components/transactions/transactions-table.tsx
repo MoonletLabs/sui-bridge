@@ -1,32 +1,32 @@
-import { Box, Link, TableCell, TableRow, Typography, keyframes } from '@mui/material'
+import { Box, Link, TableCell, TableRow, Typography } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
-import { fNumber } from 'src/utils/format-number'
-// import { truncateAddress, formatTransactionType } from 'src/utils/helper'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import { endpoints, fetcher } from 'src/utils/axios'
+import { fNumber } from 'src/utils/format-number'
 import { getTokensList, TransactionType } from 'src/utils/types'
 import useSWR from 'swr'
-import { CustomTable } from '../table/table'
 import { Iconify } from '../iconify'
-
-type RowComponentProps = {
-    row: TransactionType
-}
-
-const blink = keyframes`
-  0% { opacity: 1; }
-  50% { opacity: 0; }
-  100% { opacity: 1; }
-`
+import { CustomTable } from '../table/table'
 
 export function TransactionsTable() {
     const network = getNetwork()
-    const { data, isLoading } = useSWR<TransactionType[]>(
-        `${endpoints.transactions}?network=${network}`,
+    const [page, setPage] = useState(0)
+    const [totalItems, setTotalItems] = useState(0)
+    const pageSize = 48
+
+    // Fetch paginated data
+    const { data, isLoading } = useSWR<{ transactions: TransactionType[]; total: number }>(
+        `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}`,
         fetcher,
     )
+
+    useEffect(() => {
+        if (data?.total && totalItems !== data?.total) {
+            setTotalItems(data?.total)
+        }
+    }, [data?.total])
 
     return (
         <Box>
@@ -39,7 +39,7 @@ export function TransactionsTable() {
                     { id: 'tx', label: 'Tx' },
                     { id: 'timestamp_ms', label: 'Date' },
                 ]}
-                tableData={data || []}
+                tableData={data?.transactions || []}
                 loading={isLoading}
                 title={
                     (
@@ -49,39 +49,29 @@ export function TransactionsTable() {
                             alignItems="center"
                             justifyContent="space-between"
                         >
-                            {/* Main Title */}
                             <Typography variant="h6">Transactions</Typography>
-
-                            {/* Blinking "Live" Indicator */}
-                            {/* <Typography
-                                variant="body2"
-                                sx={{
-                                    position: 'absolute',
-                                    top: -10,
-                                    left: 70,
-                                    color: 'red', // You can choose any color you prefer
-                                    fontWeight: 'bold',
-                                    animation: `${blink} 1s infinite`, // Apply the blinking animation
-                                }}
-                            >
-                                Live
-                            </Typography> */}
                         </Box>
                     ) as any
                 }
-                rows={24}
-                // hidePagination={true}
+                // rows={pageSize}
                 rowHeight={77}
                 RowComponent={ActivitiesRow}
+                pagination={{
+                    count: totalItems,
+                    page,
+                    rowsPerPage: pageSize,
+                    onPageChange: newPage => setPage(newPage),
+                }}
             />
         </Box>
     )
 }
 
-const ActivitiesRow: React.FC<RowComponentProps> = ({ row }) => {
+const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
     const network = getNetwork()
     const relativeTime = formatDistanceToNow(Number(row.timestamp_ms), { addSuffix: true })
     const isInflow = row.destination_chain === 'SUI'
+
     return (
         <TableRow hover sx={{ height: 77 }}>
             <TableCell>
@@ -99,13 +89,7 @@ const ActivitiesRow: React.FC<RowComponentProps> = ({ row }) => {
                                 ? 'solar:round-arrow-right-bold-duotone'
                                 : 'solar:round-arrow-left-bold-duotone'
                         }
-                        sx={{
-                            flexShrink: 0,
-                            color: isInflow ? '#38B137' : '#FA3913',
-                            // marginRight: 1,
-                            alignContent: 'center',
-                            alignSelf: 'center',
-                        }}
+                        sx={{ flexShrink: 0, color: isInflow ? '#38B137' : '#FA3913' }}
                     />
 
                     <img
@@ -128,16 +112,11 @@ const ActivitiesRow: React.FC<RowComponentProps> = ({ row }) => {
                     rel="noopener noreferrer"
                     underline="hover"
                     color="inherit"
-                    sx={
-                        {
-                            // textDecoration: truncatedBuyer && 'underline',
-                            // color: truncatedBuyer && '#0294fd',
-                        }
-                    }
                 >
                     {truncateAddress(row.sender_address)}
                 </Link>
             </TableCell>
+
             <TableCell>
                 <Link
                     href={formatExplorerUrl({
@@ -150,12 +129,6 @@ const ActivitiesRow: React.FC<RowComponentProps> = ({ row }) => {
                     rel="noopener noreferrer"
                     underline="hover"
                     color="inherit"
-                    sx={
-                        {
-                            // textDecoration: truncateMint && 'underline',
-                            // color: truncateMint && '#0294fd',
-                        }
-                    }
                 >
                     {truncateAddress(row.recipient_address)}
                 </Link>
@@ -182,6 +155,7 @@ const ActivitiesRow: React.FC<RowComponentProps> = ({ row }) => {
                     </Typography>
                 </Box>
             </TableCell>
+
             <TableCell>
                 <Link
                     href={formatExplorerUrl({
@@ -194,15 +168,11 @@ const ActivitiesRow: React.FC<RowComponentProps> = ({ row }) => {
                     rel="noopener noreferrer"
                     underline="hover"
                     color="inherit"
-                    sx={
-                        {
-                            // textDecoration: 'underline', color: '#0294fd'
-                        }
-                    }
                 >
                     {truncateAddress(row.tx_hash)}
                 </Link>
             </TableCell>
+
             <TableCell>{relativeTime}</TableCell>
         </TableRow>
     )

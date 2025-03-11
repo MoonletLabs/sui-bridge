@@ -13,7 +13,7 @@ import {
 } from '@mui/material'
 import { Scrollbar } from '../scrollbar'
 import { TableHeadCustom } from './table-head-custom'
-import React, { ComponentType, FC, ReactElement, ReactNode, useState } from 'react'
+import React, { ComponentType, FC, ReactElement, ReactNode } from 'react'
 
 type RowComponentProps<T> = {
     row: T
@@ -23,12 +23,17 @@ type Props<T> = CardProps & {
     title?: ReactNode
     subheader?: string
     headLabel: { id: string; label: string }[]
-    tableData: any[]
+    tableData: T[]
     RowComponent: ComponentType<RowComponentProps<T>>
     hidePagination?: boolean
     loading?: boolean
     rowHeight?: number
-    rows?: number
+    pagination?: {
+        count: number
+        page: number
+        rowsPerPage: number
+        onPageChange: (newPage: number) => void
+    }
 }
 
 export function CustomTable<T>({
@@ -39,23 +44,10 @@ export function CustomTable<T>({
     rowHeight,
     RowComponent,
     loading,
-    rows,
     hidePagination,
+    pagination,
     ...other
 }: Props<T>) {
-    const [page, setPage] = useState(0)
-    const rowsPerPage = rows || 10
-
-    const handleChangePage = (event: unknown, newPage: number) => {
-        setPage(newPage)
-    }
-
-    // Slice the data for the current page
-    const currentData = (tableData || []).slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage,
-    )
-
     return (
         <Card {...other} sx={{ mt: 4 }}>
             <CardHeader title={title} subheader={subheader} sx={{ mb: 3 }} />
@@ -65,14 +57,14 @@ export function CustomTable<T>({
                     <TableHeadCustom headLabel={headLabel} />
                     <TableBody>
                         {loading
-                            ? Array.from(new Array(10)).map((it, index) => (
+                            ? Array.from(new Array(10)).map((_, index) => (
                                   <SkeletonRow
                                       rowHeight={rowHeight}
                                       key={index}
                                       columnCount={headLabel?.length}
                                   />
                               ))
-                            : currentData.map((row, index) => (
+                            : tableData.map((row, index) => (
                                   <RowComponent key={(row as any).id || index} row={row} />
                               ))}
                     </TableBody>
@@ -81,15 +73,15 @@ export function CustomTable<T>({
 
             <Divider sx={{ borderStyle: 'dashed' }} />
 
-            {!hidePagination ? (
+            {!hidePagination && pagination ? (
                 <Box sx={{ p: 2 }}>
                     <TablePagination
-                        rowsPerPageOptions={[10]} // fixed at 10
+                        rowsPerPageOptions={[pagination.rowsPerPage]}
                         component="div"
-                        count={tableData.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={handleChangePage}
+                        count={pagination.count}
+                        rowsPerPage={pagination.rowsPerPage}
+                        page={pagination.page}
+                        onPageChange={(_, newPage) => pagination.onPageChange(newPage)}
                     />
                 </Box>
             ) : null}
