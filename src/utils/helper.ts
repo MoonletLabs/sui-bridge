@@ -185,6 +185,59 @@ export const transformAmount = (
     })
 }
 
+export const transformTransfers = (
+    networkConfig: INetworkConfig,
+    data: {
+        tx_hash: string
+        sender_address: string
+        recipient_address: string
+        chain_id: number
+        destination_chain: number
+        nonce: number
+        block_height: number
+        timestamp_ms: number
+        token_id: number
+        amount: number
+    }[],
+) => {
+    return data
+        .map(it => {
+            const tokenData = networkConfig?.config?.coins?.[it.token_id]
+            if (tokenData) {
+                const destination_chain = getNetworkName(
+                    it.destination_chain,
+                    networkConfig.config.networkId,
+                )
+                const from_chain = getNetworkName(it.chain_id, networkConfig.config.networkId)
+
+                let tx_hash = it.tx_hash // todo: fix hash for SUI
+                let sender_address = it.sender_address
+                let recipient_address = it.recipient_address
+
+                if (it.chain_id === networkConfig.config.networkId.ETH) {
+                    tx_hash = `0x${it.tx_hash}`
+                    sender_address = `0x${it.sender_address}`
+                } else {
+                    recipient_address = `0x${it.recipient_address}`
+                }
+                return {
+                    ...it,
+                    amount: Number(it.amount) / tokenData.deno,
+                    amount_usd: (Number(it.amount) / tokenData.deno) * tokenData.priceUSD,
+                    token_info: tokenData,
+                    destination_chain,
+                    from_chain,
+                    tx_hash,
+                    sender_address,
+                    recipient_address,
+                }
+            } else {
+                console.warn(`Cannot find tokenData for token_id: ${it.token_id}`)
+            }
+        })
+        ?.filter(it => !!it)
+}
+
 export const calculateCardsTotals = (
     apiData: {
         inflows: TokenRespType[]

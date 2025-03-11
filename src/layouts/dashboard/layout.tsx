@@ -45,9 +45,16 @@ export type DashboardLayoutProps = {
     data?: {
         nav?: NavSectionProps['data']
     }
+    disableTimelines?: boolean
 }
 
-export function DashboardLayout({ sx, children, header, data }: DashboardLayoutProps) {
+export function DashboardLayout({
+    sx,
+    children,
+    header,
+    data,
+    disableTimelines,
+}: DashboardLayoutProps) {
     const network = getNetwork()
 
     const { timePeriod, setTimePeriod, selectedTokens, setSelectedTokens } = useGlobalContext()
@@ -154,23 +161,27 @@ export function DashboardLayout({ sx, children, header, data }: DashboardLayoutP
                         ),
                         rightArea: (
                             <>
-                                <ChartSelect
-                                    options={TIME_PERIODS}
-                                    value={timePeriod}
-                                    onChange={newVal => setTimePeriod(newVal as TimePeriod)}
-                                />
-                                <MultiSelect
-                                    options={[
-                                        { name: 'All' },
-                                        ...getTokensList(network).map(i => ({
-                                            name: i.ticker,
-                                            icon: i.icon,
-                                        })),
-                                    ]}
-                                    allOption="All"
-                                    value={selectedTokens}
-                                    onChange={setSelectedTokens}
-                                />
+                                {!disableTimelines && (
+                                    <>
+                                        <ChartSelect
+                                            options={TIME_PERIODS}
+                                            value={timePeriod}
+                                            onChange={newVal => setTimePeriod(newVal as TimePeriod)}
+                                        />
+                                        <MultiSelect
+                                            options={[
+                                                { name: 'All' },
+                                                ...getTokensList(network).map(i => ({
+                                                    name: i.ticker,
+                                                    icon: i.icon,
+                                                })),
+                                            ]}
+                                            allOption="All"
+                                            value={selectedTokens}
+                                            onChange={setSelectedTokens}
+                                        />
+                                    </>
+                                )}
                                 <NetworkPopover />
                             </>
                         ),

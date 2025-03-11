@@ -24,11 +24,19 @@ export function fNumber(inputValue: InputNumberValue, options?: Options) {
     const number = processInput(inputValue)
     if (number === null) return ''
 
-    const fm = new Intl.NumberFormat(locale.code, {
+    let fm = new Intl.NumberFormat(locale.code, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
         ...options,
     }).format(number)
+
+    if (Number(fm) === 0) {
+        fm = new Intl.NumberFormat(locale.code, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 5,
+            ...options,
+        }).format(number)
+    }
 
     return fm
 }
