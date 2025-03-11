@@ -1,19 +1,19 @@
 import {
-    CardProps,
+    Box,
     Card,
     CardHeader,
+    CardProps,
+    Divider,
+    Skeleton,
     Table,
     TableBody,
-    Divider,
-    TablePagination,
-    Box,
-    Skeleton,
     TableCell,
+    TablePagination,
     TableRow,
 } from '@mui/material'
+import { ComponentType, FC, ReactNode } from 'react'
 import { Scrollbar } from '../scrollbar'
 import { TableHeadCustom } from './table-head-custom'
-import React, { ComponentType, FC, ReactElement, ReactNode } from 'react'
 
 type RowComponentProps<T> = {
     row: T
@@ -52,18 +52,20 @@ export function CustomTable<T>({
         <Card {...other} sx={{ mt: 4 }}>
             <CardHeader title={title} subheader={subheader} sx={{ mb: 3 }} />
 
-            <Scrollbar sx={{ minHeight: 462 }}>
+            <Scrollbar sx={{ minHeight: 800 }}>
                 <Table sx={{ width: '100%', tableLayout: 'fixed', minWidth: 720 }}>
                     <TableHeadCustom headLabel={headLabel} />
                     <TableBody>
                         {loading
-                            ? Array.from(new Array(10)).map((_, index) => (
-                                  <SkeletonRow
-                                      rowHeight={rowHeight}
-                                      key={index}
-                                      columnCount={headLabel?.length}
-                                  />
-                              ))
+                            ? Array.from(new Array(pagination?.rowsPerPage || 10)).map(
+                                  (_, index) => (
+                                      <SkeletonRow
+                                          rowHeight={rowHeight}
+                                          key={index}
+                                          columnCount={headLabel?.length}
+                                      />
+                                  ),
+                              )
                             : tableData.map((row, index) => (
                                   <RowComponent key={(row as any).id || index} row={row} />
                               ))}
