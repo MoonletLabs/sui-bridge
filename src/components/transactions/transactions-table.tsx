@@ -1,5 +1,5 @@
 import { Box, Link, TableCell, TableRow, Typography } from '@mui/material'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, formatDistanceToNowStrict } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork } from 'src/hooks/get-network-storage'
@@ -84,7 +84,7 @@ const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
             <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <img
-                        src={`/assets/icons/brands/${row.from_chain.toLowerCase()}.svg`}
+                        src={`/assets/icons/brands/eth.svg`}
                         alt={row.from_chain}
                         style={{ width: 28, height: 28 }}
                     />
@@ -100,7 +100,7 @@ const ActivitiesRow: React.FC<{ row: TransactionType }> = ({ row }) => {
                     />
 
                     <img
-                        src={`/assets/icons/brands/${row.destination_chain.toLowerCase()}.svg`}
+                        src={`/assets/icons/brands/sui.svg`}
                         alt={row.destination_chain}
                         style={{ width: 28, height: 28 }}
                     />
