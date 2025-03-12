@@ -61,7 +61,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             tx: transformTransfers(networkConfig, [tokendata] as any)?.[0],
         })
     } catch (error) {
-        console.log({ error })
         sendError(res)
     }
 }
