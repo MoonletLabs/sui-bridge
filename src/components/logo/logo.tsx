@@ -50,6 +50,14 @@ export const Logo = forwardRef<HTMLDivElement, LogoProps>(
             />
         )
 
+        const singleLogo = (
+            <img
+                alt="Single logo"
+                src={`/assets/icons/brands/single-logo.svg`}
+                style={{ width: 200, height: 35, marginTop: 55 }}
+            />
+        )
+
         return (
             <Box
                 ref={ref}
@@ -69,7 +77,7 @@ export const Logo = forwardRef<HTMLDivElement, LogoProps>(
                 }}
                 {...other}
             >
-                {fullLogo}
+                {isLarge ? fullLogo : singleLogo}
             </Box>
         )
     },

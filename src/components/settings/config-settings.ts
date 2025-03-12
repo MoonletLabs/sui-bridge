@@ -10,7 +10,7 @@ export const defaultSettings: SettingsState = {
     colorScheme: 'dark',
     direction: 'ltr',
     contrast: 'default',
-    navLayout: 'horizontal',
+    navLayout: 'vertical',
     primaryColor: 'default',
     navColor: 'integrate',
     compactLayout: true,

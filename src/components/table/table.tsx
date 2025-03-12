@@ -22,7 +22,7 @@ type RowComponentProps<T> = {
 type Props<T> = CardProps & {
     title?: ReactNode | any
     subheader?: string
-    headLabel: { id: string; label: string }[]
+    headLabel: { id: string; label: string; align?: 'left' | 'right' | 'center' }[]
     tableData: T[]
     RowComponent: ComponentType<RowComponentProps<T>>
     hidePagination?: boolean

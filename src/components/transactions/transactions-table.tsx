@@ -10,6 +10,7 @@ import useSWR from 'swr'
 import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
 import { useRouter } from 'src/routes/hooks'
+import { paths } from 'src/routes/paths'
 
 export function TransactionsTable() {
     const network = getNetwork()
@@ -31,7 +32,7 @@ export function TransactionsTable() {
     }, [data?.total])
 
     const onNavigateTx = (tx: string) => {
-        router.push(`/transactions/${tx}`)
+        router.push(`${paths.transactions.root}/${tx}`)
     }
 
     return (
@@ -44,7 +45,7 @@ export function TransactionsTable() {
                     { id: 'amount', label: 'Amount' },
                     { id: 'tx', label: 'Tx' },
                     { id: 'timestamp_ms', label: 'Date' },
-                    { id: 'view', label: 'More details' },
+                    { id: 'view', label: 'More details', align: 'center' },
                 ]}
                 tableData={data?.transactions || []}
                 loading={isLoading}
@@ -214,8 +215,13 @@ const ActivitiesRow: React.FC<{
                     {relativeTime}
                 </Typography>
             </TableCell>
-            <TableCell onClick={() => onNavigateTx(row.tx_hash)} style={{ cursor: 'pointer' }}>
-                <Iconify icon="solar:eye-bold" />
+            <TableCell
+                onClick={() => onNavigateTx(row.tx_hash)}
+                style={{ cursor: 'pointer', textAlign: 'center', verticalAlign: 'middle' }}
+            >
+                <Box display="flex" alignItems="center" justifyContent="center">
+                    <Iconify icon="solar:eye-bold" />
+                </Box>
             </TableCell>
         </TableRow>
     )

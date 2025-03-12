@@ -70,7 +70,7 @@ export function TransactionView({ tx }: { tx: string }) {
                 {/* Timeline Column */}
                 <Box sx={{ width: { xs: '100%', md: '70%' }, p: 2 }}>
                     <CardHeader
-                        title="Transaction Timeline"
+                        title="Bridge Timeline"
                         titleTypographyProps={{ variant: 'h6', fontWeight: 'bold' }}
                         sx={{
                             backgroundColor: 'primary.main',
@@ -366,7 +366,7 @@ function TransactionSummary({ tx, network }: { tx: TransactionType; network: NET
     return (
         <Card sx={{ boxShadow: 5, borderRadius: 2 }}>
             <CardHeader
-                title="Transaction Summary"
+                title="Bridge Summary"
                 titleTypographyProps={{ variant: 'h6', fontWeight: 'bold' }}
                 sx={{
                     backgroundColor: 'primary.main',
@@ -380,8 +380,8 @@ function TransactionSummary({ tx, network }: { tx: TransactionType; network: NET
                 <Stack direction="row" spacing={1} sx={{ marginBottom: 2 }} alignItems="center">
                     <Typography variant="subtitle1">
                         {isInflow
-                            ? 'Transfer assets from Ethereum to SUI'
-                            : 'Transfer assets from SUI to Ethereum'}
+                            ? 'Bridge assets from Ethereum to SUI'
+                            : 'Bridge assets from SUI to Ethereum'}
                     </Typography>
                 </Stack>
                 <Stack direction="row" spacing={2} alignItems="center">
