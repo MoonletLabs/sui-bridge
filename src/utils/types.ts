@@ -22,6 +22,8 @@ export type TokenColorInfo = {
     icon: string
 }
 
+export type ChainType = 'ETH' | 'SUI'
+
 export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: NETWORK) => {
     return network === NETWORK.MAINNET
         ? [
@@ -106,4 +108,38 @@ export type CardType = {
     dollars: boolean
     icon?: string
     percentageChange?: number // percentage change
+}
+
+export type TransactionType = {
+    tx_hash: string
+    sender_address: string
+    recipient_address: string
+    chain_id: number
+    destination_chain: ChainType
+    nonce: string
+    block_height: string
+    timestamp_ms: string
+    token_id: number
+    amount: number
+    amount_usd: number
+    token_info: {
+        name: string
+        deno: number
+        priceUSD: number
+        id: number
+    }
+    from_chain: ChainType
+}
+
+export type TransactionHistoryType = {
+    tx_hash: string
+    txn_sender: string
+    chain_id: number
+    nonce: string
+    status: string
+    block_height: number
+    timestamp_ms: number
+    gas_usage: number
+    data_source: ChainType
+    is_finalized: boolean
 }

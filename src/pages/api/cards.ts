@@ -168,7 +168,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             previousAddresses,
         })
     } catch (error) {
-        console.log(error)
         sendError(res, error)
     }
 }

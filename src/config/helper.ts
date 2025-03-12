@@ -1,4 +1,4 @@
-import { CoinType, NetworkConfigType } from 'src/utils/types'
+import { ChainType, CoinType, NetworkConfigType } from 'src/utils/types'
 import { NETWORK } from 'src/hooks/get-network-storage'
 import { NextApiRequest } from 'next'
 import { endpoints } from 'src/utils/axios'
@@ -132,4 +132,32 @@ export const getNetworkConfig = (options: {
         config: NETWORK_CONFIG[network],
         network,
     }
+}
+
+export function truncateAddress(str: string, chars: number = 4) {
+    if (!str || str.length <= 6) return str
+    return `${str.slice(0, chars)}...${str.slice(-chars)}`
+}
+
+export const formatExplorerUrl = (opt: {
+    network: NETWORK
+    address: string
+    isAccount: boolean
+    chain: ChainType
+}) => {
+    const { network, address, isAccount, chain } = opt
+    let prefix = ''
+    if (chain === 'SUI') {
+        prefix =
+            network === NETWORK.MAINNET
+                ? 'https://suiscan.xyz/mainnet/'
+                : 'https://suiscan.xyz/testnet/'
+        prefix += isAccount ? 'account/' : 'tx/'
+    } else {
+        prefix =
+            network === NETWORK.MAINNET ? 'https://etherscan.io/' : 'https://sepolia.etherscan.io/'
+        prefix += isAccount ? 'address/' : 'tx/'
+    }
+
+    return prefix + address
 }

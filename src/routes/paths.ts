@@ -3,6 +3,7 @@
 const ROOTS = {
     AUTH: '/auth',
     DASHBOARD: '/dashboard',
+    TRANSACTIONS: '/transactions',
 }
 
 // ----------------------------------------------------------------------
@@ -50,5 +51,10 @@ export const paths = {
             five: `${ROOTS.DASHBOARD}/group/five`,
             six: `${ROOTS.DASHBOARD}/group/six`,
         },
+    },
+
+    // DASHBOARD
+    transactions: {
+        root: ROOTS.TRANSACTIONS,
     },
 }

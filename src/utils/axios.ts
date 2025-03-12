@@ -34,11 +34,9 @@ export const fetcher = async (args: string | [string, AxiosRequestConfig]) => {
 export const endpoints = {
     cards: '/api/cards',
     inflows: '/api/inflows',
+    transactions: '/api/transactions',
+    transaction: '/api/transaction',
     outflows: '/api/outflows',
-    recentTransfers: '/api/recent-transfers',
-    statusTransfers: '/api/status-transfers',
-    stocks: '/api/stocks',
-    transferActivity: '/api/transfer-activity',
     volume: {
         daily: '/api/volume/daily',
         hourly: '/api/volume/hourly',
