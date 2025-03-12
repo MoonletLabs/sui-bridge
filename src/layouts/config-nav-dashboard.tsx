@@ -43,7 +43,7 @@ const ICONS = {
 
 export const navData = [
     {
-        subheader: 'Sui Bridge Analytics',
+        // subheader: 'Sui Bridge Analytics',
         items: [{ title: 'Dashbord', path: paths.dashboard.root, icon: ICONS.analytics }],
     },
 
