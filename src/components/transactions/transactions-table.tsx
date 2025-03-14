@@ -5,7 +5,7 @@ import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
-import { getTokensList, TransactionType } from 'src/utils/types'
+import { AllTxsResponse, getTokensList, TransactionType } from 'src/utils/types'
 import useSWR from 'swr'
 import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
@@ -15,9 +15,11 @@ import { paths } from 'src/routes/paths'
 export function TransactionsTable({
     ethAddress,
     suiAddress,
+    onDataChange,
 }: {
     ethAddress?: string
     suiAddress?: string
+    onDataChange?: (data?: AllTxsResponse) => void
 }) {
     const network = getNetwork()
     const router = useRouter()
@@ -26,10 +28,14 @@ export function TransactionsTable({
     const pageSize = 48
 
     // Fetch paginated data
-    const { data, isLoading } = useSWR<{ transactions: TransactionType[]; total: number }>(
+    const { data, isLoading } = useSWR<AllTxsResponse>(
         `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
         fetcher,
     )
+
+    useEffect(() => {
+        onDataChange?.(data)
+    }, [data])
 
     useEffect(() => {
         if (data?.total && totalItems !== data?.total) {

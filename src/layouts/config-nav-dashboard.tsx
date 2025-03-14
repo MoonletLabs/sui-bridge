@@ -51,7 +51,7 @@ export const navData = [
         items: [{ title: 'Transactions', path: paths.transactions.root, icon: ICONS.parameter }],
     },
 
-    {
-        items: [{ title: 'Profile', path: paths.profile.root, icon: ICONS.course }],
-    },
+    // {
+    //     items: [{ title: 'Profile', path: paths.profile.root, icon: ICONS.course }],
+    // },
 ]

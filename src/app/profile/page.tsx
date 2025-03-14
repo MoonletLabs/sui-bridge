@@ -3,10 +3,17 @@ import { useState } from 'react'
 import { TextField, Box } from '@mui/material'
 import { TransactionsTable } from 'src/components/transactions/transactions-table'
 import { DashboardContent } from 'src/layouts/dashboard'
+import { AllTxsResponse } from 'src/utils/types'
+import UserStatsWidgets from 'src/components/widgets/user-stats-widgets'
 
 export default function Page() {
-    const [suiAddress, setSuiAddress] = useState('0x24089889eE9dc4C20Ab20C871686B03AF2D204c2')
+    const [suiAddress, setSuiAddress] = useState(
+        'f6e5199d2fa1ad3d1c7fbbdb8bab85acf094c4a83aac86eac0e74a201fa45cff',
+    )
     const [ethAddress, setEthAddress] = useState('')
+    const [data, setData] = useState<AllTxsResponse | undefined>()
+
+    console.log(data)
 
     return (
         <DashboardContent maxWidth="xl">
@@ -24,7 +31,14 @@ export default function Page() {
                     onChange={e => setEthAddress(e.target.value)}
                 />
             </Box>
-            <TransactionsTable suiAddress={suiAddress} ethAddress={ethAddress} />
+            {(data?.transactions?.length && (
+                <UserStatsWidgets transactions={data?.transactions || []} />
+            )) || <></>}
+            <TransactionsTable
+                suiAddress={suiAddress}
+                ethAddress={ethAddress}
+                onDataChange={setData}
+            />
         </DashboardContent>
     )
 }

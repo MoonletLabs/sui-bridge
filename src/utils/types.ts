@@ -118,7 +118,7 @@ export type TransactionType = {
     destination_chain: ChainType
     nonce: string
     block_height: string
-    timestamp_ms: string
+    timestamp_ms: number
     token_id: number
     amount: number
     amount_usd: number
@@ -130,6 +130,8 @@ export type TransactionType = {
     }
     from_chain: ChainType
 }
+
+export type AllTxsResponse = { transactions: TransactionType[]; total: number }
 
 export type TransactionHistoryType = {
     tx_hash: string
