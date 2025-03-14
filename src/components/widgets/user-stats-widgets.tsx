@@ -1,155 +1,74 @@
-import React from 'react'
 import {
-    Container,
-    Grid,
+    Box,
     Card,
     CardContent,
-    Typography,
+    Container,
+    Grid,
     Table,
     TableBody,
     TableCell,
     TableHead,
     TableRow,
+    Typography,
 } from '@mui/material'
-import { TransactionType } from 'src/utils/types'
-
-// Helper function to format timestamps into readable dates
-const formatDate = (timestamp_ms: number) => new Date(timestamp_ms).toLocaleString()
+import { formatDistanceToNow } from 'date-fns'
+import React from 'react'
+import { getNetwork } from 'src/hooks/get-network-storage'
+import { endpoints, fetcher } from 'src/utils/axios'
+import { UserStatsType } from 'src/utils/types'
+import useSWR from 'swr'
 
 interface UserStatsWidgetsProps {
-    transactions: TransactionType[]
+    ethAddress?: string
+    suiAddress?: string
 }
 
-const computeStats = (txs: TransactionType[]) => {
-    const totalTransactions = txs.length
-    const totalUsdVolume = txs.reduce((acc, tx) => acc + tx.amount_usd, 0)
-    const avgTransactionUsd = totalTransactions > 0 ? totalUsdVolume / totalTransactions : 0
+const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddress }) => {
+    const network = getNetwork()
 
-    // Median calculation:
-    let medianTransactionUsd = 0
-    if (totalTransactions > 0) {
-        const sortedAmounts = txs.map(tx => tx.amount_usd).sort((a, b) => a - b)
-        if (totalTransactions % 2 === 0) {
-            medianTransactionUsd =
-                (sortedAmounts[totalTransactions / 2 - 1] + sortedAmounts[totalTransactions / 2]) /
-                2
-        } else {
-            medianTransactionUsd = sortedAmounts[Math.floor(totalTransactions / 2)]
-        }
-    }
-
-    // Standard deviation calculation:
-    let stdDeviationUsd = 0
-    if (totalTransactions > 0) {
-        const mean = avgTransactionUsd
-        const variance =
-            txs.reduce((acc, tx) => acc + Math.pow(tx.amount_usd - mean, 2), 0) / totalTransactions
-        stdDeviationUsd = Math.sqrt(variance)
-    }
-
-    // Count transactions by originating chain (from_chain)
-    const chainCounts = txs.reduce(
-        (acc, tx) => {
-            const chain = tx.from_chain
-            acc[chain] = (acc[chain] || 0) + 1
-            return acc
-        },
-        {} as { [chain: string]: number },
+    const { data: stats, isLoading } = useSWR<UserStatsType>(
+        `${endpoints.userStats}?network=${network}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
+        fetcher,
     )
-
-    // Find the most active chain
-    let mostActiveChain = ''
-    let mostActiveChainCount = 0
-    Object.entries(chainCounts).forEach(([chain, count]) => {
-        if (count > mostActiveChainCount) {
-            mostActiveChainCount = count
-            mostActiveChain = chain
-        }
-    })
-
-    // Find the earliest and latest transactions based on timestamp
-    let earliestTx = txs[0]
-    let latestTx = txs[0]
-    txs.forEach(tx => {
-        if (tx.timestamp_ms < earliestTx.timestamp_ms) earliestTx = tx
-        if (tx.timestamp_ms > latestTx.timestamp_ms) latestTx = tx
-    })
-
-    // Identify the largest and smallest transactions by USD amount
-    let largestTx = txs[0]
-    let smallestTx = txs[0]
-    txs.forEach(tx => {
-        if (tx.amount_usd > largestTx.amount_usd) largestTx = tx
-        if (tx.amount_usd < smallestTx.amount_usd) smallestTx = tx
-    })
-
-    // Compute stats per token (group by token name)
-    const tokenStats = txs.reduce(
-        (acc, tx) => {
-            const tokenName = tx.token_info.name
-            if (!acc[tokenName]) {
-                acc[tokenName] = { count: 0, totalAmount: 0, totalUsd: 0 }
-            }
-            acc[tokenName].count += 1
-            acc[tokenName].totalAmount += tx.amount
-            acc[tokenName].totalUsd += tx.amount_usd
-            return acc
-        },
-        {} as { [token: string]: { count: number; totalAmount: number; totalUsd: number } },
-    )
-
-    // Find the most used token
-    let mostUsedToken = ''
-    let mostUsedTokenCount = 0
-    Object.entries(tokenStats).forEach(([token, stats]) => {
-        if (stats.count > mostUsedTokenCount) {
-            mostUsedTokenCount = stats.count
-            mostUsedToken = token
-        }
-    })
-
-    // Number of unique tokens
-    const uniqueTokensCount = Object.keys(tokenStats).length
-
-    // SUI Inflow/Outflow Volume
-    const suiInflowVolume = txs.reduce((acc, tx) => {
-        if (tx.destination_chain === 'SUI') {
-            return acc + tx.amount_usd
-        }
-        return acc
-    }, 0)
-
-    const suiOutflowVolume = txs.reduce((acc, tx) => {
-        if (tx.from_chain === 'SUI') {
-            return acc + tx.amount_usd
-        }
-        return acc
-    }, 0)
-
-    return {
-        totalTransactions,
-        totalUsdVolume,
-        avgTransactionUsd,
-        medianTransactionUsd,
-        stdDeviationUsd,
-        chainCounts,
-        mostActiveChain,
-        mostActiveChainCount,
-        earliestTx,
-        latestTx,
-        largestTx,
-        smallestTx,
-        tokenStats,
-        mostUsedToken,
-        mostUsedTokenCount,
-        uniqueTokensCount,
-        suiInflowVolume,
-        suiOutflowVolume,
+    if (isLoading) {
+        return (
+            <Box
+                sx={{
+                    alignContent: 'center',
+                    alignItems: 'center',
+                    display: 'flex',
+                    flex: 1,
+                    alignSelf: 'center',
+                }}
+            >
+                <Typography variant={'h4'}>Loading data...</Typography>
+            </Box>
+        )
     }
-}
 
-const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ transactions }) => {
-    const stats = computeStats(transactions)
+    if (!stats?.totalTransactions) {
+        return (
+            <Box
+                sx={{
+                    alignContent: 'center',
+                    alignItems: 'center',
+                    display: 'flex',
+                    flex: 1,
+                    alignSelf: 'center',
+                }}
+            >
+                <Typography variant={'h4'}>
+                    {!stats
+                        ? 'Failed to load stats'
+                        : !stats?.totalTransactions
+                          ? 'No stats for current available'
+                          : ''}
+                </Typography>
+            </Box>
+        )
+    }
+
+    console.log(stats)
 
     return (
         <Container sx={{ mt: 4 }}>
@@ -187,7 +106,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ transactions }) => 
                             <Typography variant="h6" gutterBottom>
                                 Chain Activity
                             </Typography>
-                            {Object.entries(stats.chainCounts).map(([chain, count]) => (
+                            {Object.entries(stats.chainCounts).map(([chain, count]: [any, any]) => (
                                 <Typography key={chain}>
                                     {chain}: {count}
                                 </Typography>
@@ -207,10 +126,16 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ transactions }) => 
                                 Transaction Date Range
                             </Typography>
                             <Typography>
-                                Earliest: {formatDate(stats.earliestTx.timestamp_ms)}
+                                Earliest:{' '}
+                                {formatDistanceToNow(stats.earliestTx.timestamp_ms, {
+                                    addSuffix: true,
+                                })}
                             </Typography>
                             <Typography>
-                                Latest: {formatDate(stats.latestTx.timestamp_ms)}
+                                Latest:{' '}
+                                {formatDistanceToNow(stats.latestTx.timestamp_ms, {
+                                    addSuffix: true,
+                                })}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -255,30 +180,32 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ transactions }) => 
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {Object.entries(stats.tokenStats).map(([token, data]) => (
-                                        <TableRow key={token}>
-                                            <TableCell>{token}</TableCell>
-                                            <TableCell align="right">{data.count}</TableCell>
-                                            <TableCell align="right">
-                                                {data.totalAmount.toLocaleString()}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                $
-                                                {data.totalUsd.toLocaleString(undefined, {
-                                                    maximumFractionDigits: 2,
-                                                })}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                $
-                                                {(data.totalUsd / data.count).toLocaleString(
-                                                    undefined,
-                                                    {
+                                    {Object.entries(stats.tokenStats).map(
+                                        ([token, data]: [any, any]) => (
+                                            <TableRow key={token}>
+                                                <TableCell>{token}</TableCell>
+                                                <TableCell align="right">{data.count}</TableCell>
+                                                <TableCell align="right">
+                                                    {data.totalAmount.toLocaleString()}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    $
+                                                    {data.totalUsd.toLocaleString(undefined, {
                                                         maximumFractionDigits: 2,
-                                                    },
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                                    })}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    $
+                                                    {(data.totalUsd / data.count).toLocaleString(
+                                                        undefined,
+                                                        {
+                                                            maximumFractionDigits: 2,
+                                                        },
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ),
+                                    )}
                                 </TableBody>
                             </Table>
                         </CardContent>

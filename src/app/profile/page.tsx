@@ -11,9 +11,6 @@ export default function Page() {
         'f6e5199d2fa1ad3d1c7fbbdb8bab85acf094c4a83aac86eac0e74a201fa45cff',
     )
     const [ethAddress, setEthAddress] = useState('')
-    const [data, setData] = useState<AllTxsResponse | undefined>()
-
-    console.log(data)
 
     return (
         <DashboardContent maxWidth="xl">
@@ -31,14 +28,10 @@ export default function Page() {
                     onChange={e => setEthAddress(e.target.value)}
                 />
             </Box>
-            {(data?.transactions?.length && (
-                <UserStatsWidgets transactions={data?.transactions || []} />
+            {((suiAddress || ethAddress) && (
+                <UserStatsWidgets suiAddress={suiAddress} ethAddress={ethAddress} />
             )) || <></>}
-            <TransactionsTable
-                suiAddress={suiAddress}
-                ethAddress={ethAddress}
-                onDataChange={setData}
-            />
+            <TransactionsTable suiAddress={suiAddress} ethAddress={ethAddress} />
         </DashboardContent>
     )
 }

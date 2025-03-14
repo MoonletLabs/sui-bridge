@@ -133,6 +133,36 @@ export type TransactionType = {
 
 export type AllTxsResponse = { transactions: TransactionType[]; total: number }
 
+export type UserStatsType = {
+    totalTransactions: number
+    totalUsdVolume: number
+    avgTransactionUsd: number
+    medianTransactionUsd: number
+    stdDeviationUsd: number
+    chainCounts: {
+        ETH: number
+        SUI: number
+    }
+    mostActiveChain: string
+    mostActiveChainCount: number
+    earliestTx: TransactionType
+    latestTx: TransactionType
+    largestTx: TransactionType
+    smallestTx: TransactionType
+    tokenStats: {
+        [token: string]: {
+            count: number
+            totalAmount: number
+            totalUsd: number
+        }
+    }
+    mostUsedToken: string
+    mostUsedTokenCount: number
+    uniqueTokensCount: number
+    suiInflowVolume: number
+    suiOutflowVolume: number
+}
+
 export type TransactionHistoryType = {
     tx_hash: string
     txn_sender: string

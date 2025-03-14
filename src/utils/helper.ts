@@ -4,7 +4,13 @@
  */
 
 import { getNetworkConfig, INetworkConfig } from 'src/config/helper'
-import { CardType, NetworkConfigType, TokenRespType, TransactionHistoryType } from './types'
+import {
+    CardType,
+    NetworkConfigType,
+    TokenRespType,
+    TransactionHistoryType,
+    TransactionType,
+} from './types'
 
 // ----------------------------------------------------------------------
 
@@ -304,6 +310,134 @@ export const transformHistory = (data: TransactionHistoryType[]) => {
             }
         })
         ?.sort((a, b) => a.timestamp_ms - b.timestamp_ms)
+}
+
+export const computeStats = (txs: TransactionType[]) => {
+    const totalTransactions = txs.length
+    const totalUsdVolume = txs.reduce((acc, tx) => acc + tx.amount_usd, 0)
+    const avgTransactionUsd = totalTransactions > 0 ? totalUsdVolume / totalTransactions : 0
+
+    // Median calculation:
+    let medianTransactionUsd = 0
+    if (totalTransactions > 0) {
+        const sortedAmounts = txs.map(tx => tx.amount_usd).sort((a, b) => a - b)
+        if (totalTransactions % 2 === 0) {
+            medianTransactionUsd =
+                (sortedAmounts[totalTransactions / 2 - 1] + sortedAmounts[totalTransactions / 2]) /
+                2
+        } else {
+            medianTransactionUsd = sortedAmounts[Math.floor(totalTransactions / 2)]
+        }
+    }
+
+    // Standard deviation calculation:
+    let stdDeviationUsd = 0
+    if (totalTransactions > 0) {
+        const mean = avgTransactionUsd
+        const variance =
+            txs.reduce((acc, tx) => acc + Math.pow(tx.amount_usd - mean, 2), 0) / totalTransactions
+        stdDeviationUsd = Math.sqrt(variance)
+    }
+
+    // Count transactions by originating chain (from_chain)
+    const chainCounts = txs.reduce(
+        (acc, tx) => {
+            const chain = tx.from_chain
+            acc[chain] = (acc[chain] || 0) + 1
+            return acc
+        },
+        {} as { [chain: string]: number },
+    )
+
+    // Find the most active chain
+    let mostActiveChain = ''
+    let mostActiveChainCount = 0
+    Object.entries(chainCounts).forEach(([chain, count]) => {
+        if (count > mostActiveChainCount) {
+            mostActiveChainCount = count
+            mostActiveChain = chain
+        }
+    })
+
+    // Find the earliest and latest transactions based on timestamp
+    let earliestTx = txs[0]
+    let latestTx = txs[0]
+    txs.forEach(tx => {
+        if (tx.timestamp_ms < earliestTx.timestamp_ms) earliestTx = tx
+        if (tx.timestamp_ms > latestTx.timestamp_ms) latestTx = tx
+    })
+
+    // Identify the largest and smallest transactions by USD amount
+    let largestTx = txs[0]
+    let smallestTx = txs[0]
+    txs.forEach(tx => {
+        if (tx.amount_usd > largestTx.amount_usd) largestTx = tx
+        if (tx.amount_usd < smallestTx.amount_usd) smallestTx = tx
+    })
+
+    // Compute stats per token (group by token name)
+    const tokenStats = txs.reduce(
+        (acc, tx) => {
+            const tokenName = tx.token_info.name
+            if (!acc[tokenName]) {
+                acc[tokenName] = { count: 0, totalAmount: 0, totalUsd: 0 }
+            }
+            acc[tokenName].count += 1
+            acc[tokenName].totalAmount += tx.amount
+            acc[tokenName].totalUsd += tx.amount_usd
+            return acc
+        },
+        {} as { [token: string]: { count: number; totalAmount: number; totalUsd: number } },
+    )
+
+    // Find the most used token
+    let mostUsedToken = ''
+    let mostUsedTokenCount = 0
+    Object.entries(tokenStats).forEach(([token, stats]) => {
+        if (stats.count > mostUsedTokenCount) {
+            mostUsedTokenCount = stats.count
+            mostUsedToken = token
+        }
+    })
+
+    // Number of unique tokens
+    const uniqueTokensCount = Object.keys(tokenStats).length
+
+    // SUI Inflow/Outflow Volume
+    const suiInflowVolume = txs.reduce((acc, tx) => {
+        if (tx.destination_chain === 'SUI') {
+            return acc + tx.amount_usd
+        }
+        return acc
+    }, 0)
+
+    const suiOutflowVolume = txs.reduce((acc, tx) => {
+        if (tx.from_chain === 'SUI') {
+            return acc + tx.amount_usd
+        }
+        return acc
+    }, 0)
+
+    return {
+        totalTransactions,
+        totalUsdVolume,
+        avgTransactionUsd,
+        medianTransactionUsd,
+        stdDeviationUsd,
+        chainCounts,
+        mostActiveChain,
+        mostActiveChainCount,
+        earliestTx,
+        latestTx,
+        largestTx,
+        smallestTx,
+        tokenStats,
+        mostUsedToken,
+        mostUsedTokenCount,
+        uniqueTokensCount,
+        suiInflowVolume,
+        suiOutflowVolume,
+    }
 }
 
 export const transformNumberFields = <T extends Record<string, any>>(data: T[]) => {

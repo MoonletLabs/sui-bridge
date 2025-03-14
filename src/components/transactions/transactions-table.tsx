@@ -15,11 +15,9 @@ import { paths } from 'src/routes/paths'
 export function TransactionsTable({
     ethAddress,
     suiAddress,
-    onDataChange,
 }: {
     ethAddress?: string
     suiAddress?: string
-    onDataChange?: (data?: AllTxsResponse) => void
 }) {
     const network = getNetwork()
     const router = useRouter()
@@ -32,10 +30,6 @@ export function TransactionsTable({
         `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
         fetcher,
     )
-
-    useEffect(() => {
-        onDataChange?.(data)
-    }, [data])
 
     useEffect(() => {
         if (data?.total && totalItems !== data?.total) {
