@@ -113,10 +113,53 @@ const numberToFixed = (value: number, decimals: number = 2) => {
 }
 
 export const removePrefix = (tx?: string) => {
+    if (tx === 'undefined') return ''
     let finalTx = tx?.toString() || ''
-    return finalTx?.startsWith('0x') ? finalTx?.slice(2) : finalTx
+    return finalTx?.startsWith('0x') || finalTx?.startsWith('0X') ? finalTx?.slice(2) : finalTx
 }
 
+export function isHexadecimal(str: string): boolean {
+    // This regex allows an optional "0x" prefix and then one or more hexadecimal digits.
+    const hexRegex = /^(0x)?[0-9A-Fa-f]+$/
+    if (!hexRegex.test(str)) return false
+
+    // Remove the "0x" prefix if it exists.
+    const hexDigits = removePrefix(str)
+
+    // Ensure the number of hex digits is even.
+    return hexDigits.length % 2 === 0
+}
+
+const joinSQL = (sql: any, fragments: any[], separator: any) => {
+    if (fragments.length === 0) return sql``
+    return fragments.reduce(
+        (prev, curr, index) => (index === 0 ? curr : sql`${prev}${separator}${curr}`),
+        sql``,
+    )
+}
+
+export const buildConditionalQuery = (
+    sql: any,
+    { suiAddress, ethAddress }: { suiAddress?: string; ethAddress?: string },
+) => {
+    const conditions: any[] = []
+
+    if (suiAddress) {
+        // Condition for suiAddress: sender or recipient must match.
+        conditions.push(
+            sql`(sender_address = decode(${suiAddress}, 'hex') OR recipient_address = decode(${suiAddress}, 'hex'))`,
+        )
+    }
+    if (ethAddress) {
+        // Condition for ethAddress: sender or recipient must match.
+        conditions.push(
+            sql`(sender_address = decode(${ethAddress}, 'hex') OR recipient_address = decode(${ethAddress}, 'hex'))`,
+        )
+    }
+
+    // If both addresses are provided, this will join the two conditions with AND.
+    return conditions.length ? sql`AND (${joinSQL(sql, conditions, sql` AND `)})` : sql``
+}
 // ----------------------------------------------------------------------
 
 function isObject(item: any) {

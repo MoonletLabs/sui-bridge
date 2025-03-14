@@ -12,7 +12,13 @@ import { CustomTable } from '../table/table'
 import { useRouter } from 'src/routes/hooks'
 import { paths } from 'src/routes/paths'
 
-export function TransactionsTable() {
+export function TransactionsTable({
+    ethAddress,
+    suiAddress,
+}: {
+    ethAddress?: string
+    suiAddress?: string
+}) {
     const network = getNetwork()
     const router = useRouter()
     const [page, setPage] = useState(0)
@@ -21,7 +27,7 @@ export function TransactionsTable() {
 
     // Fetch paginated data
     const { data, isLoading } = useSWR<{ transactions: TransactionType[]; total: number }>(
-        `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}`,
+        `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
         fetcher,
     )
 
