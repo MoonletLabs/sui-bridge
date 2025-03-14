@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { TextField, Box } from '@mui/material'
+import { TextField, Box, Typography } from '@mui/material'
 import { TransactionsTable } from 'src/components/transactions/transactions-table'
 import { DashboardContent } from 'src/layouts/dashboard'
 import { AllTxsResponse } from 'src/utils/types'
@@ -29,9 +29,27 @@ export default function Page() {
                 />
             </Box>
             {((suiAddress || ethAddress) && (
-                <UserStatsWidgets suiAddress={suiAddress} ethAddress={ethAddress} />
-            )) || <></>}
-            <TransactionsTable suiAddress={suiAddress} ethAddress={ethAddress} />
+                <>
+                    <UserStatsWidgets suiAddress={suiAddress} ethAddress={ethAddress} />
+                    <TransactionsTable suiAddress={suiAddress} ethAddress={ethAddress} />
+                </>
+            )) || (
+                <>
+                    <Box
+                        sx={{
+                            alignContent: 'center',
+                            alignItems: 'center',
+                            display: 'flex',
+                            flex: 1,
+                            alignSelf: 'center',
+                        }}
+                    >
+                        <Typography variant={'h4'}>
+                            Please select an Ethereum / SUI address
+                        </Typography>
+                    </Box>
+                </>
+            )}
         </DashboardContent>
     )
 }

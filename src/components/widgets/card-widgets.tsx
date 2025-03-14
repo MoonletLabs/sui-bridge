@@ -50,6 +50,7 @@ const CardWidget: React.FC<ICardWidget> = ({
                 display: 'flex',
                 alignItems: 'center',
                 p: 3,
+                borderLeft: isNumber(total) ? `5px solid ${color}` : '',
                 // background: color
                 //     ? `linear-gradient(135deg, ${alpha(color, 0.8)}, ${alpha(color, 0.4)})`
                 //     : '',

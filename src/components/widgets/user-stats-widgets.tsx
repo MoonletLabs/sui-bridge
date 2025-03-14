@@ -1,3 +1,4 @@
+import React from 'react'
 import {
     Box,
     Card,
@@ -12,11 +13,11 @@ import {
     Typography,
 } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
-import React from 'react'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { UserStatsType } from 'src/utils/types'
 import useSWR from 'swr'
+import { Iconify } from '../iconify'
 
 interface UserStatsWidgetsProps {
     ethAddress?: string
@@ -27,9 +28,10 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
     const network = getNetwork()
 
     const { data: stats, isLoading } = useSWR<UserStatsType>(
-        `${endpoints.userStats}?network=${network}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
+        `${endpoints.userStats}?network=${network}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''}`,
         fetcher,
     )
+
     if (isLoading) {
         return (
             <Box
@@ -41,7 +43,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                     alignSelf: 'center',
                 }}
             >
-                <Typography variant={'h4'}>Loading data...</Typography>
+                <Typography variant="h4">Loading data...</Typography>
             </Box>
         )
     }
@@ -57,13 +59,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                     alignSelf: 'center',
                 }}
             >
-                <Typography variant={'h4'}>
-                    {!stats
-                        ? 'Failed to load stats'
-                        : !stats?.totalTransactions
-                          ? 'No stats for current available'
-                          : ''}
-                </Typography>
+                <Typography variant="h4">No stats available for current selection</Typography>
             </Box>
         )
     }
@@ -76,13 +72,20 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                 Bridge Statistics Dashboard
             </Typography>
             <Grid container spacing={3}>
-                {/* Summary Card */}
-                <Grid item xs={12} sm={4}>
-                    <Card elevation={3}>
+                {/* Row 1: Summary (full width) */}
+                <Grid item xs={12}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #3f51b5' }}>
                         <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Summary
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:activity-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#3f51b5"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">Summary</Typography>
+                            </Box>
                             <Typography>Total Transactions: {stats.totalTransactions}</Typography>
                             <Typography>
                                 Total USD Volume: $
@@ -99,13 +102,20 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         </CardContent>
                     </Card>
                 </Grid>
-                {/* Chain Activity Card */}
-                <Grid item xs={12} sm={4}>
-                    <Card elevation={3}>
+                {/* Row 2: Chain Activity & Transaction Date Range */}
+                <Grid item xs={12} sm={6}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #009688' }}>
                         <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Chain Activity
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:trending-up-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#009688"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">Chain Activity</Typography>
+                            </Box>
                             {Object.entries(stats.chainCounts).map(([chain, count]: [any, any]) => (
                                 <Typography key={chain}>
                                     {chain}: {count}
@@ -118,13 +128,19 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         </CardContent>
                     </Card>
                 </Grid>
-                {/* Date Range Card */}
-                <Grid item xs={12} sm={4}>
-                    <Card elevation={3}>
+                <Grid item xs={12} sm={6}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #f44336' }}>
                         <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Transaction Date Range
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:clock-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#f44336"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">Transaction Date Range</Typography>
+                            </Box>
                             <Typography>
                                 Earliest:{' '}
                                 {formatDistanceToNow(stats.earliestTx.timestamp_ms, {
@@ -140,13 +156,20 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         </CardContent>
                     </Card>
                 </Grid>
-                {/* Extreme Values Card */}
+                {/* Row 3: Extreme Transactions & Additional Metrics */}
                 <Grid item xs={12} sm={6}>
-                    <Card elevation={3}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #9c27b0' }}>
                         <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Extreme Transactions
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:bar-chart-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#9c27b0"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">Extreme Transactions</Typography>
+                            </Box>
                             <Typography>
                                 Largest Transaction: $
                                 {stats.largestTx.amount_usd.toLocaleString(undefined, {
@@ -162,13 +185,97 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         </CardContent>
                     </Card>
                 </Grid>
-                {/* Token Stats Table Card */}
                 <Grid item xs={12} sm={6}>
-                    <Card elevation={3}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #607d8b' }}>
                         <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Token Statistics
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:metrics-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#607d8b"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">Additional Metrics</Typography>
+                            </Box>
+                            <Typography>
+                                Median Transaction Value: $
+                                {stats.medianTransactionUsd.toLocaleString(undefined, {
+                                    maximumFractionDigits: 2,
+                                })}
                             </Typography>
+                            <Typography>
+                                Std. Deviation: $
+                                {stats.stdDeviationUsd.toLocaleString(undefined, {
+                                    maximumFractionDigits: 2,
+                                })}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                {/* Row 4: Most Active Entities & SUI Inflow/Outflow */}
+                <Grid item xs={12} sm={6}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #8bc34a' }}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:people-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#8bc34a"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">Most Active Entities</Typography>
+                            </Box>
+                            <Typography>
+                                Most Used Token: {stats.mostUsedToken} ({stats.mostUsedTokenCount})
+                            </Typography>
+                            <Typography>Unique Tokens: {stats.uniqueTokensCount}</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #00bcd4' }}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:swap-horizontal-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#00bcd4"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">SUI Inflow / Outflow</Typography>
+                            </Box>
+                            <Typography>
+                                Inflow Volume (USD): $
+                                {stats.suiInflowVolume.toLocaleString(undefined, {
+                                    maximumFractionDigits: 2,
+                                })}
+                            </Typography>
+                            <Typography>
+                                Outflow Volume (USD): $
+                                {stats.suiOutflowVolume.toLocaleString(undefined, {
+                                    maximumFractionDigits: 2,
+                                })}
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                {/* Row 5: Token Stats Table (full width) */}
+                <Grid item xs={12}>
+                    <Card elevation={3} sx={{ borderLeft: '5px solid #ff9800' }}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Iconify
+                                    icon="eva:list-outline"
+                                    width={24}
+                                    height={24}
+                                    color="#ff9800"
+                                    style={{ marginRight: 8 }}
+                                />
+                                <Typography variant="h6">Token Statistics</Typography>
+                            </Box>
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
@@ -208,64 +315,6 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                     )}
                                 </TableBody>
                             </Table>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                {/* Additional Metrics Card */}
-                <Grid item xs={12} sm={6}>
-                    <Card elevation={3}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Additional Metrics
-                            </Typography>
-                            <Typography>
-                                Median Transaction Value: $
-                                {stats.medianTransactionUsd.toLocaleString(undefined, {
-                                    maximumFractionDigits: 2,
-                                })}
-                            </Typography>
-                            <Typography>
-                                Std. Deviation: $
-                                {stats.stdDeviationUsd.toLocaleString(undefined, {
-                                    maximumFractionDigits: 2,
-                                })}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                {/* Most Active Entities Card */}
-                <Grid item xs={12} sm={6}>
-                    <Card elevation={3}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Most Active Entities
-                            </Typography>
-                            <Typography>
-                                Most Used Token: {stats.mostUsedToken} ({stats.mostUsedTokenCount})
-                            </Typography>
-                            <Typography>Unique Tokens: {stats.uniqueTokensCount}</Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                {/* SUI Inflow/Outflow Volume Card */}
-                <Grid item xs={12} sm={6}>
-                    <Card elevation={3}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                SUI Inflow / Outflow Volume
-                            </Typography>
-                            <Typography>
-                                Inflow Volume (USD): $
-                                {stats.suiInflowVolume.toLocaleString(undefined, {
-                                    maximumFractionDigits: 2,
-                                })}
-                            </Typography>
-                            <Typography>
-                                Outflow Volume (USD): $
-                                {stats.suiOutflowVolume.toLocaleString(undefined, {
-                                    maximumFractionDigits: 2,
-                                })}
-                            </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
