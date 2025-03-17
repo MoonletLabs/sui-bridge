@@ -77,7 +77,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         title="Bridge Summary"
                     >
                         <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
+                            <Grid item xs={12} sm={4}>
                                 <KeyValue
                                     title="Total Transactions:"
                                     content={stats.totalTransactions}
@@ -95,17 +95,8 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                     title="Outlflow Volume:"
                                     content={fNumber(stats.suiOutflowVolume, { prefix: '$' })}
                                 />
-                                <KeyValue
-                                    title="From SUI:"
-                                    content={stats.chainCounts['SUI'] || '-'}
-                                />
-
-                                <KeyValue
-                                    title="From Ethereum:"
-                                    content={stats.chainCounts['ETH'] || '-'}
-                                />
                             </Grid>
-                            <Grid item xs={12} sm={6}>
+                            <Grid item xs={12} sm={4}>
                                 <KeyValue
                                     title="Largest Transaction:"
                                     content={fNumber(stats.largestTx.amount_usd, { prefix: '$' })}
@@ -124,7 +115,17 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                     title="Median Transaction:"
                                     content={fNumber(stats.medianTransactionUsd, { prefix: '$' })}
                                 />
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                                <KeyValue
+                                    title="Bridges From SUI:"
+                                    content={stats.chainCounts['SUI'] || '-'}
+                                />
 
+                                <KeyValue
+                                    title="Bridges From Ethereum:"
+                                    content={stats.chainCounts['ETH'] || '-'}
+                                />
                                 <KeyValue
                                     title="Earlies Transaction:"
                                     content={formatDistanceToNow(stats.earliestTx.timestamp_ms, {

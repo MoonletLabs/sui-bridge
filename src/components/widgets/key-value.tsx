@@ -1,7 +1,5 @@
-import { Card, CardContent, Box, Typography, Stack } from '@mui/material'
-import { Iconify } from '../iconify'
+import { Box, Typography } from '@mui/material'
 
-// Reusable ProfileCard component
 interface KeyValueProps {
     title: string
     content: string | React.ReactNode
@@ -9,17 +7,20 @@ interface KeyValueProps {
 
 export const KeyValue: React.FC<KeyValueProps> = ({ title, content }) => {
     return (
-        <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            marginTop={1}
-            sx={{ borderBottom: `1px solid grey` }}
+        <Box
+            sx={theme => ({
+                py: 1,
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+            })}
         >
-            <Typography variant="subtitle2">{title}</Typography>
+            <Typography variant="subtitle2" color="text.secondary">
+                {title}
+            </Typography>
             <Typography variant="subtitle1" fontWeight="bold" color="primary">
                 {content}
             </Typography>
-        </Stack>
+        </Box>
     )
 }
