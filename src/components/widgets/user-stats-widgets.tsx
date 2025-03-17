@@ -127,7 +127,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                     content={stats.chainCounts['ETH'] || '-'}
                                 />
                                 <KeyValue
-                                    title="Earlies Transaction:"
+                                    title="Oldest Transaction:"
                                     content={formatDistanceToNow(stats.earliestTx.timestamp_ms, {
                                         addSuffix: true,
                                     })}
