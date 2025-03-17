@@ -46,6 +46,7 @@ const CardWidget: React.FC<ICardWidget> = ({
     }
     return (
         <Card
+            elevation={3}
             sx={{
                 display: 'flex',
                 alignItems: 'center',

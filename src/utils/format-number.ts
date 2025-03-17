@@ -18,7 +18,7 @@ function processInput(inputValue: InputNumberValue): number | null {
 
 // ----------------------------------------------------------------------
 
-export function fNumber(inputValue: InputNumberValue, options?: Options) {
+export function fNumber(inputValue: InputNumberValue, options?: Options & { prefix?: string }) {
     const locale = DEFAULT_LOCALE
 
     const number = processInput(inputValue)
@@ -36,6 +36,10 @@ export function fNumber(inputValue: InputNumberValue, options?: Options) {
             maximumFractionDigits: 5,
             ...options,
         }).format(number)
+    }
+
+    if (options?.prefix) {
+        return Number(fm) === 0 ? '-' : `${options.prefix}${fm}`
     }
 
     return fm
