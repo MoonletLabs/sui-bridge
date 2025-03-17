@@ -22,6 +22,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             sx={{
                 borderLeft: `4px solid ${borderColor}`,
                 borderRadius: 2,
+                overflow: 'scroll',
                 ...sx,
             }}
         >

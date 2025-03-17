@@ -35,15 +35,15 @@ export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: N
               },
               {
                   ticker: 'WBTC',
-                  name: 'Bitcoin',
+                  name: 'Wrapped Bitcoin',
                   color: '#f7941a',
                   icon: '/assets/icons/brands/btc.svg',
               },
               {
                   ticker: 'WLBTC',
-                  name: 'Bitcoin',
+                  name: 'Lombard Staked BTC',
                   color: '#f7941a',
-                  icon: '/assets/icons/brands/btc.svg',
+                  icon: '/assets/icons/brands/lbtc.png',
               },
               {
                   ticker: 'USDT',

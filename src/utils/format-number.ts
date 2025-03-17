@@ -26,7 +26,7 @@ export function fNumber(inputValue: InputNumberValue, options?: Options & { pref
 
     let fm = new Intl.NumberFormat(locale.code, {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: number > 10_000 ? 0 : 2,
         ...options,
     }).format(number)
 
