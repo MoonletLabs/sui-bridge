@@ -41,6 +41,22 @@ export function TransactionsTable({
         router.push(`${paths.transactions.root}/${tx}`)
     }
 
+    const onNavigateProfile = (opt: { ethAddress?: string; suiAddress?: string }) => {
+        const { ethAddress, suiAddress } = opt
+        if (!ethAddress && !suiAddress) {
+            return
+        }
+
+        let query = ''
+        if (ethAddress) {
+            query += `ethAddress=${ethAddress}`
+        }
+        if (suiAddress) {
+            query += `suiAddress=${suiAddress}`
+        }
+        router.push(`${paths.profile.root}?${query}`)
+    }
+
     return (
         <Box>
             <CustomTable
@@ -66,7 +82,12 @@ export function TransactionsTable({
                 }
                 rowHeight={85}
                 RowComponent={props => (
-                    <ActivitiesRow {...props} network={network} onNavigateTx={onNavigateTx} />
+                    <ActivitiesRow
+                        {...props}
+                        network={network}
+                        onNavigateTx={onNavigateTx}
+                        onNavigateProfile={onNavigateProfile}
+                    />
                 )}
                 pagination={{
                     count: totalItems,
@@ -83,7 +104,8 @@ const ActivitiesRow: React.FC<{
     row: TransactionType
     network: NETWORK
     onNavigateTx: (tx: string) => void
-}> = ({ row, network, onNavigateTx }) => {
+    onNavigateProfile: (opt: { ethAddress?: string; suiAddress?: string }) => void
+}> = ({ row, network, onNavigateTx, onNavigateProfile }) => {
     const relativeTime = formatDistanceToNow(Number(row.timestamp_ms), { addSuffix: true })
     const isInflow = row.destination_chain === 'SUI'
 
@@ -128,40 +150,75 @@ const ActivitiesRow: React.FC<{
 
             {/* Sender with Improved Visibility */}
             <TableCell>
-                <Link
-                    href={formatExplorerUrl({
-                        network,
-                        address: row.sender_address,
-                        isAccount: true,
-                        chain: row.from_chain,
-                    })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    underline="hover"
-                    color="primary"
-                    fontWeight="bold"
-                >
-                    {truncateAddress(row.sender_address)}
-                </Link>
+                <Box sx={{ display: 'flex' }}>
+                    <Link
+                        href={formatExplorerUrl({
+                            network,
+                            address: row.sender_address,
+                            isAccount: true,
+                            chain: row.from_chain,
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        underline="hover"
+                        color="primary"
+                        fontWeight="bold"
+                    >
+                        {truncateAddress(row.sender_address)}
+                    </Link>
+                    <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        sx={{ marginLeft: 2, cursor: 'pointer' }}
+                        onClick={() =>
+                            onNavigateProfile(
+                                !isInflow
+                                    ? { suiAddress: row.sender_address }
+                                    : { ethAddress: row.sender_address },
+                            )
+                        }
+                    >
+                        <Iconify icon="solar:arrow-right-up-outline" />
+                    </Box>
+                </Box>
             </TableCell>
 
             {/* Recipient with Improved Visibility */}
             <TableCell>
-                <Link
-                    href={formatExplorerUrl({
-                        network,
-                        address: row.recipient_address,
-                        isAccount: true,
-                        chain: isInflow ? 'SUI' : 'ETH',
-                    })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    underline="hover"
-                    color="primary"
-                    fontWeight="bold"
-                >
-                    {truncateAddress(row.recipient_address)}
-                </Link>
+                <Box sx={{ display: 'flex' }}>
+                    <Link
+                        href={formatExplorerUrl({
+                            network,
+                            address: row.recipient_address,
+                            isAccount: true,
+                            chain: isInflow ? 'SUI' : 'ETH',
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        underline="hover"
+                        color="primary"
+                        fontWeight="bold"
+                    >
+                        {truncateAddress(row.recipient_address)}
+                    </Link>
+
+                    <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        sx={{ marginLeft: 2, cursor: 'pointer' }}
+                        onClick={() =>
+                            onNavigateProfile(
+                                isInflow
+                                    ? { suiAddress: row.recipient_address }
+                                    : { ethAddress: row.recipient_address },
+                            )
+                        }
+                    >
+                        <Iconify icon="solar:arrow-right-up-outline" />
+                    </Box>
+                </Box>
             </TableCell>
 
             {/* Amount with Token Icon */}

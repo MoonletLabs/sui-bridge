@@ -103,7 +103,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         </Grid>
                         <Grid item xs={12} sm={4}>
                             <KeyValue
-                                title="Avg Brdige Value:"
+                                title="Avg Bridge Value:"
                                 content={fNumber(stats.avgTransactionUsd, { prefix: '$' })}
                             />
                             <KeyValue

@@ -1,11 +1,8 @@
 import { Box, Card } from '@mui/material'
-import { alpha } from '@mui/material/styles'
 import { isNumber } from '@mui/x-data-grid/internals'
 import React from 'react'
 import AnimatedNumbers from 'react-animated-numbers'
 import { Iconify } from '../iconify'
-import { SvgColor } from '../svg-color'
-import { CONFIG } from 'src/config-global'
 
 interface ICardWidget {
     title: React.ReactNode

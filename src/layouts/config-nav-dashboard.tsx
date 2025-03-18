@@ -53,7 +53,7 @@ export const navData = [
         ],
     },
 
-    // {
-    //     items: [{ title: 'Profile', path: paths.profile.root, icon: ICONS.course }],
-    // },
+    {
+        items: [{ title: 'Profile', path: paths.profile.root, icon: ICONS.course }],
+    },
 ]
