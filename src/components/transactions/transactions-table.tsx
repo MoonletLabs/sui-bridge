@@ -249,13 +249,17 @@ const ActivitiesRow: React.FC<{
                     {relativeTime}
                 </Typography>
             </TableCell>
-            <TableCell
-                onClick={() => onNavigateTx(row.tx_hash)}
-                style={{ cursor: 'pointer', textAlign: 'center', verticalAlign: 'middle' }}
-            >
-                <Box display="flex" alignItems="center" justifyContent="center">
+            <TableCell style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                <Link
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    sx={{ marginLeft: 1 }}
+                    color="inherit"
+                    href={`${paths.transactions.root}/${row.tx_hash}`}
+                >
                     <Iconify icon="solar:eye-bold" />
-                </Box>
+                </Link>
             </TableCell>
         </TableRow>
     )
