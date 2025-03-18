@@ -44,7 +44,7 @@ export function NavVertical({
             )}
 
             <Scrollbar fillContent>
-                <NavSectionVertical data={data} sx={{ px: 2, flex: '1 1 auto' }} {...other} />
+                <NavSectionVertical data={data} sx={{ px: 0.5, flex: '1 1 auto' }} {...other} />
             </Scrollbar>
         </>
     )
