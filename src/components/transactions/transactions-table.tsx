@@ -105,7 +105,7 @@ const ActivitiesRow: React.FC<{
                     <img
                         src={`/assets/icons/brands/eth.svg`}
                         alt={row.from_chain}
-                        style={{ width: 28, height: 28 }}
+                        style={{ width: 24, height: 24 }}
                     />
 
                     <Iconify
@@ -121,7 +121,7 @@ const ActivitiesRow: React.FC<{
                     <img
                         src={`/assets/icons/brands/sui.svg`}
                         alt={row.destination_chain}
-                        style={{ width: 28, height: 28 }}
+                        style={{ width: 24, height: 24 }}
                     />
                 </Box>
             </TableCell>

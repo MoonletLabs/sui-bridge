@@ -139,9 +139,13 @@ export type UserStatsType = {
     avgTransactionUsd: number
     medianTransactionUsd: number
     stdDeviationUsd: number
-    chainCounts: {
-        ETH: number
-        SUI: number
+    chainStats: {
+        [chain: string]: {
+            count: number
+            differentTokensCount: number
+            totalUsd: number
+            avgUsd: number
+        }
     }
     mostActiveChain: string
     mostActiveChainCount: number

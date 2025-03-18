@@ -339,26 +339,6 @@ export const computeStats = (txs: TransactionType[]) => {
         stdDeviationUsd = Math.sqrt(variance)
     }
 
-    // Count transactions by originating chain (from_chain)
-    const chainCounts = txs.reduce(
-        (acc, tx) => {
-            const chain = tx.from_chain
-            acc[chain] = (acc[chain] || 0) + 1
-            return acc
-        },
-        {} as { [chain: string]: number },
-    )
-
-    // Find the most active chain
-    let mostActiveChain = ''
-    let mostActiveChainCount = 0
-    Object.entries(chainCounts).forEach(([chain, count]) => {
-        if (count > mostActiveChainCount) {
-            mostActiveChainCount = count
-            mostActiveChain = chain
-        }
-    })
-
     // Find the earliest and latest transactions based on timestamp
     let earliestTx = txs[0]
     let latestTx = txs[0]
@@ -418,15 +398,53 @@ export const computeStats = (txs: TransactionType[]) => {
         return acc
     }, 0)
 
+    // Compute stats per chain (group by originating chain - from_chain)
+    const chainStats = txs.reduce(
+        (acc, tx) => {
+            const chain = tx.from_chain
+            if (!acc[chain]) {
+                acc[chain] = {
+                    count: 0,
+                    differentTokens: [],
+                    totalUsd: 0,
+                    avgUsd: 0,
+                    differentTokensCount: 0,
+                }
+            }
+            acc[chain].count += 1
+            acc[chain].differentTokens = [
+                ...(acc?.[chain].differentTokens || []),
+                tx.token_info.name,
+            ]
+            acc[chain].totalUsd += tx.amount_usd
+            return acc
+        },
+        {} as {
+            [chain: string]: {
+                count: number
+                differentTokens?: string[]
+                differentTokensCount: number
+                totalUsd: number
+                avgUsd: number
+            }
+        },
+    )
+
+    // Compute the average USD value per chain
+    Object.entries(chainStats).forEach(([chain, stats]) => {
+        stats.avgUsd = stats.count > 0 ? stats.totalUsd / stats.count : 0
+        stats.differentTokensCount = new Set(stats?.differentTokens || []).size
+
+        delete stats.differentTokens
+    })
+
     return {
         totalTransactions,
         totalUsdVolume,
         avgTransactionUsd,
         medianTransactionUsd,
         stdDeviationUsd,
-        chainCounts,
-        mostActiveChain,
-        mostActiveChainCount,
+        chainStats,
         earliestTx,
         latestTx,
         largestTx,
