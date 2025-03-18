@@ -161,7 +161,9 @@ export default function Page() {
                         style={{ marginRight: 8 }}
                     />
 
-                    <Typography variant="h4">Please select an Ethereum / SUI address</Typography>
+                    <Typography variant="h4">
+                        Please select a Sui address or an Ethereum address.
+                    </Typography>
                 </Box>
             )}
         </DashboardContent>
