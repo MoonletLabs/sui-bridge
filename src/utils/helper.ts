@@ -11,6 +11,7 @@ import {
     TransactionHistoryType,
     TransactionType,
 } from './types'
+import { paths } from 'src/routes/paths'
 
 // ----------------------------------------------------------------------
 
@@ -571,4 +572,21 @@ export const calculateCardsTotals = (
             ),
         },
     ]
+}
+
+export const buildProfileQuery = (opt: { ethAddress?: string; suiAddress?: string }) => {
+    const { ethAddress, suiAddress } = opt
+    if (!ethAddress && !suiAddress) {
+        return
+    }
+
+    let query = ''
+    if (ethAddress) {
+        query += `ethAddress=${ethAddress}`
+    }
+    if (suiAddress) {
+        query += `suiAddress=${suiAddress}`
+    }
+
+    return `${paths.profile.root}?${query}`
 }

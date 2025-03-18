@@ -3,14 +3,15 @@ import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
+import { useRouter } from 'src/routes/hooks'
+import { paths } from 'src/routes/paths'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
+import { buildProfileQuery } from 'src/utils/helper'
 import { AllTxsResponse, getTokensList, TransactionType } from 'src/utils/types'
 import useSWR from 'swr'
 import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
-import { useRouter } from 'src/routes/hooks'
-import { paths } from 'src/routes/paths'
 
 export function TransactionsTable({
     ethAddress,
@@ -41,22 +42,6 @@ export function TransactionsTable({
         router.push(`${paths.transactions.root}/${tx}`)
     }
 
-    const onNavigateProfile = (opt: { ethAddress?: string; suiAddress?: string }) => {
-        const { ethAddress, suiAddress } = opt
-        if (!ethAddress && !suiAddress) {
-            return
-        }
-
-        let query = ''
-        if (ethAddress) {
-            query += `ethAddress=${ethAddress}`
-        }
-        if (suiAddress) {
-            query += `suiAddress=${suiAddress}`
-        }
-        router.push(`${paths.profile.root}?${query}`)
-    }
-
     return (
         <Box>
             <CustomTable
@@ -82,12 +67,7 @@ export function TransactionsTable({
                 }
                 rowHeight={85}
                 RowComponent={props => (
-                    <ActivitiesRow
-                        {...props}
-                        network={network}
-                        onNavigateTx={onNavigateTx}
-                        onNavigateProfile={onNavigateProfile}
-                    />
+                    <ActivitiesRow {...props} network={network} onNavigateTx={onNavigateTx} />
                 )}
                 pagination={{
                     count: totalItems,
@@ -104,8 +84,7 @@ const ActivitiesRow: React.FC<{
     row: TransactionType
     network: NETWORK
     onNavigateTx: (tx: string) => void
-    onNavigateProfile: (opt: { ethAddress?: string; suiAddress?: string }) => void
-}> = ({ row, network, onNavigateTx, onNavigateProfile }) => {
+}> = ({ row, network, onNavigateTx }) => {
     const relativeTime = formatDistanceToNow(Number(row.timestamp_ms), { addSuffix: true })
     const isInflow = row.destination_chain === 'SUI'
 
@@ -166,21 +145,17 @@ const ActivitiesRow: React.FC<{
                     >
                         {truncateAddress(row.sender_address)}
                     </Link>
-                    <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        sx={{ marginLeft: 2, cursor: 'pointer' }}
-                        onClick={() =>
-                            onNavigateProfile(
-                                !isInflow
-                                    ? { suiAddress: row.sender_address }
-                                    : { ethAddress: row.sender_address },
-                            )
-                        }
+                    <Link
+                        sx={{ marginLeft: 1 }}
+                        color="inherit"
+                        href={buildProfileQuery(
+                            !isInflow
+                                ? { suiAddress: row.sender_address }
+                                : { ethAddress: row.sender_address },
+                        )}
                     >
                         <Iconify icon="solar:arrow-right-up-outline" />
-                    </Box>
+                    </Link>
                 </Box>
             </TableCell>
 
@@ -203,21 +178,17 @@ const ActivitiesRow: React.FC<{
                         {truncateAddress(row.recipient_address)}
                     </Link>
 
-                    <Box
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        sx={{ marginLeft: 2, cursor: 'pointer' }}
-                        onClick={() =>
-                            onNavigateProfile(
-                                isInflow
-                                    ? { suiAddress: row.recipient_address }
-                                    : { ethAddress: row.recipient_address },
-                            )
-                        }
+                    <Link
+                        sx={{ marginLeft: 1 }}
+                        color="inherit"
+                        href={buildProfileQuery(
+                            isInflow
+                                ? { suiAddress: row.recipient_address }
+                                : { ethAddress: row.recipient_address },
+                        )}
                     >
                         <Iconify icon="solar:arrow-right-up-outline" />
-                    </Box>
+                    </Link>
                 </Box>
             </TableCell>
 
