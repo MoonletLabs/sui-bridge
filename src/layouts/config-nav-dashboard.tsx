@@ -48,6 +48,8 @@ export const navData = [
     },
 
     {
-        items: [{ title: 'Transactions', path: paths.transactions.root, icon: ICONS.parameter }],
+        items: [
+            { title: 'Bridge Transactions', path: paths.transactions.root, icon: ICONS.parameter },
+        ],
     },
 ]
