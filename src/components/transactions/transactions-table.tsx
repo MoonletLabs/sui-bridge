@@ -53,7 +53,7 @@ export function TransactionsTable() {
                     (
                         <Box display="flex" alignItems="center" justifyContent="space-between">
                             <Typography variant="h6" fontWeight="bold" color="primary">
-                                Latest Transactions
+                                Bridge Latest Transactions
                             </Typography>
                         </Box>
                     ) as any
