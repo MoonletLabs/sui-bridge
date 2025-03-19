@@ -1,6 +1,6 @@
 import {
     Box,
-    Container,
+    CircularProgress,
     Grid,
     Table,
     TableBody,
@@ -16,9 +16,9 @@ import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
 import { getTokensList, UserStatsType } from 'src/utils/types'
 import useSWR from 'swr'
+import { Iconify } from '../iconify'
 import { KeyValue } from './key-value'
 import { ProfileCard } from './profile-card'
-import { Iconify } from '../iconify'
 
 interface UserStatsWidgetsProps {
     ethAddress?: string
@@ -44,7 +44,9 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                     alignSelf: 'center',
                 }}
             >
-                <Typography variant="h4">Loading data...</Typography>
+                <CircularProgress size={25} sx={{ marginRight: 1 }} />
+
+                <Typography variant="h5">Fetching stats...</Typography>
             </Box>
         )
     }
