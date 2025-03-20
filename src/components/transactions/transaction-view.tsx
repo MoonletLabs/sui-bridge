@@ -89,7 +89,7 @@ export function TransactionView({ tx }: { tx: string }) {
                             alignItems: { md: 'center' },
                             flexDirection: 'column',
                             width: '100%',
-                            overflow: 'scroll',
+                            overflow: 'auto',
                             flex: 1,
                         }}
                     >
