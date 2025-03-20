@@ -1,0 +1,29 @@
+---
+version: "3.5"
+
+services:
+  dashboard:
+    image: ${DASHBOARD_IMAGE}
+    secrets:
+      - source: SUI_BRIDGE_POSTGRES_URL_V2
+        target: /run/secrets/sui-bridge-postgres-url
+      - source: SUI_BRIDGE_TESTNET_POSTGRES_URL
+        target: /run/secrets/sui-bridge-testnet-postgres-url
+    networks:
+      - net
+      - load_balancer_net
+    deploy:
+      mode: replicated
+      replicas: 1
+
+networks:
+  net:
+    driver: overlay
+  load_balancer_net:
+    external: true
+
+secrets:
+  SUI_BRIDGE_POSTGRES_URL_V2:
+    external: true
+  SUI_BRIDGE_TESTNET_POSTGRES_URL:
+    external: true
