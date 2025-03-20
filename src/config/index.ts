@@ -12,10 +12,6 @@ if (typeof document !== 'undefined') {
         CONFIG = CONFIG_LOCAL
     }
 
-    if (/^(.*\.)?[^.]+\.cloud$/.test(hostname)) {
-        CONFIG = CONFIG_PROD
-    }
-
     if (/^(.*\.)?[^.]+\.dev$/.test(hostname)) {
         CONFIG = CONFIG_DEV
     }
