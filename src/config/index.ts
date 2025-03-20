@@ -13,8 +13,11 @@ if (typeof document !== 'undefined') {
     }
 
     if (/^(.*\.)?[^.]+\.cloud$/.test(hostname)) {
-        console.log('is_prod')
         CONFIG = CONFIG_PROD
+    }
+
+    if (/^(.*\.)?[^.]+\.dev$/.test(hostname)) {
+        CONFIG = CONFIG_DEV
     }
 }
 
