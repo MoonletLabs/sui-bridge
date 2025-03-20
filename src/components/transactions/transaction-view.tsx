@@ -1,26 +1,24 @@
 import {
     Timeline,
-    TimelineItem,
-    TimelineSeparator,
-    TimelineDot,
     TimelineConnector,
     TimelineContent,
+    TimelineDot,
+    TimelineItem,
+    TimelineSeparator,
 } from '@mui/lab'
-import { Card, CardHeader, Box, Typography, Stack, Divider, Link, Grid } from '@mui/material'
-import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
-import { endpoints, fetcher } from 'src/utils/axios'
-import { fDateTime } from 'src/utils/format-time'
-import { TransactionType, TransactionHistoryType, getTokensList } from 'src/utils/types'
-import useSWR from 'swr'
-import { Iconify } from '../iconify'
-import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
-import { fNumber } from 'src/utils/format-number'
+import { Box, Card, CardHeader, Divider, Grid, Link, Stack, Typography } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
 import Loading from 'src/app/loading'
-import { NotFoundView } from 'src/sections/error'
+import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
+import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
 import { useRouter } from 'src/routes/hooks'
-import { paths } from 'src/routes/paths'
-import { buildProfileQuery, buildQuery } from 'src/utils/helper'
+import { endpoints, fetcher } from 'src/utils/axios'
+import { fNumber } from 'src/utils/format-number'
+import { fDateTime } from 'src/utils/format-time'
+import { buildProfileQuery } from 'src/utils/helper'
+import { getTokensList, TransactionHistoryType, TransactionType } from 'src/utils/types'
+import useSWR from 'swr'
+import { Iconify } from '../iconify'
 
 export function TransactionView({ tx }: { tx: string }) {
     const network = getNetwork()
