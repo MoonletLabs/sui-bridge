@@ -136,10 +136,18 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         <TableHead>
                             <TableRow>
                                 <TableCell sx={{ width: '20%' }}>Flow</TableCell>
-                                <TableCell align="right">Bridges</TableCell>
-                                <TableCell align="right">Total USD</TableCell>
-                                <TableCell align="right">Avg USD</TableCell>
-                                <TableCell align="right">Different Tokens</TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Bridges
+                                </TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Total USD
+                                </TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Avg USD
+                                </TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Different Tokens
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -165,7 +173,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                                 },
                                             }}
                                         >
-                                            <TableCell sx={{ minWidth: { xs: 180 } }}>
+                                            <TableCell sx={{ minWidth: { xs: 200 } }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                     <img
                                                         src={`/assets/icons/brands/eth.svg`}
@@ -211,7 +219,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell align="right">
+                                            <TableCell align="right" sx={{ minWidth: { xs: 120 } }}>
                                                 <Typography variant="body2" fontWeight="bold">
                                                     {fNumber(data.totalUsd, { prefix: '$' })}
                                                 </Typography>
@@ -221,7 +229,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                                     {fNumber(data.avgUsd, { prefix: '$' })}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell align="right">
+                                            <TableCell align="right" sx={{ minWidth: { xs: 150 } }}>
                                                 <Typography variant="body2" fontWeight="bold">
                                                     {fNumber(data.differentTokensCount)}
                                                 </Typography>
@@ -245,10 +253,18 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                         <TableHead>
                             <TableRow>
                                 <TableCell sx={{ width: '20%' }}>Token</TableCell>
-                                <TableCell align="right">Bridges</TableCell>
-                                <TableCell align="right">Total USD</TableCell>
-                                <TableCell align="right">Avg USD</TableCell>
-                                <TableCell align="right">Total Amount</TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Bridges
+                                </TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Total USD
+                                </TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Avg USD
+                                </TableCell>
+                                <TableCell sx={{ width: '20%' }} align="right">
+                                    Total Amount
+                                </TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -264,7 +280,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                         },
                                     }}
                                 >
-                                    <TableCell sx={{ minWidth: { xs: 180 } }}>
+                                    <TableCell sx={{ minWidth: { xs: 200 } }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <img
                                                 src={
@@ -289,7 +305,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                         </Typography>
                                     </TableCell>
 
-                                    <TableCell align="right">
+                                    <TableCell align="right" sx={{ minWidth: { xs: 120 } }}>
                                         <Typography variant="body2" fontWeight="bold">
                                             {fNumber(data.totalUsd, { prefix: '$' })}
                                         </Typography>
@@ -301,7 +317,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                             })}
                                         </Typography>
                                     </TableCell>
-                                    <TableCell align="center">
+                                    <TableCell align="center" sx={{ minWidth: { xs: 150 } }}>
                                         <Box
                                             sx={{
                                                 display: 'flex',
