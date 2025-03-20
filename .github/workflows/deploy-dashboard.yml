@@ -78,7 +78,7 @@ jobs:
           portainer_access_token: ${{ secrets.PORTAINER_ACCESS_TOKEN }}
           endpoint: development
           stack_name: ${{ env.STACK_NAME }}
-          compose_file: ${{ env.DEPLOYMENT_PATH }}/dashboard.yml
+          compose_file: ${{ env.DEPLOYMENT_PATH }}/dashboard-dev.yml
           env_file: ${{ env.DEPLOYMENT_PATH }}/${{ env.ENV_NAME_SHORT }}.env
 
 
