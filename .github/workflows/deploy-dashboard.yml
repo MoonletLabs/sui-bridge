@@ -53,12 +53,59 @@ jobs:
       - name: Push image
         run: |
           docker push $GITHUB_IMAGE
+  
+  deploy-dev:
+    name: Deploy dev
+    runs-on: ubuntu-latest
+    needs: build
+
+    env:
+      ENV_NAME_SHORT: dev # TODO: change to dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update image name in env file
+        run: |
+          ed -s ${{ env.DEPLOYMENT_PATH }}/${{ env.ENV_NAME_SHORT }}.env <<< w
+          echo "${{ env.IMAGE_ENV_VAR }}=$GITHUB_IMAGE" >> ${{ env.DEPLOYMENT_PATH }}/${{ env.ENV_NAME_SHORT }}.env
+
+      - name: Deploy in swarm
+        uses: Moonlet/portainer-swarm-deploy-action@main
+        with:
+          portainer_url: https://portainer.moonlet.cloud
+          portainer_access_token: ${{ secrets.PORTAINER_ACCESS_TOKEN }}
+          endpoint: development
+          stack_name: ${{ env.STACK_NAME }}
+          compose_file: ${{ env.DEPLOYMENT_PATH }}/dashboard.yml
+          env_file: ${{ env.DEPLOYMENT_PATH }}/${{ env.ENV_NAME_SHORT }}.env
+
+  
+  manual-approval:
+    name: Deploy Prod Approve
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    if: success() # Only proceed if terraform-plan job succeeds
+    
+    permissions:
+      issues: write
+
+    steps:
+      - name: Await Manual Approval for Prod deploy
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: Moonlet # Replace with GitHub usernames, with the free version you can only have an issue assigned to one username
+          minimum-approvals: 1
+          issue-title: "Manual Approval Required for prod deploy"
+          issue-body: "Please approve or deny the deployment."
 
   deploy-prod:
     name: Deploy prod
     runs-on: ubuntu-latest
     environment: Production
-    needs: build
+    needs: manual-approval
 
     env:
       ENV_NAME_SHORT: prod
