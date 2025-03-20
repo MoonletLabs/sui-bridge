@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import {
     buildConditionalQuery,
+    computeStats,
     isHexadecimal,
     removePrefix,
     transformTransfers,
@@ -13,9 +14,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         const networkConfig = getNetworkConfig({ req })
 
-        const offset = req.query.offset || 0
-        const limit = Math.min(Number(req.query.limit) || 100, 100) // max 100 items
-
         const suiAddress = removePrefix(req.query.suiAddress?.toString() || '')
         const ethAddress = removePrefix(req.query.ethAddress?.toString() || '')
 
@@ -26,6 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             sendError(res, {
                 code: 400,
                 message: 'you must provide valid addresses',
+            })
+            return
+        }
+
+        if (!suiAddress && !ethAddress) {
+            sendError(res, {
+                code: 400,
+                message: 'you must provide at least one valid address',
             })
             return
         }
@@ -48,19 +54,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   amount
                 FROM token_transfer_data 
                 WHERE 
-                  is_finalized = true ${conditionalQuery}
-                ORDER BY timestamp_ms DESC 
-                OFFSET ${offset} LIMIT ${limit}`
+                  is_finalized = true ${conditionalQuery}`
 
-        const queryCount = await sql`
-                SELECT COUNT(*) 
-                FROM token_transfer_data 
-                WHERE is_finalized = true ${conditionalQuery}`
-
-        sendReply(res, {
-            transactions: transformTransfers(networkConfig, query as any[]),
-            total: Number(queryCount?.[0]?.count),
-        })
+        sendReply(res, computeStats(transformTransfers(networkConfig, query as any[]) as any[]))
     } catch (error) {
         console.log({ error })
         sendError(res, error)

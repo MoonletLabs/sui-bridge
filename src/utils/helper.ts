@@ -4,7 +4,14 @@
  */
 
 import { getNetworkConfig, INetworkConfig } from 'src/config/helper'
-import { CardType, NetworkConfigType, TokenRespType, TransactionHistoryType } from './types'
+import {
+    CardType,
+    NetworkConfigType,
+    TokenRespType,
+    TransactionHistoryType,
+    TransactionType,
+} from './types'
+import { paths } from 'src/routes/paths'
 
 // ----------------------------------------------------------------------
 
@@ -113,10 +120,50 @@ const numberToFixed = (value: number, decimals: number = 2) => {
 }
 
 export const removePrefix = (tx?: string) => {
+    if (tx === 'undefined') return ''
     let finalTx = tx?.toString() || ''
-    return finalTx?.startsWith('0x') ? finalTx?.slice(2) : finalTx
+    return finalTx?.startsWith('0x') || finalTx?.startsWith('0X') ? finalTx?.slice(2) : finalTx
 }
 
+export function isHexadecimal(str: string): boolean {
+    // This regex allows an optional "0x" prefix and then one or more hexadecimal digits.
+    const hexRegex = /^(0x)?[0-9A-Fa-f]+$/
+    if (!hexRegex.test(str)) return false
+
+    // Remove the "0x" prefix if it exists.
+    const hexDigits = removePrefix(str)
+
+    // Ensure the number of hex digits is even.
+    return hexDigits.length % 2 === 0
+}
+
+const joinSQL = (sql: any, fragments: any[], separator: any) => {
+    if (fragments.length === 0) return sql``
+    return fragments.reduce(
+        (prev, curr, index) => (index === 0 ? curr : sql`${prev}${separator}${curr}`),
+        sql``,
+    )
+}
+
+export const buildConditionalQuery = (
+    sql: any,
+    { suiAddress, ethAddress }: { suiAddress?: string; ethAddress?: string },
+) => {
+    const conditions: any[] = []
+
+    if (suiAddress) {
+        conditions.push(
+            sql`(sender_address = decode(${suiAddress}, 'hex') OR recipient_address = decode(${suiAddress}, 'hex'))`,
+        )
+    }
+    if (ethAddress) {
+        conditions.push(
+            sql`(sender_address = decode(${ethAddress}, 'hex') OR recipient_address = decode(${ethAddress}, 'hex'))`,
+        )
+    }
+
+    return conditions.length ? sql`AND (${joinSQL(sql, conditions, sql` AND `)})` : sql``
+}
 // ----------------------------------------------------------------------
 
 function isObject(item: any) {
@@ -263,6 +310,152 @@ export const transformHistory = (data: TransactionHistoryType[]) => {
         ?.sort((a, b) => a.timestamp_ms - b.timestamp_ms)
 }
 
+export const computeStats = (txs: TransactionType[]) => {
+    const totalTransactions = txs.length
+    const totalUsdVolume = txs.reduce((acc, tx) => acc + tx.amount_usd, 0)
+    const avgTransactionUsd = totalTransactions > 0 ? totalUsdVolume / totalTransactions : 0
+
+    // Median calculation:
+    let medianTransactionUsd = 0
+    if (totalTransactions > 0) {
+        const sortedAmounts = txs.map(tx => tx.amount_usd).sort((a, b) => a - b)
+        if (totalTransactions % 2 === 0) {
+            medianTransactionUsd =
+                (sortedAmounts[totalTransactions / 2 - 1] + sortedAmounts[totalTransactions / 2]) /
+                2
+        } else {
+            medianTransactionUsd = sortedAmounts[Math.floor(totalTransactions / 2)]
+        }
+    }
+
+    // Standard deviation calculation:
+    let stdDeviationUsd = 0
+    if (totalTransactions > 0) {
+        const mean = avgTransactionUsd
+        const variance =
+            txs.reduce((acc, tx) => acc + Math.pow(tx.amount_usd - mean, 2), 0) / totalTransactions
+        stdDeviationUsd = Math.sqrt(variance)
+    }
+
+    // Find the earliest and latest transactions based on timestamp
+    let earliestTx = txs[0]
+    let latestTx = txs[0]
+    txs.forEach(tx => {
+        if (tx.timestamp_ms < earliestTx.timestamp_ms) earliestTx = tx
+        if (tx.timestamp_ms > latestTx.timestamp_ms) latestTx = tx
+    })
+
+    // Identify the largest and smallest transactions by USD amount
+    let largestTx = txs[0]
+    let smallestTx = txs[0]
+    txs.forEach(tx => {
+        if (tx.amount_usd > largestTx.amount_usd) largestTx = tx
+        if (tx.amount_usd < smallestTx.amount_usd) smallestTx = tx
+    })
+
+    // Compute stats per token (group by token name)
+    const tokenStats = txs.reduce(
+        (acc, tx) => {
+            const tokenName = tx.token_info.name
+            if (!acc[tokenName]) {
+                acc[tokenName] = { count: 0, totalAmount: 0, totalUsd: 0 }
+            }
+            acc[tokenName].count += 1
+            acc[tokenName].totalAmount += tx.amount
+            acc[tokenName].totalUsd += tx.amount_usd
+            return acc
+        },
+        {} as { [token: string]: { count: number; totalAmount: number; totalUsd: number } },
+    )
+
+    // Find the most used token
+    let mostUsedToken = ''
+    let mostUsedTokenCount = 0
+    Object.entries(tokenStats).forEach(([token, stats]) => {
+        if (stats.count > mostUsedTokenCount) {
+            mostUsedTokenCount = stats.count
+            mostUsedToken = token
+        }
+    })
+
+    // Number of unique tokens
+    const uniqueTokensCount = Object.keys(tokenStats).length
+
+    // SUI Inflow/Outflow Volume
+    const suiInflowVolume = txs.reduce((acc, tx) => {
+        if (tx.destination_chain === 'SUI') {
+            return acc + tx.amount_usd
+        }
+        return acc
+    }, 0)
+
+    const suiOutflowVolume = txs.reduce((acc, tx) => {
+        if (tx.from_chain === 'SUI') {
+            return acc + tx.amount_usd
+        }
+        return acc
+    }, 0)
+
+    // Compute stats per chain (group by originating chain - from_chain)
+    const chainStats = txs.reduce(
+        (acc, tx) => {
+            const chain = tx.from_chain
+            if (!acc[chain]) {
+                acc[chain] = {
+                    count: 0,
+                    differentTokens: [],
+                    totalUsd: 0,
+                    avgUsd: 0,
+                    differentTokensCount: 0,
+                }
+            }
+            acc[chain].count += 1
+            acc[chain].differentTokens = [
+                ...(acc?.[chain].differentTokens || []),
+                tx.token_info.name,
+            ]
+            acc[chain].totalUsd += tx.amount_usd
+            return acc
+        },
+        {} as {
+            [chain: string]: {
+                count: number
+                differentTokens?: string[]
+                differentTokensCount: number
+                totalUsd: number
+                avgUsd: number
+            }
+        },
+    )
+
+    // Compute the average USD value per chain
+    Object.entries(chainStats).forEach(([chain, stats]) => {
+        stats.avgUsd = stats.count > 0 ? stats.totalUsd / stats.count : 0
+        stats.differentTokensCount = new Set(stats?.differentTokens || []).size
+
+        delete stats.differentTokens
+    })
+
+    return {
+        totalTransactions,
+        totalUsdVolume,
+        avgTransactionUsd,
+        medianTransactionUsd,
+        stdDeviationUsd,
+        chainStats,
+        earliestTx,
+        latestTx,
+        largestTx,
+        smallestTx,
+        tokenStats,
+        mostUsedToken,
+        mostUsedTokenCount,
+        uniqueTokensCount,
+        suiInflowVolume,
+        suiOutflowVolume,
+    }
+}
+
 export const transformNumberFields = <T extends Record<string, any>>(data: T[]) => {
     const fieldsToTransform = ['nonce', 'block_height', 'timestamp_ms', 'gas_usage']
 
@@ -376,4 +569,21 @@ export const calculateCardsTotals = (
             ),
         },
     ]
+}
+
+export const buildProfileQuery = (opt: { ethAddress?: string; suiAddress?: string }) => {
+    const { ethAddress, suiAddress } = opt
+    if (!ethAddress && !suiAddress) {
+        return
+    }
+
+    let query = ''
+    if (ethAddress) {
+        query += `ethAddress=${ethAddress}`
+    }
+    if (suiAddress) {
+        query += `suiAddress=${suiAddress}`
+    }
+
+    return `${paths.profile.root}?${query}`
 }

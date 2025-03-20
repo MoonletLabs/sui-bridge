@@ -1,11 +1,8 @@
 import { Box, Card } from '@mui/material'
-import { alpha } from '@mui/material/styles'
 import { isNumber } from '@mui/x-data-grid/internals'
 import React from 'react'
 import AnimatedNumbers from 'react-animated-numbers'
 import { Iconify } from '../iconify'
-import { SvgColor } from '../svg-color'
-import { CONFIG } from 'src/config-global'
 
 interface ICardWidget {
     title: React.ReactNode
@@ -46,10 +43,12 @@ const CardWidget: React.FC<ICardWidget> = ({
     }
     return (
         <Card
+            elevation={3}
             sx={{
                 display: 'flex',
                 alignItems: 'center',
                 p: 3,
+                borderLeft: isNumber(total) ? `5px solid ${color}` : '',
                 // background: color
                 //     ? `linear-gradient(135deg, ${alpha(color, 0.8)}, ${alpha(color, 0.4)})`
                 //     : '',

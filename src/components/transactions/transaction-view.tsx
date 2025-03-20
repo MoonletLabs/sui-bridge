@@ -18,9 +18,13 @@ import { fNumber } from 'src/utils/format-number'
 import { formatDistanceToNow } from 'date-fns'
 import Loading from 'src/app/loading'
 import { NotFoundView } from 'src/sections/error'
+import { useRouter } from 'src/routes/hooks'
+import { paths } from 'src/routes/paths'
+import { buildProfileQuery, buildQuery } from 'src/utils/helper'
 
 export function TransactionView({ tx }: { tx: string }) {
     const network = getNetwork()
+    const router = useRouter()
 
     const { data, isLoading } = useSWR<{
         tx: TransactionType
@@ -417,42 +421,68 @@ function TransactionSummary({ tx, network }: { tx: TransactionType; network: NET
                             <Typography variant="caption" fontWeight="bold">
                                 Sender:
                             </Typography>
-                            <Link
-                                href={formatExplorerUrl({
-                                    network,
-                                    address: tx.sender_address,
-                                    isAccount: true,
-                                    chain: tx.from_chain,
-                                })}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                underline="hover"
-                                color="primary"
-                                fontWeight="bold"
-                            >
-                                {truncateAddress(tx.sender_address)}
-                            </Link>
+                            <Box sx={{ display: 'flex' }}>
+                                <Link
+                                    href={formatExplorerUrl({
+                                        network,
+                                        address: tx.sender_address,
+                                        isAccount: true,
+                                        chain: tx.from_chain,
+                                    })}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    underline="hover"
+                                    color="primary"
+                                    fontWeight="bold"
+                                >
+                                    {truncateAddress(tx.sender_address)}
+                                </Link>
+                                <Link
+                                    sx={{ marginLeft: 1 }}
+                                    color="inherit"
+                                    href={buildProfileQuery(
+                                        !isInflow
+                                            ? { suiAddress: tx.sender_address }
+                                            : { ethAddress: tx.sender_address },
+                                    )}
+                                >
+                                    <Iconify icon="solar:arrow-right-up-outline" />
+                                </Link>
+                            </Box>
                         </Stack>
                         {/* Recipient */}
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Typography variant="caption" fontWeight="bold">
                                 Recipient:
                             </Typography>
-                            <Link
-                                href={formatExplorerUrl({
-                                    network,
-                                    address: tx.recipient_address,
-                                    isAccount: true,
-                                    chain: isInflow ? 'SUI' : 'ETH',
-                                })}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                underline="hover"
-                                color="primary"
-                                fontWeight="bold"
-                            >
-                                {truncateAddress(tx.recipient_address)}
-                            </Link>
+                            <Box sx={{ display: 'flex' }}>
+                                <Link
+                                    href={formatExplorerUrl({
+                                        network,
+                                        address: tx.recipient_address,
+                                        isAccount: true,
+                                        chain: isInflow ? 'SUI' : 'ETH',
+                                    })}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    underline="hover"
+                                    color="primary"
+                                    fontWeight="bold"
+                                >
+                                    {truncateAddress(tx.recipient_address)}
+                                </Link>
+                                <Link
+                                    sx={{ marginLeft: 1 }}
+                                    color="inherit"
+                                    href={buildProfileQuery(
+                                        isInflow
+                                            ? { suiAddress: tx.recipient_address }
+                                            : { ethAddress: tx.recipient_address },
+                                    )}
+                                >
+                                    <Iconify icon="solar:arrow-right-up-outline" />
+                                </Link>
+                            </Box>
                         </Stack>
                         {/* Amount */}
                         <Stack direction="row" spacing={1} alignItems="center">

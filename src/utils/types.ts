@@ -35,15 +35,15 @@ export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: N
               },
               {
                   ticker: 'WBTC',
-                  name: 'Bitcoin',
+                  name: 'Wrapped Bitcoin',
                   color: '#f7941a',
                   icon: '/assets/icons/brands/btc.svg',
               },
               {
                   ticker: 'WLBTC',
-                  name: 'Bitcoin',
+                  name: 'Lombard Staked BTC',
                   color: '#f7941a',
-                  icon: '/assets/icons/brands/btc.svg',
+                  icon: '/assets/icons/brands/lbtc.png',
               },
               {
                   ticker: 'USDT',
@@ -118,7 +118,7 @@ export type TransactionType = {
     destination_chain: ChainType
     nonce: string
     block_height: string
-    timestamp_ms: string
+    timestamp_ms: number
     token_id: number
     amount: number
     amount_usd: number
@@ -129,6 +129,42 @@ export type TransactionType = {
         id: number
     }
     from_chain: ChainType
+}
+
+export type AllTxsResponse = { transactions: TransactionType[]; total: number }
+
+export type UserStatsType = {
+    totalTransactions: number
+    totalUsdVolume: number
+    avgTransactionUsd: number
+    medianTransactionUsd: number
+    stdDeviationUsd: number
+    chainStats: {
+        [chain: string]: {
+            count: number
+            differentTokensCount: number
+            totalUsd: number
+            avgUsd: number
+        }
+    }
+    mostActiveChain: string
+    mostActiveChainCount: number
+    earliestTx: TransactionType
+    latestTx: TransactionType
+    largestTx: TransactionType
+    smallestTx: TransactionType
+    tokenStats: {
+        [token: string]: {
+            count: number
+            totalAmount: number
+            totalUsd: number
+        }
+    }
+    mostUsedToken: string
+    mostUsedTokenCount: number
+    uniqueTokensCount: number
+    suiInflowVolume: number
+    suiOutflowVolume: number
 }
 
 export type TransactionHistoryType = {
