@@ -135,7 +135,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell>Flow</TableCell>
+                                <TableCell sx={{ width: '20%' }}>Flow</TableCell>
                                 <TableCell align="right">Bridges</TableCell>
                                 <TableCell align="right">Total USD</TableCell>
                                 <TableCell align="right">Avg USD</TableCell>
@@ -244,7 +244,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                     <Table size="small">
                         <TableHead>
                             <TableRow>
-                                <TableCell>Token</TableCell>
+                                <TableCell sx={{ width: '20%' }}>Token</TableCell>
                                 <TableCell align="right">Bridges</TableCell>
                                 <TableCell align="right">Total USD</TableCell>
                                 <TableCell align="right">Avg USD</TableCell>
