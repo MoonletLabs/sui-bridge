@@ -146,7 +146,6 @@ const ActivitiesRow: React.FC<{
                         {truncateAddress(row.sender_address)}
                     </Link>
                     <Link
-                        sx={{ marginLeft: 1 }}
                         color="inherit"
                         href={buildProfileQuery(
                             !isInflow
@@ -179,7 +178,6 @@ const ActivitiesRow: React.FC<{
                     </Link>
 
                     <Link
-                        sx={{ marginLeft: 1 }}
                         color="inherit"
                         href={buildProfileQuery(
                             isInflow
