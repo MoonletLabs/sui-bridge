@@ -165,7 +165,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                                 },
                                             }}
                                         >
-                                            <TableCell>
+                                            <TableCell sx={{ minWidth: { xs: 180 } }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                     <img
                                                         src={`/assets/icons/brands/eth.svg`}
@@ -264,7 +264,7 @@ const UserStatsWidgets: React.FC<UserStatsWidgetsProps> = ({ ethAddress, suiAddr
                                         },
                                     }}
                                 >
-                                    <TableCell>
+                                    <TableCell sx={{ minWidth: { xs: 180 } }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <img
                                                 src={
