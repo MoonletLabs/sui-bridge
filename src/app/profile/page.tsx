@@ -10,10 +10,7 @@ import { useSearchParams } from 'next/navigation'
 export default function Page() {
     const searchParams = useSearchParams()
 
-    const [suiAddress, setSuiAddress] = useState(
-        searchParams?.get('suiAddress') || '',
-        // 'f6e5199d2fa1ad3d1c7fbbdb8bab85acf094c4a83aac86eac0e74a201fa45cff',
-    )
+    const [suiAddress, setSuiAddress] = useState(searchParams?.get('suiAddress') || '')
     const [ethAddress, setEthAddress] = useState(searchParams?.get('ethAddress') || '')
 
     const handlePasteSui = async () => {

@@ -9,9 +9,6 @@ import {
 import db from './dabatase'
 import { sendError, sendReply } from './utils'
 
-// New helper that builds an SQL fragment using the tagged template literal.
-// We pass in the sql tag function so that we use the proper instance for your network.
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
@@ -33,13 +30,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return
         }
 
-        // Get the SQL tag function for the active network.
         const sql = db[networkConfig.network]
 
-        // Build the dynamic condition fragment using our helper.
         const conditionalQuery = buildConditionalQuery(sql, { suiAddress, ethAddress })
 
-        // Use the dynamic fragment in your main query.
         const query = await sql`
                 SELECT 
                   encode(txn_hash, 'hex') AS tx_hash, 

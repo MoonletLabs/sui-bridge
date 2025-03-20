@@ -152,19 +152,16 @@ export const buildConditionalQuery = (
     const conditions: any[] = []
 
     if (suiAddress) {
-        // Condition for suiAddress: sender or recipient must match.
         conditions.push(
             sql`(sender_address = decode(${suiAddress}, 'hex') OR recipient_address = decode(${suiAddress}, 'hex'))`,
         )
     }
     if (ethAddress) {
-        // Condition for ethAddress: sender or recipient must match.
         conditions.push(
             sql`(sender_address = decode(${ethAddress}, 'hex') OR recipient_address = decode(${ethAddress}, 'hex'))`,
         )
     }
 
-    // If both addresses are provided, this will join the two conditions with AND.
     return conditions.length ? sql`AND (${joinSQL(sql, conditions, sql` AND `)})` : sql``
 }
 // ----------------------------------------------------------------------
