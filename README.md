@@ -1,8 +1,8 @@
-# Sui Bridge Public Dashboard
+# Sui Bridge Analytics
 
 ## Overview
 
-The **Sui Bridge Public Dashboard** is a web application designed to provide comprehensive analytics on the Sui Bridge ecosystem. It visualizes data related to inflows, outflows, volume, and stocks of bridged assets. The dashboard leverages the open-source Sui Bridge indexer to gather and display data in an intuitive and user-friendly way.
+The **Sui Bridge Analytics Dashboard** is a web application designed to provide comprehensive analytics on the Sui Bridge ecosystem. It visualizes data related to inflows, outflows, volume, and stocks of bridged assets. The dashboard leverages the open-source Sui Bridge indexer to gather and display data in an intuitive and user-friendly way.
 
 ### Project URL
 
