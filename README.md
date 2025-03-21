@@ -10,12 +10,11 @@ The **Sui Bridge Analytics Dashboard** is a web application designed to provide 
 
 ## Screenshots
 
-<img width="1512" alt="image" src="https://github.com/user-attachments/assets/7c735223-2f39-44b9-a097-d82aa67a49f8">
+<img width="1512" alt="image" src="https://github.com/user-attachments/assets/7ae043a3-9424-4b45-bd80-d71f6296bf26" />
 
-<img width="1512" alt="image" src="https://github.com/user-attachments/assets/5f8ce7e8-2be0-4f8b-907d-87291fbe89d4">
+<img width="1512" alt="image" src="https://github.com/user-attachments/assets/7b71bc75-35bc-432d-af5b-1fe6660c9126" />
 
-<img width="1512" alt="image" src="https://github.com/user-attachments/assets/3cfe1bb4-13b7-46f3-b278-f9981d5d697c">
-
+<img width="1512" alt="image" src="https://github.com/user-attachments/assets/519a5daa-618b-415b-8db8-cb739895a7d4" />
 
 ## Contributing
 
