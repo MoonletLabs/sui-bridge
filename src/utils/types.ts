@@ -5,6 +5,7 @@ export type CoinType = {
     name: string
     deno: number
     priceUSD: number
+    coingeckoId: string
 }
 
 export type NetworkConfigType = {
