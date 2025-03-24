@@ -3,6 +3,7 @@ import { sendError, sendReply } from './utils'
 import db from './dabatase'
 import { getNetworkConfig } from 'src/config/helper'
 import { transformAmount } from 'src/utils/helper'
+import { getPrices } from './prices'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
@@ -28,7 +29,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 destination_chain,
                 token_id;`
 
-        sendReply(res, transformAmount(networkConfig, query as any[]))
+        const prices = await getPrices(networkConfig.network)
+
+        sendReply(res, transformAmount(networkConfig, query as any[], prices))
     } catch (error) {
         sendError(res, error)
     }

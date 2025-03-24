@@ -8,7 +8,6 @@ const TOKEN_LIST: Record<number, CoinType> = {
         id: 2,
         name: 'ETH',
         deno: Math.pow(10, 8),
-        priceUSD: 2350, // TODO: get dynamically @SergiuT
         coingeckoId: 'ethereum',
     },
 
@@ -16,7 +15,6 @@ const TOKEN_LIST: Record<number, CoinType> = {
         id: 4,
         name: 'USDT',
         deno: Math.pow(10, 6),
-        priceUSD: 1,
         coingeckoId: 'tether',
     },
 
@@ -24,7 +22,6 @@ const TOKEN_LIST: Record<number, CoinType> = {
         id: 1,
         name: 'WBTC',
         deno: Math.pow(10, 8),
-        priceUSD: 95000,
         coingeckoId: 'bitcoin',
     },
 
@@ -32,7 +29,6 @@ const TOKEN_LIST: Record<number, CoinType> = {
         id: 6,
         name: 'WLBTC',
         deno: Math.pow(10, 8),
-        priceUSD: 95000,
         coingeckoId: 'bitcoin',
     },
 
@@ -40,7 +36,6 @@ const TOKEN_LIST: Record<number, CoinType> = {
         id: 3,
         name: 'USDC',
         deno: Math.pow(10, 6),
-        priceUSD: 1,
         coingeckoId: 'usd-coin',
     },
 
@@ -48,7 +43,6 @@ const TOKEN_LIST: Record<number, CoinType> = {
         id: 5,
         name: 'Pepe',
         deno: Math.pow(10, 8), // teoretic are 18 decimals dar aici se seteaza doar 8 ??
-        priceUSD: 0.057456,
         coingeckoId: 'pepe',
     },
 }
@@ -76,6 +70,13 @@ const NETWORK_CONFIG: {
 export interface INetworkConfig {
     config: NetworkConfigType
     network: NETWORK
+}
+
+export interface IPrice {
+    token_id: number
+    name: string
+    price: string
+    last_updated: string
 }
 
 export type TimePeriod = 'Last 24h' | 'Last Week' | 'Last Month' | 'Last year' | 'All time'

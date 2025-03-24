@@ -4,6 +4,7 @@ import db from '../dabatase'
 import { getNetworkConfig } from 'src/config/helper'
 import { setFlowDirection, transformAmount } from 'src/utils/helper'
 import dayjs from 'dayjs'
+import { getPrices } from '../prices'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
@@ -33,7 +34,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ORDER BY
                 transfer_date DESC;`
 
-        sendReply(res, transformAmount(networkConfig, setFlowDirection(networkConfig, query)))
+        const prices = await getPrices(networkConfig.network)
+
+        sendReply(
+            res,
+            transformAmount(networkConfig, setFlowDirection(networkConfig, query), prices),
+        )
     } catch (error) {
         sendError(res, error)
     }
