@@ -9,6 +9,7 @@ import {
 } from 'src/utils/helper'
 import db from './dabatase'
 import { sendError, sendReply } from './utils'
+import { getPrices } from './prices'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
@@ -41,9 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const conditionalQuery = buildConditionalQuery(sql, { suiAddress, ethAddress })
 
         const query = await sql`
-                SELECT 
-                  encode(txn_hash, 'hex') AS tx_hash, 
-                  encode(sender_address, 'hex') AS sender_address, 
+                SELECT
+                  encode(txn_hash, 'hex') AS tx_hash,
+                  encode(sender_address, 'hex') AS sender_address,
                   encode(recipient_address, 'hex') AS recipient_address,
                   chain_id,
                   destination_chain,
@@ -52,11 +53,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   timestamp_ms,
                   token_id,
                   amount
-                FROM token_transfer_data 
-                WHERE 
+                FROM token_transfer_data
+                WHERE
                   is_finalized = true ${conditionalQuery}`
 
-        sendReply(res, computeStats(transformTransfers(networkConfig, query as any[]) as any[]))
+        const prices = await getPrices(networkConfig.network)
+
+        sendReply(
+            res,
+            computeStats(transformTransfers(networkConfig, query as any[], prices) as any[]),
+        )
     } catch (error) {
         console.log({ error })
         sendError(res, error)

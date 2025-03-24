@@ -4,7 +4,6 @@ export type CoinType = {
     id: number
     name: string
     deno: number
-    priceUSD: number
     coingeckoId: string
 }
 

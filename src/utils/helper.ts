@@ -3,7 +3,7 @@
  * https://github.com/you-dont-need-x/you-dont-need-lodash
  */
 
-import { getNetworkConfig, INetworkConfig } from 'src/config/helper'
+import { getNetworkConfig, INetworkConfig, IPrice } from 'src/config/helper'
 import {
     CardType,
     NetworkConfigType,
@@ -216,15 +216,19 @@ export const transformAmount = (
         total_count: string
         total_volume: string
     }[],
+    prices: IPrice[],
 ) => {
     return data.map(it => {
         const tokenData = networkConfig?.config?.coins?.[it.token_id]
+        const priceData = prices.find(price => price.token_id === it.token_id)
+
         if (tokenData) {
             return {
                 ...it,
                 total_count: Number(it.total_count),
                 total_volume: Number(it.total_volume) / tokenData.deno,
-                total_volume_usd: (Number(it.total_volume) / tokenData.deno) * tokenData.priceUSD,
+                total_volume_usd:
+                    (Number(it.total_volume) / tokenData.deno) * Number(priceData?.price),
                 token_info: tokenData,
                 destination_chain: getNetworkName(
                     it.destination_chain,
@@ -251,11 +255,14 @@ export const transformTransfers = (
         token_id: number
         amount: number
     }[],
+    prices: IPrice[],
 ) => {
     return transformNumberFields(
         data
             .map(it => {
                 const tokenData = networkConfig?.config?.coins?.[it.token_id]
+                const priceData = prices.find(price => price.token_id === it.token_id)
+
                 if (tokenData) {
                     const destination_chain = getNetworkName(
                         it.destination_chain,
@@ -276,7 +283,7 @@ export const transformTransfers = (
                     return {
                         ...it,
                         amount: Number(it.amount) / tokenData.deno,
-                        amount_usd: (Number(it.amount) / tokenData.deno) * tokenData.priceUSD,
+                        amount_usd: (Number(it.amount) / tokenData.deno) * Number(priceData?.price),
                         token_info: tokenData,
                         destination_chain,
                         from_chain,

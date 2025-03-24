@@ -1,11 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { sendError, sendReply } from './utils'
 import db from './dabatase'
-import { TimePeriod, getNetworkConfig, INetworkConfig } from 'src/config/helper'
+import { TimePeriod, getNetworkConfig, INetworkConfig, IPrice } from 'src/config/helper'
 import { transformAmount } from 'src/utils/helper'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
+import { getPrices } from './prices'
 
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
@@ -41,6 +42,7 @@ export const computerIntervals = (timePeriod: TimePeriod, computePrevious?: bool
 
 const getInflows = (
     networkConfig: INetworkConfig,
+    prices: IPrice[],
     timePeriod: TimePeriod,
     computePrevious?: boolean,
 ) => {
@@ -62,11 +64,12 @@ const getInflows = (
         GROUP BY
             destination_chain,
             token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+    `.then(query => transformAmount(networkConfig, query as any[], prices))
 }
 
 const getOutflows = (
     networkConfig: INetworkConfig,
+    prices: IPrice[],
     timePeriod: TimePeriod,
     computePrevious?: boolean,
 ) => {
@@ -87,7 +90,7 @@ const getOutflows = (
         GROUP by
             destination_chain,
             token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+    `.then(query => transformAmount(networkConfig, query as any[], prices))
 }
 
 // const getVolume = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
@@ -107,6 +110,7 @@ const getOutflows = (
 
 const getAddresses = (
     networkConfig: INetworkConfig,
+    prices: IPrice[],
     timePeriod: TimePeriod,
     computePrevious?: boolean,
 ) => {
@@ -140,7 +144,7 @@ const getAddresses = (
 
         ) AS unique_addresses
         GROUP BY token_id
-    `.then(query => transformAmount(networkConfig, query as any[]))
+    `.then(query => transformAmount(networkConfig, query as any[], prices))
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -149,14 +153,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const timePeriod = req.query.timePeriod as TimePeriod
 
+        const prices = await getPrices(networkConfig.network)
+
         const [inflows, outflows, addresses, previousInflows, previousOutflows, previousAddresses] =
             await Promise.all([
-                getInflows(networkConfig, timePeriod),
-                getOutflows(networkConfig, timePeriod),
-                getAddresses(networkConfig, timePeriod),
-                getInflows(networkConfig, timePeriod, true),
-                getOutflows(networkConfig, timePeriod, true),
-                getAddresses(networkConfig, timePeriod, true),
+                getInflows(networkConfig, prices, timePeriod),
+                getOutflows(networkConfig, prices, timePeriod),
+                getAddresses(networkConfig, prices, timePeriod),
+                getInflows(networkConfig, prices, timePeriod, true),
+                getOutflows(networkConfig, prices, timePeriod, true),
+                getAddresses(networkConfig, prices, timePeriod, true),
             ])
 
         sendReply(res, {
