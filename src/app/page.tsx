@@ -1,19 +1,21 @@
 'use client'
-
-import { useEffect } from 'react'
-
-import { useRouter } from 'src/routes/hooks'
-
-import { CONFIG } from 'src/config-global'
+import InflowOutflowCharts from 'src/components/chart/inflow-outflow-charts'
+import TokenVolumePieChart from 'src/components/chart/pie-charts'
+import StockOfAssetsChart from 'src/components/chart/total-stock-assets'
+import CustomWidgets from 'src/components/widgets/custom-widgets'
+import { DashboardContent, DashboardLayout } from 'src/layouts/dashboard'
 
 // ----------------------------------------------------------------------
 
 export default function Page() {
-    const router = useRouter()
-
-    useEffect(() => {
-        router.push(CONFIG.auth.redirectPath)
-    }, [router])
-
-    return null
+    return (
+        <DashboardLayout>
+            <DashboardContent maxWidth="xl">
+                <CustomWidgets />
+                <InflowOutflowCharts />
+                <StockOfAssetsChart />
+                <TokenVolumePieChart />
+            </DashboardContent>
+        </DashboardLayout>
+    )
 }
