@@ -134,7 +134,7 @@ export default function StockOfAssetsChart() {
             <Grid item xs={12}>
                 <Card>
                     <CardHeader
-                        title="Net flow per asset"
+                        title="Net inflow per asset"
                         subheader=""
                         action={
                             <ChartSelect

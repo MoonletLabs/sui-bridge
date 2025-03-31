@@ -557,7 +557,7 @@ export const calculateCardsTotals = (
             ),
         },
         {
-            title: 'Net flow (USD)',
+            title: 'Net inflow (USD)',
             value: netFlow,
             color: '#FCBD05', // red
             icon: 'solar:square-transfer-horizontal-bold-duotone',
