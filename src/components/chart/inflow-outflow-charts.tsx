@@ -234,7 +234,7 @@ export default function InflowOutflowCharts() {
                             ...(inflowSeries?.[0]?.data?.length > 2
                                 ? [
                                       {
-                                          name: 'Net Flow',
+                                          name: 'Net Inflow',
                                           type: 'line',
                                           data: (() => {
                                               const weekSums: { [key: string]: number } = {}
