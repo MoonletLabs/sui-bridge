@@ -42,7 +42,7 @@ export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: N
               {
                   ticker: 'WLBTC',
                   name: 'Lombard Staked BTC',
-                  color: '#c5fdf2',
+                  color: '#90beb7',
                   icon: '/assets/icons/brands/lbtc.png',
               },
               {
