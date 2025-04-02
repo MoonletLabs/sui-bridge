@@ -122,7 +122,10 @@ export default function InflowOutflowCharts() {
     }, [data, timePeriod, selectedTokens, selectedSeriesInflow])
 
     // Chart Options
-    const chartOptions = (isInflowOutflow: boolean) =>
+    const chartOptions = (
+        isInflowOutflow: boolean,
+        tooltipList: { period: string; value: number }[],
+    ) =>
         useChart({
             chart: {
                 stacked: true,
@@ -167,7 +170,7 @@ export default function InflowOutflowCharts() {
                     formatter: labelFormatted,
                 },
             },
-            tooltip: buildTooltip(),
+            tooltip: buildTooltip(tooltipList),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
@@ -263,7 +266,7 @@ export default function InflowOutflowCharts() {
                                   ]
                                 : []),
                         ]}
-                        options={chartOptions(true)}
+                        options={chartOptions(true, inflowSeries?.[0]?.data)}
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
@@ -290,7 +293,7 @@ export default function InflowOutflowCharts() {
                             name: item.name,
                             data: item.data.map(point => point.value),
                         }))}
-                        options={chartOptions(false)}
+                        options={chartOptions(false, chartData?.[0]?.data)}
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}

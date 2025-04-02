@@ -133,7 +133,7 @@ export const calculateStartDate = (timePeriod: string) => {
     }
 }
 
-export const buildTooltip = () => {
+export const buildTooltip = (tootlipList: { period: string; value: number }[]) => {
     return {
         shared: true,
         followCursor: true,
@@ -149,7 +149,42 @@ export const buildTooltip = () => {
             dataPointIndex: any
             w: any
         }) => {
-            const xLabel = w.globals.labels[dataPointIndex] || 'Unknown'
+            const label = w.globals.labels[dataPointIndex] || 'Unknown'
+            let xLabel = label
+
+            const matchedItem = tootlipList[dataPointIndex]
+            if (matchedItem?.period) {
+                const period = matchedItem.period
+
+                const weekMatch = period.match(/^(\d{4})-W(\d{1,2})$/)
+                const monthMatch = period.match(/^(\d{4})-(\d{1,2})$/)
+                const dayMatch = period.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+
+                if (weekMatch) {
+                    const year = parseInt(weekMatch[1], 10)
+                    const week = parseInt(weekMatch[2], 10)
+                    const start = dayjs().year(year).isoWeek(week).startOf('isoWeek')
+                    const end = start.endOf('isoWeek')
+                    xLabel = `${start.format('D MMM')} - ${end.format('D MMM YYYY')}`
+                } else if (monthMatch) {
+                    const year = parseInt(monthMatch[1], 10)
+                    const month = parseInt(monthMatch[2], 10)
+                    xLabel = dayjs()
+                        .year(year)
+                        .month(month - 1)
+                        .format('MMMM YYYY')
+                } else if (dayMatch) {
+                    const date = dayjs(period)
+                    const day = date.date()
+                    const ordinal = (n: number) =>
+                        n +
+                        ['th', 'st', 'nd', 'rd'][
+                            n % 100 > 10 && n % 100 < 14 ? 0 : n % 10 < 4 ? n % 10 : 0
+                        ]
+                    xLabel = `${ordinal(day)} ${date.format('MMMM YYYY')}` // → "24th April 2025"
+                }
+            }
+
             const activeSeriesIndices = w.globals.series
                 .map((_: any, i: any) => i)
                 .filter((i: any) => !w.globals.collapsedSeriesIndices.includes(i))
@@ -163,7 +198,7 @@ export const buildTooltip = () => {
                     const formattedValue =
                         value < 0
                             ? ` -$${Math.abs(Number(value.toFixed(0))).toLocaleString()}`
-                            : ` $${Number(value.toFixed(0)).toLocaleString()}`
+                            : ` $${Number(value?.toFixed(0)).toLocaleString()}`
                     const textColor = value < 0 ? '#FF5630' : ''
 
                     return value !== undefined && value !== 0
