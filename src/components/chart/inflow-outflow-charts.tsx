@@ -146,6 +146,7 @@ export default function InflowOutflowCharts() {
                 },
             },
             xaxis: {
+                type: 'category',
                 categories: formatCategories(
                     isInflowOutflow ? inflowSeries : chartData,
                     isInflowOutflow ? selectedSeriesInflow : selectedSeries,
@@ -211,7 +212,7 @@ export default function InflowOutflowCharts() {
 
                                     return Object.entries(weekSums)
                                         .sort(([a], [b]) => a.localeCompare(b)) // Ensure weeks are sorted correctly
-                                        .map(([period, value]) => ({ x: period, y: value }))
+                                        .map(([, value]) => value)
                                 })(),
                             },
                             {
@@ -228,7 +229,7 @@ export default function InflowOutflowCharts() {
 
                                     return Object.entries(weekSums)
                                         .sort(([a], [b]) => a.localeCompare(b)) // Ensure weeks are sorted correctly
-                                        .map(([period, value]) => ({ x: period, y: value }))
+                                        .map(([, value]) => value)
                                 })(),
                             },
                             ...(inflowSeries?.[0]?.data?.length > 2
@@ -257,10 +258,7 @@ export default function InflowOutflowCharts() {
 
                                               return Object.entries(weekSums)
                                                   .sort(([a], [b]) => a.localeCompare(b))
-                                                  .map(([period, value]) => ({
-                                                      x: period,
-                                                      y: value,
-                                                  }))
+                                                  .map(([, value]) => value)
                                           })(),
                                       },
                                   ]

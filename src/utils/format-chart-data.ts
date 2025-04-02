@@ -149,38 +149,7 @@ export const buildTooltip = () => {
             dataPointIndex: any
             w: any
         }) => {
-            const label = w.globals.labels[dataPointIndex] || 'Unknown'
-            let xLabel = label
-
-            console.log(w.globals.initialSeries?.[0])
-            const weekMatch = label.match(/^Week (\d+)$/)
-            const fullPeriod = w.globals.initialSeries?.[0]?.data?.[dataPointIndex]?.x
-            const monthMatch = fullPeriod.match(/^(\d{4})-(\d{2})$/)
-            if (weekMatch) {
-                const weekNum = parseInt(weekMatch[1], 10)
-
-                // Default to current year
-                let year = new Date().getFullYear()
-
-                if (fullPeriod) {
-                    const yearMatch = fullPeriod.match(/^(\d{4})-W\d+$/)
-                    if (yearMatch) {
-                        year = parseInt(yearMatch[1], 10)
-                    }
-                }
-
-                const startOfWeek = dayjs().year(year).isoWeek(weekNum).startOf('isoWeek')
-                const endOfWeek = startOfWeek.endOf('isoWeek')
-                xLabel = `${startOfWeek.format('D MMM')} - ${endOfWeek.format('D MMM YYYY')}`
-            } else if (monthMatch) {
-                const year = parseInt(monthMatch[1], 10)
-                const month = parseInt(monthMatch[2], 10)
-                const date = dayjs()
-                    .year(year)
-                    .month(month - 1)
-                xLabel = date.format('MMMM YYYY')
-            }
-
+            const xLabel = w.globals.labels[dataPointIndex] || 'Unknown'
             const activeSeriesIndices = w.globals.series
                 .map((_: any, i: any) => i)
                 .filter((i: any) => !w.globals.collapsedSeriesIndices.includes(i))
@@ -240,37 +209,3 @@ export const labelFormatted = (value: number) =>
     value < 0
         ? `-$${Intl.NumberFormat('en', { notation: 'compact' }).format(Math.abs(value))}`
         : `$${Intl.NumberFormat('en', { notation: 'compact' }).format(value)}`
-
-export function inferLabelYears(labels: string[]): Map<string, number> {
-    const map = new Map<string, number>()
-
-    if (!labels.length) return map
-
-    const weeklyPattern = /^Week\s(\d+)$/
-
-    const lastLabel = labels[labels.length - 1]
-    const lastWeekMatch = lastLabel.match(weeklyPattern)
-
-    // Only support weekly labels for now
-    if (!lastWeekMatch) return map
-
-    let week = parseInt(lastWeekMatch[1], 10)
-    let year = new Date().getFullYear()
-
-    for (let i = labels.length - 1; i >= 0; i--) {
-        const label = labels[i]
-        const match = label.match(weeklyPattern)
-
-        if (match) {
-            map.set(label, year)
-
-            week--
-            if (week < 1) {
-                year--
-                week = 52 // default to 52 for simplicity
-            }
-        }
-    }
-
-    return map
-}
