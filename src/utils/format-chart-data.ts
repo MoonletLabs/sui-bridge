@@ -48,7 +48,7 @@ export function formatChartData(
                 return
             }
         } else if (selectedSeries === 'Weekly') {
-            periodKey = `${date.isoWeekYear()}-W${date.isoWeek()}` // FIXED
+            periodKey = `${date.isoWeekYear()}-W${String(date.isoWeek()).padStart(2, '0')}`
         } else if (selectedSeries === 'Monthly') {
             periodKey = date.format('YYYY-MM') // Group by month
         } else {
@@ -63,7 +63,20 @@ export function formatChartData(
     })
 
     const tokens = Array.from(new Set(apiData.map(item => item.token_info.name)))
-    const periods = selectedSeries === 'Hourly' ? fullHours : Object.keys(groupedData).sort()
+    const periods =
+        selectedSeries === 'Hourly'
+            ? fullHours
+            : Object.keys(groupedData).sort((a, b) => {
+                  const isWeekFormat = a.includes('-W') && b.includes('-W')
+
+                  if (isWeekFormat) {
+                      const [yearA, weekA] = a.split('-W').map(Number)
+                      const [yearB, weekB] = b.split('-W').map(Number)
+                      return yearA !== yearB ? yearA - yearB : weekA - weekB
+                  }
+
+                  return dayjs(a).valueOf() - dayjs(b).valueOf()
+              })
 
     const chartData: ChartDataItem[] = tokens.map(token => {
         const colorData = tokensList.find(info => info.ticker === token)
