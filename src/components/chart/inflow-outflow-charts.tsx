@@ -211,7 +211,7 @@ export default function InflowOutflowCharts() {
 
                                     return Object.entries(weekSums)
                                         .sort(([a], [b]) => a.localeCompare(b)) // Ensure weeks are sorted correctly
-                                        .map(([, value]) => value)
+                                        .map(([period, value]) => ({ x: period, y: value }))
                                 })(),
                             },
                             {
@@ -228,7 +228,7 @@ export default function InflowOutflowCharts() {
 
                                     return Object.entries(weekSums)
                                         .sort(([a], [b]) => a.localeCompare(b)) // Ensure weeks are sorted correctly
-                                        .map(([, value]) => value)
+                                        .map(([period, value]) => ({ x: period, y: value }))
                                 })(),
                             },
                             ...(inflowSeries?.[0]?.data?.length > 2
@@ -257,7 +257,10 @@ export default function InflowOutflowCharts() {
 
                                               return Object.entries(weekSums)
                                                   .sort(([a], [b]) => a.localeCompare(b))
-                                                  .map(([, value]) => value)
+                                                  .map(([period, value]) => ({
+                                                      x: period,
+                                                      y: value,
+                                                  }))
                                           })(),
                                       },
                                   ]
