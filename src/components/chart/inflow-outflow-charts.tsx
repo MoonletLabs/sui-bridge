@@ -146,7 +146,6 @@ export default function InflowOutflowCharts() {
                 },
             },
             xaxis: {
-                type: 'category',
                 categories: formatCategories(
                     isInflowOutflow ? inflowSeries : chartData,
                     isInflowOutflow ? selectedSeriesInflow : selectedSeries,
