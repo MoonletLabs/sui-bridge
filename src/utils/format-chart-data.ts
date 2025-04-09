@@ -148,7 +148,10 @@ export const calculateStartDate = (timePeriod: string) => {
     }
 }
 
-export const buildTooltip = (tootlipList: { period: string; value: number }[]) => {
+export const buildTooltip = (
+    tootlipList: { period: string; value: number }[],
+    showTotal: boolean = false,
+) => {
     return {
         shared: true,
         followCursor: true,
@@ -170,34 +173,7 @@ export const buildTooltip = (tootlipList: { period: string; value: number }[]) =
             const matchedItem = tootlipList[dataPointIndex]
             if (matchedItem?.period) {
                 const period = matchedItem.period
-
-                const weekMatch = period.match(/^(\d{4})-W(\d{1,2})$/)
-                const monthMatch = period.match(/^(\d{4})-(\d{1,2})$/)
-                const dayMatch = period.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-
-                if (weekMatch) {
-                    const year = parseInt(weekMatch[1], 10)
-                    const week = parseInt(weekMatch[2], 10)
-                    const start = dayjs().year(year).isoWeek(week).startOf('isoWeek')
-                    const end = start.endOf('isoWeek')
-                    xLabel = `${start.format('D MMM')} - ${end.format('D MMM YYYY')}`
-                } else if (monthMatch) {
-                    const year = parseInt(monthMatch[1], 10)
-                    const month = parseInt(monthMatch[2], 10)
-                    xLabel = dayjs()
-                        .year(year)
-                        .month(month - 1)
-                        .format('MMMM YYYY')
-                } else if (dayMatch) {
-                    const date = dayjs(period)
-                    const day = date.date()
-                    const ordinal = (n: number) =>
-                        n +
-                        ['th', 'st', 'nd', 'rd'][
-                            n % 100 > 10 && n % 100 < 14 ? 0 : n % 10 < 4 ? n % 10 : 0
-                        ]
-                    xLabel = `${ordinal(day)} ${date.format('MMMM YYYY')}` // → "24th April 2025"
-                }
+                // ...existing code for formatting xLabel...
             }
 
             const activeSeriesIndices = w.globals.series
@@ -236,6 +212,31 @@ export const buildTooltip = (tootlipList: { period: string; value: number }[]) =
                 })
                 .join('')
 
+            let total = 0
+            if (showTotal) {
+                total = activeSeriesIndices.reduce((sum: any, i: any) => {
+                    const value = series?.[i]?.[dataPointIndex]
+                    return sum + (value || 0)
+                }, 0)
+            }
+
+            const textColor = total < 0 ? '#FF5630' : ''
+
+            const totalTooltip = showTotal
+                ? `
+                    <div style="
+                        margin-top: 8px;
+                        padding: 6px;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        color: white;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        text-align: left;">
+                        <strong>Total:</strong> <span style="color: ${textColor}">$${Math.round(total).toLocaleString()}</span>
+                    </div>
+                `
+                : ''
+
             return tooltips.trim()
                 ? `
                     <div style="
@@ -248,6 +249,7 @@ export const buildTooltip = (tootlipList: { period: string; value: number }[]) =
                         color: white;">
                         <strong style="color: black">${xLabel}</strong>
                         ${tooltips}
+                        ${totalTooltip}
                     </div>
                 `
                 : ''

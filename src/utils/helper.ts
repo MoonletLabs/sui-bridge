@@ -6,6 +6,7 @@
 import { getNetworkConfig, INetworkConfig, IPrice, TrasformedType } from 'src/config/helper'
 import {
     CardType,
+    CumulativeInflowType,
     NetworkConfigType,
     TokenRespType,
     TransactionHistoryType,
@@ -593,4 +594,105 @@ export const buildProfileQuery = (opt: { ethAddress?: string; suiAddress?: strin
     }
 
     return `${paths.profile.root}?${query}`
+}
+
+export function addCumulativeNetInflow(
+    data: TrasformedType[],
+    iterateByHour?: boolean,
+): CumulativeInflowType[] {
+    const result: CumulativeInflowType[] = []
+    const groupedData = new Map<string, TrasformedType[]>()
+
+    data.forEach(item => {
+        const key = `${new Date(item.transfer_date).toISOString()}_${item.token_info.name}`
+        if (!groupedData.has(key)) {
+            groupedData.set(key, [item])
+        } else {
+            const group = groupedData.get(key)
+            group?.push(item)
+        }
+    })
+
+    const groupedData2 = new Map<
+        string, // token
+        CumulativeInflowType[]
+    >()
+
+    groupedData.forEach((items: TrasformedType[], key) => {
+        let total_volume = 0
+        let total_volume_usd = 0
+        items.forEach(item => {
+            if (item.direction === 'inflow') {
+                total_volume += item.total_volume
+                total_volume_usd += item.total_volume_usd
+            } else {
+                total_volume -= item.total_volume
+                total_volume_usd -= item.total_volume_usd
+            }
+        })
+        const d = {
+            transfer_date: items?.[0]?.transfer_date,
+            token_id: items?.[0]?.token_id,
+            token_info: items?.[0]?.token_info,
+            total_volume,
+            total_volume_usd,
+        }
+
+        const key2 = items?.[0].token_info.name
+
+        if (!groupedData2.has(key2)) {
+            groupedData2.set(key2, [d])
+        } else {
+            const group = groupedData2.get(key2)
+            group?.push(d)
+        }
+    })
+
+    // Ensure all dates are present for each token
+    groupedData2.forEach((items: CumulativeInflowType[], key) => {
+        let sorted = items?.sort(
+            (a, b) => new Date(a.transfer_date).getTime() - new Date(b.transfer_date).getTime(),
+        )
+
+        const allDates = new Set<string>()
+        sorted.forEach(item => allDates.add(item.transfer_date))
+
+        const minDate = new Date(sorted[0].transfer_date)
+        const maxDate = new Date()
+
+        for (
+            let d = new Date(minDate);
+            d <= maxDate;
+            iterateByHour ? d.setHours(d.getHours() + 1) : d.setDate(d.getDate() + 1)
+        ) {
+            const dateStr = d.toISOString()
+            if (!allDates.has(dateStr)) {
+                sorted.push({
+                    transfer_date: dateStr,
+                    token_id: sorted[0].token_id,
+                    token_info: sorted[0].token_info,
+                    total_volume: 0,
+                    total_volume_usd: 0,
+                })
+            }
+        }
+
+        sorted = sorted.sort(
+            (a, b) => new Date(a.transfer_date).getTime() - new Date(b.transfer_date).getTime(),
+        )
+
+        for (let i = 0; i < sorted.length; i++) {
+            if (i != 0) {
+                sorted[i].total_volume = sorted[i - 1].total_volume + sorted[i].total_volume
+                sorted[i].total_volume_usd =
+                    sorted[i - 1].total_volume_usd + sorted[i].total_volume_usd
+            }
+        }
+    })
+
+    groupedData2.forEach((items: CumulativeInflowType[]) => {
+        result.push(...items)
+    })
+
+    return result
 }

@@ -1,28 +1,28 @@
 'use client'
-import { useChart, ChartSelect, Chart } from 'src/components/chart'
-import { endpoints, fetcher } from 'src/utils/axios'
-import useSWR from 'swr'
-import { useCallback, useEffect, useState } from 'react'
-import { Grid, Card, CardHeader } from '@mui/material'
-import {
-    ChartDataItem,
-    buildTooltip,
-    calculateStartDate,
-    formatCategories,
-    formatChartData,
-    labelFormatted,
-} from 'src/utils/format-chart-data'
-import { getNetwork } from 'src/hooks/get-network-storage'
+import { Card, CardHeader, Grid } from '@mui/material'
 import dayjs from 'dayjs'
-import { useGlobalContext } from 'src/provider/global-provider'
-import { getTokensList } from 'src/utils/types'
+import { useCallback, useEffect, useState } from 'react'
+import { Chart, useChart } from 'src/components/chart'
 import {
     getCumulativeInflowEndpointForPeriod,
     getDefaultTimeIntervalForPeriod,
     getTimeIntervalForPeriod,
-    getVolumeEndpointForPeriod,
     TimeInterval,
 } from 'src/config/helper'
+import { getNetwork } from 'src/hooks/get-network-storage'
+import { useGlobalContext } from 'src/provider/global-provider'
+import { fetcher } from 'src/utils/axios'
+import {
+    buildTooltip,
+    calculateStartDate,
+    ChartDataItem,
+    formatCategories,
+    formatChartData,
+    labelFormatted,
+} from 'src/utils/format-chart-data'
+import { CumulativeInflowType, getTokensList } from 'src/utils/types'
+import useSWR from 'swr'
+import { ChartActionButtons } from './chart-action-buttons'
 
 export default function CumulativeNetInflow() {
     const network = getNetwork()
@@ -32,6 +32,7 @@ export default function CumulativeNetInflow() {
     const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
+    const [showTotal, setShowTotal] = useState(false)
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
@@ -44,7 +45,7 @@ export default function CumulativeNetInflow() {
         }
     }, [timePeriod])
 
-    const { data } = useSWR<any>(
+    const { data } = useSWR<CumulativeInflowType[]>(
         getCumulativeInflowEndpointForPeriod(timePeriod, network),
         fetcher,
         {
@@ -53,7 +54,7 @@ export default function CumulativeNetInflow() {
     )
 
     useEffect(() => {
-        if (data?.length > 0) {
+        if (data && data?.length > 0) {
             const startDate = calculateStartDate(timePeriod)
             const dateFilter = data.filter((item: any) =>
                 dayjs(item.transfer_date).isAfter(startDate),
@@ -128,36 +129,59 @@ export default function CumulativeNetInflow() {
                     formatter: labelFormatted,
                 },
             },
-            tooltip: buildTooltip(chartData?.[0]?.data),
+            tooltip: buildTooltip(chartData?.[0]?.data, !showTotal),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
         setSelectedSeries(newValue as TimeInterval)
     }, [])
 
+    const totalChartData =
+        chartData.length > 0
+            ? [
+                  {
+                      name: 'Net Inflow',
+                      data: chartData[0].data.map((_, index) => ({
+                          value: chartData.reduce(
+                              (sum, series) => sum + series.data[index].value,
+                              0,
+                          ),
+                      })),
+                  },
+              ]
+            : []
+
     return (
         <Grid container spacing={4} marginTop={2}>
             <Grid item xs={12}>
                 <Card>
                     <CardHeader
-                        title="Cumulative net inflow"
+                        title="Cumulative Net inflow"
                         subheader=""
                         action={
-                            <ChartSelect
-                                options={getTimeIntervalForPeriod(timePeriod)}
-                                value={selectedSeries}
-                                onChange={handleChangeSeries}
+                            <ChartActionButtons
+                                showTotal={showTotal}
+                                setShowTotal={setShowTotal}
+                                selectedSeries={selectedSeries}
+                                handleChangeSeries={handleChangeSeries}
+                                timePeriod={timePeriod}
                             />
                         }
                     />
-
                     <Chart
                         type="bar"
-                        series={chartData.map(item => ({
-                            name: item.name,
-                            data: item.data.map(point => point.value),
-                        }))}
-                        options={chartOptions(false)}
+                        series={
+                            showTotal
+                                ? totalChartData.map(item => ({
+                                      name: item.name,
+                                      data: item.data.map(point => point.value),
+                                  }))
+                                : chartData.map(item => ({
+                                      name: item.name,
+                                      data: item.data.map(point => point.value),
+                                  }))
+                        }
+                        options={chartOptions(showTotal)}
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
