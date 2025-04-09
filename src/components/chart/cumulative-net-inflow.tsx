@@ -82,6 +82,7 @@ export default function CumulativeNetInflow() {
                 selectedSeries as any,
                 getTokensList(network),
                 timePeriod,
+                true,
             )
 
             setChartData(formattedData)

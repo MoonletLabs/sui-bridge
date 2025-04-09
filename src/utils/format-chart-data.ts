@@ -26,8 +26,10 @@ export function formatChartData(
     selectedSeries: TimeInterval,
     tokensList: TokenColorInfo[],
     timePeriod: TimePeriod,
+    meanValue?: boolean,
 ) {
     const groupedData: { [key: string]: { [token: string]: number } } = {}
+    const groupedDataCountItems: { [key: string]: { [token: string]: number } } = {}
     const now = dayjs()
     const startDate = calculateStartDate(timePeriod)
 
@@ -55,11 +57,17 @@ export function formatChartData(
             periodKey = date.format('YYYY-MM-DD') // Group by day
         }
 
-        if (!groupedData[periodKey]) groupedData[periodKey] = {}
-        if (!groupedData[periodKey][item.token_info.name])
+        if (!groupedData[periodKey]) {
+            groupedData[periodKey] = {}
+            groupedDataCountItems[periodKey] = {}
+        }
+        if (!groupedData[periodKey][item.token_info.name]) {
             groupedData[periodKey][item.token_info.name] = 0
+            groupedDataCountItems[periodKey][item.token_info.name] = 0
+        }
 
         groupedData[periodKey][item.token_info.name] += item.total_volume_usd
+        groupedDataCountItems[periodKey][item.token_info.name] += 1
     })
 
     const tokens = Array.from(new Set(apiData.map(item => item.token_info.name)))
@@ -85,7 +93,14 @@ export function formatChartData(
             color: colorData?.color || '#000000', // Default color if not found
             data: periods.map(period => ({
                 period,
-                value: parseFloat(((groupedData[period] ?? {})[token] || 0).toFixed(6)),
+                value: !meanValue
+                    ? parseFloat(((groupedData[period] ?? {})[token] || 0).toFixed(6))
+                    : parseFloat(
+                          (
+                              ((groupedData[period] ?? {})[token] || 0) /
+                              ((groupedDataCountItems[period] ?? {})[token] || 1)
+                          ).toFixed(6),
+                      ),
             })),
         }
     })
