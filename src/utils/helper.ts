@@ -3,7 +3,7 @@
  * https://github.com/you-dont-need-x/you-dont-need-lodash
  */
 
-import { getNetworkConfig, INetworkConfig, IPrice } from 'src/config/helper'
+import { getNetworkConfig, INetworkConfig, IPrice, TrasformedType } from 'src/config/helper'
 import {
     CardType,
     NetworkConfigType,

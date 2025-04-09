@@ -79,6 +79,22 @@ export interface IPrice {
     last_updated: string
 }
 
+export interface TrasformedType {
+    transfer_date: string
+    total_count: number
+    total_volume: number
+    destination_chain: string
+    token_id: number
+    direction: string
+    total_volume_usd: number
+    token_info: {
+        id: number
+        name: string
+        deno: number
+        coingeckoId: string
+    }
+}
+
 export type TimePeriod = 'Last 24h' | 'Last Week' | 'Last Month' | 'Last year' | 'All time'
 
 export const TIME_PERIODS: TimePeriod[] = [
@@ -126,6 +142,19 @@ export const getVolumeEndpointForPeriod = (period: TimePeriod, network: NETWORK)
             return `${endpoints.volume.hourly}?network=${network}`
         default:
             return `${endpoints.volume.daily}?network=${network}`
+    }
+}
+
+export const getCumulativeInflowEndpointForPeriod = (
+    period: TimePeriod,
+    network: NETWORK,
+): string => {
+    switch (period) {
+        case 'Last 24h':
+        case 'Last Week':
+            return `${endpoints.cumulative_inflow.hourly}?network=${network}`
+        default:
+            return `${endpoints.cumulative_inflow.daily}?network=${network}`
     }
 }
 
