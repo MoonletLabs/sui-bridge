@@ -26,8 +26,10 @@ export function formatChartData(
     selectedSeries: TimeInterval,
     tokensList: TokenColorInfo[],
     timePeriod: TimePeriod,
+    meanValue?: boolean,
 ) {
     const groupedData: { [key: string]: { [token: string]: number } } = {}
+    const groupedDataCountItems: { [key: string]: { [token: string]: number } } = {}
     const now = dayjs()
     const startDate = calculateStartDate(timePeriod)
 
@@ -55,11 +57,17 @@ export function formatChartData(
             periodKey = date.format('YYYY-MM-DD') // Group by day
         }
 
-        if (!groupedData[periodKey]) groupedData[periodKey] = {}
-        if (!groupedData[periodKey][item.token_info.name])
+        if (!groupedData[periodKey]) {
+            groupedData[periodKey] = {}
+            groupedDataCountItems[periodKey] = {}
+        }
+        if (!groupedData[periodKey][item.token_info.name]) {
             groupedData[periodKey][item.token_info.name] = 0
+            groupedDataCountItems[periodKey][item.token_info.name] = 0
+        }
 
         groupedData[periodKey][item.token_info.name] += item.total_volume_usd
+        groupedDataCountItems[periodKey][item.token_info.name] += 1
     })
 
     const tokens = Array.from(new Set(apiData.map(item => item.token_info.name)))
@@ -85,7 +93,14 @@ export function formatChartData(
             color: colorData?.color || '#000000', // Default color if not found
             data: periods.map(period => ({
                 period,
-                value: parseFloat(((groupedData[period] ?? {})[token] || 0).toFixed(6)),
+                value: !meanValue
+                    ? parseFloat(((groupedData[period] ?? {})[token] || 0).toFixed(6))
+                    : parseFloat(
+                          (
+                              ((groupedData[period] ?? {})[token] || 0) /
+                              ((groupedDataCountItems[period] ?? {})[token] || 1)
+                          ).toFixed(6),
+                      ),
             })),
         }
     })
@@ -133,7 +148,10 @@ export const calculateStartDate = (timePeriod: string) => {
     }
 }
 
-export const buildTooltip = (tootlipList: { period: string; value: number }[]) => {
+export const buildTooltip = (
+    tootlipList: { period: string; value: number }[],
+    showTotal: boolean = false,
+) => {
     return {
         shared: true,
         followCursor: true,
@@ -155,7 +173,6 @@ export const buildTooltip = (tootlipList: { period: string; value: number }[]) =
             const matchedItem = tootlipList[dataPointIndex]
             if (matchedItem?.period) {
                 const period = matchedItem.period
-
                 const weekMatch = period.match(/^(\d{4})-W(\d{1,2})$/)
                 const monthMatch = period.match(/^(\d{4})-(\d{1,2})$/)
                 const dayMatch = period.match(/^(\d{4})-(\d{2})-(\d{2})$/)
@@ -221,6 +238,31 @@ export const buildTooltip = (tootlipList: { period: string; value: number }[]) =
                 })
                 .join('')
 
+            let total = 0
+            if (showTotal) {
+                total = activeSeriesIndices.reduce((sum: any, i: any) => {
+                    const value = series?.[i]?.[dataPointIndex]
+                    return sum + (value || 0)
+                }, 0)
+            }
+
+            const textColor = total < 0 ? '#FF5630' : ''
+
+            const totalTooltip = showTotal
+                ? `
+                    <div style="
+                        margin-top: 8px;
+                        padding: 6px;
+                        background-color: rgba(0, 0, 0, 0.8);
+                        color: white;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        text-align: left;">
+                        <strong>Total:</strong> <span style="color: ${textColor}">$${Math.round(total).toLocaleString()}</span>
+                    </div>
+                `
+                : ''
+
             return tooltips.trim()
                 ? `
                     <div style="
@@ -233,6 +275,7 @@ export const buildTooltip = (tootlipList: { period: string; value: number }[]) =
                         color: white;">
                         <strong style="color: black">${xLabel}</strong>
                         ${tooltips}
+                        ${totalTooltip}
                     </div>
                 `
                 : ''

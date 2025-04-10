@@ -1,27 +1,28 @@
 'use client'
-import { useChart, ChartSelect, Chart } from 'src/components/chart'
-import { endpoints, fetcher } from 'src/utils/axios'
-import useSWR from 'swr'
-import { useCallback, useEffect, useState } from 'react'
-import { Grid, Card, CardHeader } from '@mui/material'
-import {
-    ChartDataItem,
-    buildTooltip,
-    calculateStartDate,
-    formatCategories,
-    formatChartData,
-    labelFormatted,
-} from 'src/utils/format-chart-data'
-import { getNetwork } from 'src/hooks/get-network-storage'
+import { Card, CardHeader, Grid } from '@mui/material'
 import dayjs from 'dayjs'
-import { useGlobalContext } from 'src/provider/global-provider'
-import { getTokensList } from 'src/utils/types'
+import { useCallback, useEffect, useState } from 'react'
+import { Chart, ChartSelect, useChart } from 'src/components/chart'
 import {
     getDefaultTimeIntervalForPeriod,
     getTimeIntervalForPeriod,
     getVolumeEndpointForPeriod,
     TimeInterval,
 } from 'src/config/helper'
+import { getNetwork } from 'src/hooks/get-network-storage'
+import { useGlobalContext } from 'src/provider/global-provider'
+import { fetcher } from 'src/utils/axios'
+import {
+    buildTooltip,
+    calculateStartDate,
+    ChartDataItem,
+    formatCategories,
+    formatChartData,
+    labelFormatted,
+} from 'src/utils/format-chart-data'
+import { getTokensList } from 'src/utils/types'
+import useSWR from 'swr'
+import { ChartActionButtons } from './chart-action-buttons'
 
 export default function InflowOutflowCharts() {
     const network = getNetwork()
@@ -30,6 +31,8 @@ export default function InflowOutflowCharts() {
     const [chartData, setChartData] = useState<ChartDataItem[]>([])
     const [inflowSeries, setInflowSeries] = useState<ChartDataItem[]>([])
     const [outflowSeries, setOutflowSeries] = useState<ChartDataItem[]>([])
+
+    const [showTotal, setShowTotal] = useState(false)
     const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
@@ -170,7 +173,7 @@ export default function InflowOutflowCharts() {
                     formatter: labelFormatted,
                 },
             },
-            tooltip: buildTooltip(tooltipList),
+            tooltip: buildTooltip(tooltipList, !showTotal),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
@@ -180,6 +183,21 @@ export default function InflowOutflowCharts() {
     const handleChangeSeriesInflow = useCallback((newValue: string) => {
         setSelectedSeriesInflow(newValue as TimeInterval)
     }, [])
+
+    const totalChartData =
+        chartData.length > 0
+            ? [
+                  {
+                      name: 'Total Volume',
+                      data: chartData[0].data.map((_, index) => ({
+                          value: chartData.reduce(
+                              (sum, series) => sum + series.data[index].value,
+                              0,
+                          ),
+                      })),
+                  },
+              ]
+            : []
 
     return (
         <Grid container spacing={4} marginTop={2}>
@@ -279,21 +297,34 @@ export default function InflowOutflowCharts() {
                         title="Total Volume (inflow + outflow)"
                         subheader=""
                         action={
-                            <ChartSelect
-                                options={getTimeIntervalForPeriod(timePeriod)}
-                                value={selectedSeries}
-                                onChange={handleChangeSeries}
+                            <ChartActionButtons
+                                showTotal={showTotal}
+                                setShowTotal={setShowTotal}
+                                selectedSeries={selectedSeries}
+                                handleChangeSeries={handleChangeSeries}
+                                timePeriod={timePeriod}
                             />
                         }
                     />
 
                     <Chart
                         type="bar"
-                        series={chartData.map(item => ({
-                            name: item.name,
-                            data: item.data.map(point => point.value),
-                        }))}
-                        options={chartOptions(false, chartData?.[0]?.data)}
+                        // series={chartData.map(item => ({
+                        //     name: item.name,
+                        //     data: item.data.map(point => point.value),
+                        // }))}
+                        series={
+                            showTotal
+                                ? totalChartData.map(item => ({
+                                      name: item.name,
+                                      data: item.data.map(point => point.value),
+                                  }))
+                                : chartData.map(item => ({
+                                      name: item.name,
+                                      data: item.data.map(point => point.value),
+                                  }))
+                        }
+                        options={chartOptions(showTotal, chartData?.[0]?.data)}
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}

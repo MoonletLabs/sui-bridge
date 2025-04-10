@@ -179,3 +179,11 @@ export type TransactionHistoryType = {
     data_source: ChainType
     is_finalized: boolean
 }
+
+export type CumulativeInflowType = {
+    transfer_date: string
+    token_id: string | number
+    token_info: any
+    total_volume: number
+    total_volume_usd: number
+}

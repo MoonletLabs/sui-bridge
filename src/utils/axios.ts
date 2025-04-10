@@ -44,4 +44,8 @@ export const endpoints = {
         monthly: '/api/volume/monthly',
         weekly: '/api/volume/weekly',
     },
+    cumulative_inflow: {
+        daily: '/api/cumulative_inflow/daily',
+        hourly: '/api/cumulative_inflow/hourly',
+    },
 }
