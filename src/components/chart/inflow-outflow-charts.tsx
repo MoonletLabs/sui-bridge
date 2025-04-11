@@ -173,7 +173,7 @@ export default function InflowOutflowCharts() {
                     formatter: labelFormatted,
                 },
             },
-            tooltip: buildTooltip(tooltipList, !showTotal),
+            tooltip: buildTooltip(tooltipList, !isInflowOutflow),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
