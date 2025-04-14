@@ -3,6 +3,7 @@ import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
 import { TokenColorInfo } from './types'
 import { TimeInterval, TimePeriod } from 'src/config/helper'
+import { fNumber } from './format-number'
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
 
@@ -18,7 +19,7 @@ type ApiDataItem = {
 export type ChartDataItem = {
     name: string
     color: string
-    data: { period: string; value: number }[]
+    data: { period: string; value: number; value_token?: number }[]
 }
 
 export function formatChartData(
@@ -27,9 +28,10 @@ export function formatChartData(
     tokensList: TokenColorInfo[],
     timePeriod: TimePeriod,
     meanValue?: boolean,
-) {
+): ChartDataItem[] {
     const groupedData: { [key: string]: { [token: string]: number } } = {}
     const groupedDataCountItems: { [key: string]: { [token: string]: number } } = {}
+    const groupedDataToken: { [key: string]: { [token: string]: number } } = {}
     const now = dayjs()
     const startDate = calculateStartDate(timePeriod)
 
@@ -60,13 +62,16 @@ export function formatChartData(
         if (!groupedData[periodKey]) {
             groupedData[periodKey] = {}
             groupedDataCountItems[periodKey] = {}
+            groupedDataToken[periodKey] = {}
         }
         if (!groupedData[periodKey][item.token_info.name]) {
             groupedData[periodKey][item.token_info.name] = 0
             groupedDataCountItems[periodKey][item.token_info.name] = 0
+            groupedDataToken[periodKey][item.token_info.name] = 0
         }
 
         groupedData[periodKey][item.token_info.name] += item.total_volume_usd
+        groupedDataToken[periodKey][item.token_info.name] += item.total_volume
         groupedDataCountItems[periodKey][item.token_info.name] += 1
     })
 
@@ -91,17 +96,28 @@ export function formatChartData(
         return {
             name: token,
             color: colorData?.color || '#000000', // Default color if not found
-            data: periods.map(period => ({
-                period,
-                value: !meanValue
-                    ? parseFloat(((groupedData[period] ?? {})[token] || 0).toFixed(6))
-                    : parseFloat(
-                          (
-                              ((groupedData[period] ?? {})[token] || 0) /
-                              ((groupedDataCountItems[period] ?? {})[token] || 1)
-                          ).toFixed(6),
-                      ),
-            })),
+            data: periods.map(
+                period =>
+                    ({
+                        period,
+                        value: !meanValue
+                            ? parseFloat(((groupedData[period] ?? {})[token] || 0).toFixed(6))
+                            : parseFloat(
+                                  (
+                                      ((groupedData[period] ?? {})[token] || 0) /
+                                      ((groupedDataCountItems[period] ?? {})[token] || 1)
+                                  ).toFixed(6),
+                              ),
+                        value_token: !meanValue
+                            ? parseFloat(((groupedDataToken[period] ?? {})[token] || 0).toFixed(6))
+                            : parseFloat(
+                                  (
+                                      ((groupedDataToken[period] ?? {})[token] || 0) /
+                                      ((groupedDataCountItems[period] ?? {})[token] || 1)
+                                  ).toFixed(6),
+                              ),
+                    }) as ChartDataItem['data'][0],
+            ),
         }
     })
 
@@ -148,10 +164,12 @@ export const calculateStartDate = (timePeriod: string) => {
     }
 }
 
-export const buildTooltip = (
-    tootlipList: { period: string; value: number }[],
-    showTotal: boolean = false,
-) => {
+export const buildTooltip = (opt: {
+    chartData: ChartDataItem[]
+    showTotal?: boolean
+    showToken?: boolean
+}) => {
+    const { chartData, showToken, showTotal } = opt
     return {
         shared: true,
         followCursor: true,
@@ -170,7 +188,7 @@ export const buildTooltip = (
             const label = w.globals.labels[dataPointIndex] || 'Unknown'
             let xLabel = label
 
-            const matchedItem = tootlipList[dataPointIndex]
+            const matchedItem = chartData?.[0]?.data?.[dataPointIndex]
             if (matchedItem?.period) {
                 const period = matchedItem.period
                 const weekMatch = period.match(/^(\d{4})-W(\d{1,2})$/)
@@ -212,11 +230,18 @@ export const buildTooltip = (
                     let value = series[i][dataPointIndex]
                     const color = w.globals.colors[i]
 
-                    const formattedValue =
-                        value < 0
+                    // Add value_token logic
+                    const valueToken = chartData?.find(it => it.name === seriesName)?.data?.[
+                        dataPointIndex
+                    ]?.value_token
+
+                    const formattedValue = !showToken
+                        ? value < 0
                             ? ` -$${Math.abs(Number(value.toFixed(0))).toLocaleString()}`
                             : ` $${Number(value?.toFixed(0)).toLocaleString()}`
-                    const textColor = value < 0 ? '#FF5630' : ''
+                        : ` ${fNumber(valueToken)}`
+
+                    const textColor = (showToken ? valueToken : value) < 0 ? '#FF5630' : ''
 
                     return value !== undefined && value !== 0
                         ? `
@@ -239,7 +264,8 @@ export const buildTooltip = (
                 .join('')
 
             let total = 0
-            if (showTotal) {
+            let showTotalLocal = showTotal && !showToken
+            if (showTotalLocal) {
                 total = activeSeriesIndices.reduce((sum: any, i: any) => {
                     const value = series?.[i]?.[dataPointIndex]
                     return sum + (value || 0)
@@ -248,7 +274,7 @@ export const buildTooltip = (
 
             const textColor = total < 0 ? '#FF5630' : ''
 
-            const totalTooltip = showTotal
+            const totalTooltip = showTotalLocal
                 ? `
                     <div style="
                         margin-top: 8px;
