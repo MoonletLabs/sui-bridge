@@ -160,19 +160,6 @@ export default function CumulativeNetInflow() {
                                 spacing={2}
                                 direction={{ xs: 'column', sm: 'row' }} // Responsive layout
                             >
-                                {(!showMergedValues && (
-                                    <Grid item>
-                                        <FormControlLabel
-                                            control={
-                                                <Switch
-                                                    checked={showDollar}
-                                                    onChange={() => setShowDollar(!showDollar)} // Toggle showDollar
-                                                />
-                                            }
-                                            label="Total in $" // Updated concise label
-                                        />
-                                    </Grid>
-                                )) || <></>}
                                 <Grid item>
                                     <ChartActionButtons
                                         showTotal={showMergedValues}
@@ -180,6 +167,8 @@ export default function CumulativeNetInflow() {
                                         selectedSeries={selectedSeries}
                                         handleChangeSeries={handleChangeSeries}
                                         timePeriod={timePeriod}
+                                        showDollar={showDollar} // Pass showDollar state
+                                        setShowDollar={setShowDollar} // Pass setShowDollar function
                                     />
                                 </Grid>
                             </Grid>

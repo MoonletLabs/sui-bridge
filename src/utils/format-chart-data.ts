@@ -264,8 +264,7 @@ export const buildTooltip = (opt: {
                 .join('')
 
             let total = 0
-            let showTotalLocal = showTotal && !showToken
-            if (showTotalLocal) {
+            if (showTotal) {
                 total = activeSeriesIndices.reduce((sum: any, i: any) => {
                     const value = series?.[i]?.[dataPointIndex]
                     return sum + (value || 0)
@@ -274,7 +273,7 @@ export const buildTooltip = (opt: {
 
             const textColor = total < 0 ? '#FF5630' : ''
 
-            const totalTooltip = showTotalLocal
+            const totalTooltip = showTotal
                 ? `
                     <div style="
                         margin-top: 8px;
