@@ -122,7 +122,7 @@ export default function StockOfAssetsChart() {
                     formatter: labelFormatted,
                 },
             },
-            tooltip: buildTooltip(chartData?.[0]?.data),
+            tooltip: buildTooltip({ chartData }),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {

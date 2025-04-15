@@ -1,5 +1,5 @@
 'use client'
-import { Card, CardHeader, Grid } from '@mui/material'
+import { Card, CardHeader, Grid, Switch, FormControlLabel } from '@mui/material'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { Chart, useChart } from 'src/components/chart'
@@ -32,7 +32,8 @@ export default function CumulativeNetInflow() {
     const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
-    const [showTotal, setShowTotal] = useState(false)
+    const [showMergedValues, setShowMergedValues] = useState(false)
+    const [showDollar, setShowDollar] = useState(true) // Add showToken state
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
@@ -63,23 +64,13 @@ export default function CumulativeNetInflow() {
             const filteredData = selectedTokens.includes('All')
                 ? dateFilter
                 : dateFilter.filter(
-                      (item: any) =>
+                      (item: CumulativeInflowType) =>
                           selectedTokens.includes('All') ||
                           selectedTokens.includes(item?.token_info?.name),
                   )
 
             const formattedData = formatChartData(
-                filteredData.map((item: any) => {
-                    if (item.direction === 'outflow') {
-                        return {
-                            ...item,
-                            total_volume: -item.total_volume,
-                            total_volume_usd: -item.total_volume_usd,
-                        }
-                    } else {
-                        return { ...item }
-                    }
-                }),
+                filteredData,
                 selectedSeries as any,
                 getTokensList(network),
                 timePeriod,
@@ -129,7 +120,11 @@ export default function CumulativeNetInflow() {
                     formatter: labelFormatted,
                 },
             },
-            tooltip: buildTooltip(chartData?.[0]?.data, !showTotal),
+            tooltip: buildTooltip({
+                chartData,
+                showTotal: !showMergedValues,
+                showToken: !showDollar && !showMergedValues,
+            }), // Use showToken state
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
@@ -159,19 +154,30 @@ export default function CumulativeNetInflow() {
                         title="Cumulative Net inflow"
                         subheader=""
                         action={
-                            <ChartActionButtons
-                                showTotal={showTotal}
-                                setShowTotal={setShowTotal}
-                                selectedSeries={selectedSeries}
-                                handleChangeSeries={handleChangeSeries}
-                                timePeriod={timePeriod}
-                            />
+                            <Grid
+                                container
+                                alignItems="center"
+                                spacing={2}
+                                direction={{ xs: 'column', sm: 'row' }} // Responsive layout
+                            >
+                                <Grid item>
+                                    <ChartActionButtons
+                                        showTotal={showMergedValues}
+                                        setShowTotal={setShowMergedValues}
+                                        selectedSeries={selectedSeries}
+                                        handleChangeSeries={handleChangeSeries}
+                                        timePeriod={timePeriod}
+                                        showDollar={showDollar} // Pass showDollar state
+                                        setShowDollar={setShowDollar} // Pass setShowDollar function
+                                    />
+                                </Grid>
+                            </Grid>
                         }
                     />
                     <Chart
                         type="bar"
                         series={
-                            showTotal
+                            showMergedValues
                                 ? totalChartData.map(item => ({
                                       name: item.name,
                                       data: item.data.map(point => point.value),
@@ -181,7 +187,7 @@ export default function CumulativeNetInflow() {
                                       data: item.data.map(point => point.value),
                                   }))
                         }
-                        options={chartOptions(showTotal)}
+                        options={chartOptions(showMergedValues)}
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}

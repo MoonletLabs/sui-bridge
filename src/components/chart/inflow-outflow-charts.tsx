@@ -32,13 +32,15 @@ export default function InflowOutflowCharts() {
     const [inflowSeries, setInflowSeries] = useState<ChartDataItem[]>([])
     const [outflowSeries, setOutflowSeries] = useState<ChartDataItem[]>([])
 
-    const [showTotal, setShowTotal] = useState(false)
+    const [showMergedValues, setShowMergedValues] = useState(false)
     const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
     const [selectedSeriesInflow, setSelectedSeriesInflow] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
+
+    const [showDollar, setShowDollar] = useState(true)
 
     const { data } = useSWR<any>(getVolumeEndpointForPeriod(timePeriod, network), fetcher, {
         revalidateOnFocus: false,
@@ -173,7 +175,11 @@ export default function InflowOutflowCharts() {
                     formatter: labelFormatted,
                 },
             },
-            tooltip: buildTooltip(tooltipList, !isInflowOutflow),
+            tooltip: buildTooltip({
+                chartData,
+                showTotal: !isInflowOutflow,
+                showToken: !showDollar,
+            }),
         })
 
     const handleChangeSeries = useCallback((newValue: string) => {
@@ -298,11 +304,13 @@ export default function InflowOutflowCharts() {
                         subheader=""
                         action={
                             <ChartActionButtons
-                                showTotal={showTotal}
-                                setShowTotal={setShowTotal}
+                                showTotal={showMergedValues}
+                                setShowTotal={setShowMergedValues}
                                 selectedSeries={selectedSeries}
                                 handleChangeSeries={handleChangeSeries}
                                 timePeriod={timePeriod}
+                                showDollar={showDollar} // Pass showDollar state
+                                setShowDollar={setShowDollar} // Pass setShowDollar function
                             />
                         }
                     />
@@ -314,7 +322,7 @@ export default function InflowOutflowCharts() {
                         //     data: item.data.map(point => point.value),
                         // }))}
                         series={
-                            showTotal
+                            showMergedValues
                                 ? totalChartData.map(item => ({
                                       name: item.name,
                                       data: item.data.map(point => point.value),
@@ -324,7 +332,7 @@ export default function InflowOutflowCharts() {
                                       data: item.data.map(point => point.value),
                                   }))
                         }
-                        options={chartOptions(showTotal, chartData?.[0]?.data)}
+                        options={chartOptions(showMergedValues, chartData?.[0]?.data)}
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
