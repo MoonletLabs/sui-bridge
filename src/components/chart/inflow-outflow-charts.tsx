@@ -172,13 +172,14 @@ export default function InflowOutflowCharts() {
             },
             yaxis: {
                 labels: {
-                    formatter: labelFormatted,
+                    formatter: value =>
+                        labelFormatted(value, !isInflowOutflow && !showDollar && !showMergedValues),
                 },
             },
             tooltip: buildTooltip({
                 chartData,
                 showTotal: !isInflowOutflow,
-                showToken: !showDollar,
+                showToken: !showDollar && !showMergedValues,
             }),
         })
 

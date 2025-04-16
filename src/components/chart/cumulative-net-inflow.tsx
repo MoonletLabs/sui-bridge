@@ -117,7 +117,7 @@ export default function CumulativeNetInflow() {
             },
             yaxis: {
                 labels: {
-                    formatter: labelFormatted,
+                    formatter: value => labelFormatted(value, !showDollar && !showMergedValues),
                 },
             },
             tooltip: buildTooltip({
