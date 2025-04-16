@@ -172,8 +172,8 @@ export default function InflowOutflowCharts() {
                                   ? 8
                                   : totalPoints > 20
                                     ? 2
-                                    : 1 // Show every 8th label if over 100 points
-                        return opts?.i % skipInterval === 0 ? value : '' // Only show label every `skipInterval` points
+                                    : 1
+                        return opts?.i % skipInterval === 0 ? value : ''
                     },
                 },
             },
