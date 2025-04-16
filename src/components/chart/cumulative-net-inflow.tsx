@@ -107,8 +107,6 @@ export default function CumulativeNetInflow() {
             xaxis: {
                 categories: formatCategories(chartData, selectedSeries),
                 labels: {
-                    rotate: -45,
-                    offsetX: -1,
                     formatter: (value, index, opts) => {
                         if (index === undefined) return value // Return full value if index is undefined
 
@@ -116,12 +114,14 @@ export default function CumulativeNetInflow() {
                         const skipInterval = totalPoints && totalPoints > 100 ? 8 : 1
 
                         if (selectedSeries === 'Daily') {
-                            const skip = totalPoints && totalPoints > 60 ? 6 : 2
-
+                            const skip = totalPoints && totalPoints > 100 ? 4 : 2
                             return opts?.i % skip === 0 ? value : ''
                         } else {
                             return opts?.i % skipInterval === 0 ? value : ''
                         }
+                    },
+                    style: {
+                        fontSize: '12px',
                     },
                 },
             },

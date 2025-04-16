@@ -169,12 +169,14 @@ export default function InflowOutflowCharts() {
                         const skipInterval = totalPoints && totalPoints > 100 ? 8 : 1
 
                         if (selectedSeries === 'Daily') {
-                            const skip = totalPoints && totalPoints > 60 ? 6 : 2
-
+                            const skip = totalPoints && totalPoints > 100 ? 4 : 2
                             return opts?.i % skip === 0 ? value : ''
                         } else {
                             return opts?.i % skipInterval === 0 ? value : ''
                         }
+                    },
+                    style: {
+                        fontSize: '12px',
                     },
                 },
             },
