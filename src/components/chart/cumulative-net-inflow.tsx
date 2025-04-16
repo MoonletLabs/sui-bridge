@@ -7,6 +7,7 @@ import {
     getCumulativeInflowEndpointForPeriod,
     getDefaultTimeIntervalForPeriod,
     getTimeIntervalForPeriod,
+    TIME_INTERVALS,
     TimeInterval,
 } from 'src/config/helper'
 import { getNetwork } from 'src/hooks/get-network-storage'
@@ -106,12 +107,20 @@ export default function CumulativeNetInflow() {
             xaxis: {
                 categories: formatCategories(chartData, selectedSeries),
                 labels: {
+                    rotate: -45,
                     formatter: (value, index, opts) => {
                         if (index === undefined) return value // Return full value if index is undefined
 
                         const totalPoints = chartData[0]?.data.length
                         const skipInterval = totalPoints && totalPoints > 100 ? 8 : 1 // Show every 8th label if over 100 points
-                        return opts?.i % skipInterval === 0 ? value : '' // Only show label every `skipInterval` points
+
+                        if (selectedSeries === 'Daily') {
+                            const skip = totalPoints && totalPoints > 60 ? 6 : 2
+
+                            return opts?.i % skip === 0 ? value : ''
+                        } else {
+                            return opts?.i % skipInterval === 0 ? value : '' // Only show label every `skipInterval` points
+                        }
                     },
                 },
             },
