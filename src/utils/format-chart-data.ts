@@ -308,7 +308,9 @@ export const buildTooltip = (opt: {
     }
 }
 
-export const labelFormatted = (value: number) =>
-    value < 0
+export const labelFormatted = (value: number, noValue?: boolean) => {
+    if (noValue) return ' '
+    return value < 0
         ? `-$${Intl.NumberFormat('en', { notation: 'compact' }).format(Math.abs(value))}`
         : `$${Intl.NumberFormat('en', { notation: 'compact' }).format(value)}`
+}
