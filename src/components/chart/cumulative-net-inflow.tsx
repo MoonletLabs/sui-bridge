@@ -108,6 +108,7 @@ export default function CumulativeNetInflow() {
                 categories: formatCategories(chartData, selectedSeries),
                 labels: {
                     rotate: -45,
+                    offsetX: -1,
                     formatter: (value, index, opts) => {
                         if (index === undefined) return value // Return full value if index is undefined
 

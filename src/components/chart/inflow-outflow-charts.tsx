@@ -165,15 +165,16 @@ export default function InflowOutflowCharts() {
                         const totalPoints = isInflowOutflow
                             ? inflowSeries[0]?.data.length
                             : chartData[0]?.data.length
-                        const skipInterval =
-                            totalPoints && totalPoints > 40
-                                ? 4
-                                : totalPoints > 80
-                                  ? 8
-                                  : totalPoints > 20
-                                    ? 2
-                                    : 1
-                        return opts?.i % skipInterval === 0 ? value : ''
+
+                        const skipInterval = totalPoints && totalPoints > 100 ? 8 : 1
+
+                        if (selectedSeries === 'Daily') {
+                            const skip = totalPoints && totalPoints > 60 ? 6 : 2
+
+                            return opts?.i % skip === 0 ? value : ''
+                        } else {
+                            return opts?.i % skipInterval === 0 ? value : ''
+                        }
                     },
                 },
             },
