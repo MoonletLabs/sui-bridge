@@ -34,7 +34,6 @@ export default function CumulativeNetInflow() {
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
     const [showMergedValues, setShowMergedValues] = useState(false)
-    const [showDollar, setShowDollar] = useState(true) // Add showToken state
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
@@ -62,7 +61,7 @@ export default function CumulativeNetInflow() {
                 dayjs(item.transfer_date).isAfter(startDate),
             )
 
-            const filteredData = selectedTokens.includes('All')
+            let filteredData = selectedTokens.includes('All')
                 ? dateFilter
                 : dateFilter.filter(
                       (item: CumulativeInflowType) =>
@@ -128,13 +127,13 @@ export default function CumulativeNetInflow() {
             },
             yaxis: {
                 labels: {
-                    formatter: value => labelFormatted(value, !showDollar && !showMergedValues),
+                    formatter: value => labelFormatted(value),
                 },
             },
             tooltip: buildTooltip({
                 chartData,
                 showTotal: !showMergedValues,
-                showToken: !showDollar && !showMergedValues,
+                showToken: true,
             }), // Use showToken state
         })
 
@@ -178,8 +177,6 @@ export default function CumulativeNetInflow() {
                                         selectedSeries={selectedSeries}
                                         handleChangeSeries={handleChangeSeries}
                                         timePeriod={timePeriod}
-                                        showDollar={showDollar} // Pass showDollar state
-                                        setShowDollar={setShowDollar} // Pass setShowDollar function
                                     />
                                 </Grid>
                             </Grid>

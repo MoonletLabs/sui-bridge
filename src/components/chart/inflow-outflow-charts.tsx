@@ -40,8 +40,6 @@ export default function InflowOutflowCharts() {
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
 
-    const [showDollar, setShowDollar] = useState(true)
-
     const { data } = useSWR<any>(getVolumeEndpointForPeriod(timePeriod, network), fetcher, {
         revalidateOnFocus: false,
     })
@@ -183,14 +181,13 @@ export default function InflowOutflowCharts() {
             },
             yaxis: {
                 labels: {
-                    formatter: value =>
-                        labelFormatted(value, !isInflowOutflow && !showDollar && !showMergedValues),
+                    formatter: value => labelFormatted(value),
                 },
             },
             tooltip: buildTooltip({
                 chartData,
                 showTotal: !isInflowOutflow,
-                showToken: !showDollar && !showMergedValues,
+                showToken: !isInflowOutflow,
             }),
         })
 
@@ -321,8 +318,6 @@ export default function InflowOutflowCharts() {
                                 selectedSeries={selectedSeries}
                                 handleChangeSeries={handleChangeSeries}
                                 timePeriod={timePeriod}
-                                showDollar={showDollar} // Pass showDollar state
-                                setShowDollar={setShowDollar} // Pass setShowDollar function
                             />
                         }
                     />

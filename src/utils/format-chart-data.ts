@@ -235,13 +235,20 @@ export const buildTooltip = (opt: {
                         dataPointIndex
                     ]?.value_token
 
-                    const formattedValue = !showToken
-                        ? value < 0
+                    const textColor = (showToken ? valueToken : value) < 0 ? '#FF5630' : ''
+
+                    let formattedValue
+                    const valWithSign =
+                        value < 0
                             ? ` -$${Math.abs(Number(value.toFixed(0))).toLocaleString()}`
                             : ` $${Number(value?.toFixed(0)).toLocaleString()}`
-                        : ` ${fNumber(valueToken)}`
-
-                    const textColor = (showToken ? valueToken : value) < 0 ? '#FF5630' : ''
+                    if (!showToken) {
+                        // Directly create the span for dollar value
+                        formattedValue = `<span style="color: ${textColor};">${valWithSign}</span>`
+                    } else {
+                        // Show token value first, then value in dollars (dollars smaller and lighter)
+                        formattedValue = `<span style="color: ${textColor};">${fNumber(valueToken)}</span> <span style="font-size: 10px; color: ${textColor || '#888'}; margin-left: 4px;">${valWithSign}</span>`
+                    }
 
                     return value !== undefined && value !== 0
                         ? `
@@ -256,7 +263,10 @@ export const buildTooltip = (opt: {
                             font-size: 12px;
                             border-left: 4px solid ${color};
                             margin-bottom: 4px;">
-                            <span style="margin-left: 8px;"><strong>${seriesName}:</strong><span style="color: ${textColor}">${formattedValue}</span></span>
+                            <span style="margin-left: 8px;">
+                                <strong>${seriesName}:</strong>
+                                ${formattedValue}
+                            </span>
                         </div>
                     `
                         : ''
