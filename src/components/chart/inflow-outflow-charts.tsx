@@ -163,8 +163,19 @@ export default function InflowOutflowCharts() {
                         const totalPoints = isInflowOutflow
                             ? inflowSeries[0]?.data.length
                             : chartData[0]?.data.length
-                        const skipInterval = totalPoints && totalPoints > 100 ? 8 : 1 // Show every 8th label if over 100 points
-                        return opts?.i % skipInterval === 0 ? value : '' // Only show label every `skipInterval` points
+
+                        const skipInterval =
+                            totalPoints && totalPoints > 100 ? 8 : totalPoints > 20 ? 2 : 1
+
+                        if (selectedSeries === 'Daily') {
+                            const skip = totalPoints && totalPoints > 100 ? 4 : 2
+                            return opts?.i % skip === 0 ? value : ''
+                        } else {
+                            return opts?.i % skipInterval === 0 ? value : ''
+                        }
+                    },
+                    style: {
+                        fontSize: '12px',
                     },
                 },
             },
