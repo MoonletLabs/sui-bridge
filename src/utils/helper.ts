@@ -237,7 +237,12 @@ export const transformAmount = (
                 ),
             }
         } else {
-            console.warn(`Cannot find tokenData for token_id: ${it.token_id}`)
+            // console.warn(`Cannot find tokenData for token_id: ${it.token_id}`)
+
+            return {
+                ...it,
+                total_count: Number(it.total_count),
+            }
         }
     })
 }
@@ -500,15 +505,16 @@ export const calculateCardsTotals = (
         )
         .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
 
-    const uniqueAddressTotal = apiData.addresses
-        .filter(
-            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
-        )
-        .reduce(
-            (acc: number, item: { total_unique_addresses: any }) =>
-                acc + parseInt(item.total_unique_addresses || 0),
-            0,
-        )
+    const uniqueAddressTotal = selectedTokens.includes('All')
+        ? Number(apiData.addresses.find(item => item.token_id === -1)?.total_unique_addresses) || 0
+        : apiData.addresses
+              .filter(item => selectedTokens.includes(item.token_info?.name))
+              .reduce(
+                  (acc: number, item: { total_unique_addresses: any }) =>
+                      acc + parseInt(item.total_unique_addresses || 0),
+                  0,
+              )
+
     const netFlow = inflowTotal - outflowTotal
 
     // compute previous
@@ -525,15 +531,18 @@ export const calculateCardsTotals = (
         )
         .reduce((acc: any, item: { total_volume_usd: any }) => acc + item.total_volume_usd, 0)
 
-    const uniqueAddressTotalPrevious = apiData.previousAddresses
-        .filter(
-            item => selectedTokens.includes('All') || selectedTokens.includes(item.token_info.name),
-        )
-        .reduce(
-            (acc: number, item: { total_unique_addresses: any }) =>
-                acc + parseInt(item.total_unique_addresses || 0),
-            0,
-        )
+    const uniqueAddressTotalPrevious = selectedTokens.includes('All')
+        ? Number(
+              apiData.previousAddresses.find(item => item.token_id === -1)?.total_unique_addresses,
+          ) || 0
+        : apiData.previousAddresses
+              .filter(item => selectedTokens.includes(item.token_info?.name))
+              .reduce(
+                  (acc: number, item: { total_unique_addresses: any }) =>
+                      acc + parseInt(item.total_unique_addresses || 0),
+                  0,
+              )
+
     const netFlowPrevious = inflowTotalPrevious - outflowTotalPrevious
 
     return [

@@ -115,36 +115,39 @@ const getAddresses = (
     computePrevious?: boolean,
 ) => {
     const { fromInterval, toInterval } = computerIntervals(timePeriod, computePrevious)
-    return db[networkConfig.network]`
+
+    // Query to get addresses per token
+    const addressesPerToken = db[networkConfig.network]`
         SELECT
             token_id,
-            COUNT(DISTINCT address) AS total_unique_addresses
-        FROM (
-            SELECT
-                token_id,
-                encode(sender_address, 'hex') AS address
-            FROM
-                public.token_transfer_data
-            WHERE
-                is_finalized = true
-                AND timestamp_ms >= ${fromInterval}
-                AND timestamp_ms <= ${toInterval}
-
-            UNION
-
-            SELECT
-                token_id,
-                encode(recipient_address, 'hex') AS address
-            FROM
-                public.token_transfer_data
-            WHERE
-                is_finalized = true
-                AND timestamp_ms >= ${fromInterval}
-                AND timestamp_ms <= ${toInterval}
-
-        ) AS unique_addresses
+            COUNT(DISTINCT encode(sender_address, 'hex')) AS total_unique_addresses
+        FROM
+            public.token_transfer_data
+        WHERE
+            is_finalized = true
+            AND timestamp_ms >= ${fromInterval}
+            AND timestamp_ms <= ${toInterval}
         GROUP BY token_id
-    `.then(query => transformAmount(networkConfig, query as any[], prices))
+    `
+
+    // Query to get total unique addresses across all tokens
+    const totalAddresses = db[networkConfig.network]`
+        SELECT
+            -1 as token_id,
+            COUNT(DISTINCT encode(sender_address, 'hex')) AS total_unique_addresses
+        FROM
+            public.token_transfer_data
+        WHERE
+            is_finalized = true
+            AND timestamp_ms >= ${fromInterval}
+            AND timestamp_ms <= ${toInterval}
+    `
+
+    // Combine results from both queries
+    return Promise.all([addressesPerToken, totalAddresses]).then(([tokenResults, totalResult]) => {
+        const combinedResults = [...tokenResults, ...totalResult]
+        return transformAmount(networkConfig, combinedResults as any[], prices)
+    })
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

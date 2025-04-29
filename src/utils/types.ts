@@ -187,3 +187,23 @@ export type CumulativeInflowType = {
     total_volume: number
     total_volume_usd: number
 }
+
+// Add uniqueAddressesCount to the BridgeMetricsResponse type
+export type BridgeMetricsResponse = {
+    transactionCount: {
+        transfer_date: string
+        total_count: number
+        total_volume: number
+        total_volume_usd: number
+        direction: string
+        token_id: number
+        token_info: {
+            id: number
+            name: string
+            deno: number
+            coingeckoId: string
+        }
+        destination_chain: string
+    }[]
+    uniqueAddressesCount: number
+}

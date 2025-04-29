@@ -324,10 +324,6 @@ export default function InflowOutflowCharts() {
 
                     <Chart
                         type="bar"
-                        // series={chartData.map(item => ({
-                        //     name: item.name,
-                        //     data: item.data.map(point => point.value),
-                        // }))}
                         series={
                             showMergedValues
                                 ? totalChartData.map(item => ({
