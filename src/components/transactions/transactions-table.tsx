@@ -16,21 +16,38 @@ import { CustomTable } from '../table/table'
 export function TransactionsTable({
     ethAddress,
     suiAddress,
+    limit = 48,
+    autoRefresh,
+    hidePagination = false,
+    showTitleLink = false,
+    minHeight = 800,
 }: {
     ethAddress?: string
     suiAddress?: string
+    limit?: number
+    autoRefresh?: number | (() => void)
+    hidePagination?: boolean
+    showTitleLink?: boolean
+    minHeight?: number
 }) {
     const network = getNetwork()
     const router = useRouter()
     const [page, setPage] = useState(0)
     const [totalItems, setTotalItems] = useState(0)
-    const pageSize = 48
+    const pageSize = limit
 
     // Fetch paginated data
-    const { data, isLoading } = useSWR<AllTxsResponse>(
+    const { data, isLoading, mutate } = useSWR<AllTxsResponse>(
         `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
         fetcher,
     )
+
+    // Force refresh when autoRefresh changes
+    useEffect(() => {
+        if (autoRefresh) {
+            mutate()
+        }
+    }, [autoRefresh, mutate])
 
     useEffect(() => {
         if (data?.total && totalItems !== data?.total) {
@@ -57,24 +74,41 @@ export function TransactionsTable({
                 tableData={data?.transactions || []}
                 loading={isLoading}
                 title={
-                    (
-                        <Box display="flex" alignItems="center" justifyContent="space-between">
-                            <Typography variant="h6" fontWeight="bold" color="primary">
+                    (showTitleLink ? (
+                        <Link
+                            href={paths.transactions.root}
+                            rel="noopener noreferrer"
+                            underline="hover"
+                            color="inherit"
+                            fontWeight="bold"
+                            sx={{ display: 'flex', alignItems: 'center' }}
+                        >
+                            <Typography variant="h6" fontWeight="bold" sx={{ mr: 1 }}>
                                 Latest Bridge Transactions
                             </Typography>
-                        </Box>
-                    ) as any
+                            <Iconify icon="solar:arrow-right-up-outline" />
+                        </Link>
+                    ) : (
+                        <Typography variant="h6" fontWeight="bold">
+                            Latest Bridge Transactions
+                        </Typography>
+                    )) as any
                 }
                 rowHeight={85}
+                minHeight={minHeight}
                 RowComponent={props => (
                     <ActivitiesRow {...props} network={network} onNavigateTx={onNavigateTx} />
                 )}
-                pagination={{
-                    count: totalItems,
-                    page,
-                    rowsPerPage: pageSize,
-                    onPageChange: newPage => setPage(newPage),
-                }}
+                pagination={
+                    !hidePagination
+                        ? {
+                              count: totalItems,
+                              page,
+                              rowsPerPage: pageSize,
+                              onPageChange: newPage => setPage(newPage),
+                          }
+                        : undefined
+                }
             />
         </Box>
     )

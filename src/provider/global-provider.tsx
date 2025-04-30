@@ -19,7 +19,9 @@ const GlobalContext = createContext<GlobalContextProps | undefined>(undefined)
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     const [network, setNetworkState] = useState<NETWORK>(NETWORK.MAINNET)
     const [isMounted, setIsMounted] = useState(false)
-    const [timePeriod, setTimePeriodState] = useState<TimePeriod>('Last Month')
+    const [timePeriod, setTimePeriodState] = useState<TimePeriod>(
+        (localStorage.getItem('timePeriod') as any) || 'Last Month',
+    )
     const [selectedTokens, setSelectedTokensState] = useState<string[]>(['All'])
 
     // Update local storage and state when timePeriod changes
