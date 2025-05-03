@@ -118,29 +118,57 @@ const getAddresses = (
 
     // Query to get addresses per token
     const addressesPerToken = db[networkConfig.network]`
+        WITH all_addresses AS (
+            SELECT token_id, encode(sender_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms >= ${fromInterval}
+                AND timestamp_ms <= ${toInterval}
+                AND sender_address IS NOT NULL
+            
+            UNION
+            
+            SELECT token_id, encode(recipient_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms >= ${fromInterval}
+                AND timestamp_ms <= ${toInterval}
+                AND recipient_address IS NOT NULL
+        )
         SELECT
             token_id,
-            COUNT(DISTINCT encode(sender_address, 'hex')) AS total_unique_addresses
-        FROM
-            public.token_transfer_data
-        WHERE
-            is_finalized = true
-            AND timestamp_ms >= ${fromInterval}
-            AND timestamp_ms <= ${toInterval}
+            COUNT(DISTINCT address) AS total_unique_addresses
+        FROM all_addresses
         GROUP BY token_id
     `
 
     // Query to get total unique addresses across all tokens
     const totalAddresses = db[networkConfig.network]`
+        WITH all_addresses AS (
+            SELECT encode(sender_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms >= ${fromInterval}
+                AND timestamp_ms <= ${toInterval}
+                AND sender_address IS NOT NULL
+            
+            UNION
+            
+            SELECT encode(recipient_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms >= ${fromInterval}
+                AND timestamp_ms <= ${toInterval}
+                AND recipient_address IS NOT NULL
+        )
         SELECT
             -1 as token_id,
-            COUNT(DISTINCT encode(sender_address, 'hex')) AS total_unique_addresses
-        FROM
-            public.token_transfer_data
-        WHERE
-            is_finalized = true
-            AND timestamp_ms >= ${fromInterval}
-            AND timestamp_ms <= ${toInterval}
+            COUNT(DISTINCT address) AS total_unique_addresses
+        FROM all_addresses
     `
 
     // Combine results from both queries

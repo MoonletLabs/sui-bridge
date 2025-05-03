@@ -17,7 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const transactionCountQuery = await db[networkConfig.network]`
             SELECT
                 TO_TIMESTAMP(timestamp_ms / 1000)::DATE AS transfer_date,
-                COUNT(*) AS total_count
+                COUNT(*) AS total_count,
+                COUNT(CASE WHEN destination_chain = ${networkConfig.config.networkId.SUI} THEN 1 END) AS sui_count,
+                COUNT(CASE WHEN destination_chain = ${networkConfig.config.networkId.ETH} THEN 1 END) AS eth_count
             FROM
                 public.token_transfer_data
             WHERE is_finalized = true AND
@@ -31,14 +33,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Get unique addresses count - optimized query
         const uniqueAddressesQuery = await db[networkConfig.network]`
+            WITH all_addresses AS (
+                SELECT encode(sender_address, 'hex') AS address, destination_chain
+                FROM public.token_transfer_data
+                WHERE 
+                    is_finalized = true
+                    AND timestamp_ms >= ${fromInterval}
+                    AND timestamp_ms <= ${toInterval}
+                    AND sender_address IS NOT NULL
+                
+                UNION
+                
+                SELECT encode(recipient_address, 'hex') AS address, destination_chain
+                FROM public.token_transfer_data
+                WHERE 
+                    is_finalized = true
+                    AND timestamp_ms >= ${fromInterval}
+                    AND timestamp_ms <= ${toInterval}
+                    AND recipient_address IS NOT NULL
+            )
             SELECT
-                COUNT(DISTINCT encode(sender_address, 'hex')) AS total_unique_addresses
-            FROM
-                public.token_transfer_data
-            WHERE
-                is_finalized = true
-                AND timestamp_ms >= ${fromInterval}
-                AND timestamp_ms <= ${toInterval}
+                COUNT(DISTINCT CASE WHEN destination_chain = ${networkConfig.config.networkId.SUI} THEN address END) AS unique_sui_addresses,
+                COUNT(DISTINCT CASE WHEN destination_chain = ${networkConfig.config.networkId.ETH} THEN address END) AS unique_eth_addresses,
+                COUNT(DISTINCT address) AS total_unique_addresses
+            FROM all_addresses
         `
 
         const prices = await getPrices(networkConfig.network)
@@ -52,8 +70,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Simplified response with only what we need
         const responseData = {
-            transactionCount: formattedTransactionCountData,
-            uniqueAddressesCount: parseInt(uniqueAddressesQuery[0]?.total_unique_addresses || '0'),
+            transactionCount: {
+                chart: formattedTransactionCountData,
+                total: transactionCountQuery.reduce(
+                    (sum, item) => sum + parseInt(item.total_count || '0'),
+                    0,
+                ),
+                sui: transactionCountQuery.reduce(
+                    (sum, item) => sum + parseInt(item.sui_count || '0'),
+                    0,
+                ),
+                eth: transactionCountQuery.reduce(
+                    (sum, item) => sum + parseInt(item.eth_count || '0'),
+                    0,
+                ),
+            },
+            uniqueAddressesCount: {
+                total: parseInt(uniqueAddressesQuery[0]?.total_unique_addresses || '0'),
+                sui: parseInt(uniqueAddressesQuery[0]?.unique_sui_addresses || '0'),
+                eth: parseInt(uniqueAddressesQuery[0]?.unique_eth_addresses || '0'),
+            },
         }
 
         sendReply(res, responseData)

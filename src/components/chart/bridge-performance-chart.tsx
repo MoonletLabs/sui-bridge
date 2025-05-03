@@ -75,11 +75,6 @@ export default function BridgePerformanceChart() {
                     enabled: false, // Disable the x-axis tooltip to avoid duplication with main tooltip
                 },
             },
-            // yaxis: {
-            //     labels: {
-            //         formatter: (value) => fNumber(value),
-            //     },
-            // },
             tooltip: {
                 shared: true,
                 followCursor: true,
@@ -126,7 +121,7 @@ export default function BridgePerformanceChart() {
                                 font-size: 12px;
                                 border-left: 4px solid #3780FF;
                                 margin-bottom: 4px;">
-                                <span style="margin-left: 8px;"><strong>Transactions:</strong> ${formattedValue}</span>
+                                <span style="margin-left: 8px;"><strong>Bridges:</strong> ${formattedValue}</span>
                             </div>
                         </div>
                     `
@@ -136,22 +131,7 @@ export default function BridgePerformanceChart() {
             legend: {
                 show: false,
             },
-            // yaxis: {
-            //     labels: {
-            //         formatter: value =>
-            //             labelFormatted(value),
-            //     },
-            // },
-            // tooltip: buildTooltip({
-            //     chartData: [],
-            //     // showTotal: !isInflowOutflow,
-            //     // showToken: !showDollar && !showMergedValues,
-            // })
         })
-
-    // if (isLoading) {
-    //     return renderLoading()
-    // }
 
     return (
         <Grid container spacing={4} marginTop={2}>
@@ -161,16 +141,7 @@ export default function BridgePerformanceChart() {
                         renderLoading()
                     ) : (
                         <>
-                            <CardHeader
-                                title="Bridge Transactions"
-                                // action={
-                                //     <ChartSelect
-                                //         options={getTimeIntervalForPeriod(timePeriod)}
-                                //         value={selectedSeries}
-                                //         onChange={(value) => setSelectedSeries(value as TimeInterval)}
-                                //     />
-                                // }
-                            />
+                            <CardHeader title="Bridge Transactions" />
 
                             <Box sx={{ p: 1 }}>
                                 <Grid
@@ -183,49 +154,183 @@ export default function BridgePerformanceChart() {
                                         <Box sx={{ p: 2, textAlign: 'center' }}>
                                             {performanceData && (
                                                 <>
-                                                    <Typography variant="h5" color="primary">
-                                                        {performanceData
-                                                            ? fNumber(
-                                                                  Object.values(
-                                                                      performanceData.transactionCount?.map(
-                                                                          it => it.total_count,
-                                                                      ),
-                                                                  ).reduce(
-                                                                      (a, b) =>
-                                                                          Number(a) + Number(b),
-                                                                      0,
-                                                                  ),
-                                                              )
-                                                            : ''}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="text.secondary"
-                                                    >
-                                                        Total bridges {timePeriod.toLowerCase()}
-                                                    </Typography>
-                                                </>
-                                            )}
+                                                    {/* Total Bridges */}
+                                                    <Box mb={3}>
+                                                        <Typography variant="h5" color="primary">
+                                                            {performanceData
+                                                                ? fNumber(
+                                                                      performanceData
+                                                                          ?.transactionCount
+                                                                          ?.total || 0,
+                                                                  )
+                                                                : ''}
+                                                        </Typography>
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="text.secondary"
+                                                        >
+                                                            Total Bridges {timePeriod.toLowerCase()}
+                                                        </Typography>
 
-                                            {performanceData && (
-                                                <Box mt={3}>
-                                                    {/* <Typography variant="body2" fontWeight="bold" color="text.primary">
-                                        Unique Addresses
-                                    </Typography> */}
-                                                    <Typography variant="h5" color="info.main">
-                                                        {fNumber(
-                                                            performanceData.uniqueAddressesCount ||
-                                                                0,
-                                                        )}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="text.secondary"
-                                                    >
-                                                        Unique wallets using the bridge{' '}
-                                                        {timePeriod.toLowerCase()}
-                                                    </Typography>
-                                                </Box>
+                                                        {/* Network Breakdown for Transaction Counts */}
+                                                        <Box
+                                                            sx={{
+                                                                display: 'grid',
+                                                                gridTemplateColumns: '1fr 1fr',
+                                                                gap: 2,
+                                                                mt: 1,
+                                                            }}
+                                                        >
+                                                            {/* SUI */}
+                                                            <Box
+                                                                sx={{
+                                                                    p: 1.5,
+                                                                    borderRadius: 1,
+                                                                    bgcolor: 'background.neutral',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: 1,
+                                                                }}
+                                                            >
+                                                                <Box
+                                                                    component="img"
+                                                                    src="/assets/icons/brands/sui.svg"
+                                                                    alt="SUI"
+                                                                    sx={{
+                                                                        width: 20,
+                                                                        height: 20,
+                                                                    }}
+                                                                />
+                                                                <Typography variant="body2">
+                                                                    {fNumber(
+                                                                        performanceData
+                                                                            .transactionCount.sui ||
+                                                                            0,
+                                                                    )}
+                                                                </Typography>
+                                                            </Box>
+
+                                                            {/* ETH */}
+                                                            <Box
+                                                                sx={{
+                                                                    p: 1.5,
+                                                                    borderRadius: 1,
+                                                                    bgcolor: 'background.neutral',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: 1,
+                                                                }}
+                                                            >
+                                                                <Box
+                                                                    component="img"
+                                                                    src="/assets/icons/brands/eth.svg"
+                                                                    alt="ETH"
+                                                                    sx={{
+                                                                        width: 20,
+                                                                        height: 20,
+                                                                    }}
+                                                                />
+                                                                <Typography variant="body2">
+                                                                    {fNumber(
+                                                                        performanceData
+                                                                            .transactionCount.eth ||
+                                                                            0,
+                                                                    )}
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
+
+                                                    {/* Unique Wallets Section */}
+                                                    <Box mb={3}>
+                                                        {/* Total Count */}
+                                                        <Typography variant="h5" color="info.main">
+                                                            {fNumber(
+                                                                performanceData.uniqueAddressesCount
+                                                                    ?.total || 0,
+                                                            )}
+                                                        </Typography>
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="text.secondary"
+                                                        >
+                                                            Unique Wallets{' '}
+                                                            {timePeriod.toLowerCase()}
+                                                        </Typography>
+
+                                                        {/* Network Breakdown */}
+                                                        <Box
+                                                            sx={{
+                                                                display: 'grid',
+                                                                gridTemplateColumns: '1fr 1fr',
+                                                                gap: 2,
+                                                                mt: 1,
+                                                            }}
+                                                        >
+                                                            {/* SUI */}
+                                                            <Box
+                                                                sx={{
+                                                                    p: 1.5,
+                                                                    borderRadius: 1,
+                                                                    bgcolor: 'background.neutral',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: 1,
+                                                                }}
+                                                            >
+                                                                <Box
+                                                                    component="img"
+                                                                    src="/assets/icons/brands/sui.svg"
+                                                                    alt="SUI"
+                                                                    sx={{
+                                                                        width: 20,
+                                                                        height: 20,
+                                                                    }}
+                                                                />
+                                                                <Typography variant="body2">
+                                                                    {fNumber(
+                                                                        performanceData
+                                                                            .uniqueAddressesCount
+                                                                            ?.sui || 0,
+                                                                    )}
+                                                                </Typography>
+                                                            </Box>
+
+                                                            {/* ETH */}
+                                                            <Box
+                                                                sx={{
+                                                                    p: 1.5,
+                                                                    borderRadius: 1,
+                                                                    bgcolor: 'background.neutral',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: 1,
+                                                                }}
+                                                            >
+                                                                <Box
+                                                                    component="img"
+                                                                    src="/assets/icons/brands/eth.svg"
+                                                                    alt="ETH"
+                                                                    sx={{
+                                                                        width: 20,
+                                                                        height: 20,
+                                                                    }}
+                                                                />
+                                                                <Typography variant="body2">
+                                                                    {fNumber(
+                                                                        performanceData
+                                                                            .uniqueAddressesCount
+                                                                            ?.eth || 0,
+                                                                    )}
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
+                                                </>
                                             )}
                                         </Box>
                                     </Grid>
@@ -237,7 +342,7 @@ export default function BridgePerformanceChart() {
                                                 {
                                                     name: 'Transactions',
                                                     data: performanceData?.transactionCount
-                                                        ? performanceData.transactionCount.map(
+                                                        ? performanceData.transactionCount?.chart?.map(
                                                               item => ({
                                                                   x: new Date(
                                                                       item.transfer_date,
