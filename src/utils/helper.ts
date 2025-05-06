@@ -705,3 +705,8 @@ export function addCumulativeNetInflow(
 
     return result
 }
+
+// Helper to calculate sum from query results
+export const sumQueryField = (data: any[], field: string): number => {
+    return data.reduce((sum, item) => sum + parseInt(item[field] || '0'), 0)
+}

@@ -93,21 +93,6 @@ const getOutflows = (
     `.then(query => transformAmount(networkConfig, query as any[], prices))
 }
 
-// const getVolume = (networkConfig: INetworkConfig, timePeriod: TimePeriod) =>
-//     db[networkConfig.network]`
-//         SELECT
-//             token_id,
-//             COUNT(*) AS total_count,
-//             SUM(amount) AS total_volume
-//         FROM
-//             public.token_transfer_data
-//         WHERE
-//             is_finalized = true
-//             AND timestamp_ms >= ${calculateStartDate(timePeriod)}
-//         GROUP by
-//             token_id
-//     `.then(query => transformAmount(networkConfig, query as any[]))
-
 const getAddresses = (
     networkConfig: INetworkConfig,
     prices: IPrice[],
@@ -116,26 +101,50 @@ const getAddresses = (
 ) => {
     const { fromInterval, toInterval } = computerIntervals(timePeriod, computePrevious)
 
-    // Query to get addresses per token
+    // Query to get addresses per token using the bridge-metrics approach
     const addressesPerToken = db[networkConfig.network]`
         WITH all_addresses AS (
+            -- Addresses from ETH to SUI (sender on ETH side)
             SELECT token_id, encode(sender_address, 'hex') AS address
             FROM public.token_transfer_data
             WHERE 
                 is_finalized = true
-                AND timestamp_ms >= ${fromInterval}
-                AND timestamp_ms <= ${toInterval}
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
                 AND sender_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.SUI}
             
             UNION
             
+            -- Addresses from SUI to ETH (recipient on ETH side)
             SELECT token_id, encode(recipient_address, 'hex') AS address
             FROM public.token_transfer_data
             WHERE 
                 is_finalized = true
-                AND timestamp_ms >= ${fromInterval}
-                AND timestamp_ms <= ${toInterval}
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
                 AND recipient_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.ETH}
+            
+            UNION
+            
+            -- Addresses from ETH to SUI (recipient on SUI side)
+            SELECT token_id, encode(recipient_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                AND recipient_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.SUI}
+            
+            UNION
+            
+            -- Addresses from SUI to ETH (sender on SUI side)
+            SELECT token_id, encode(sender_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                AND sender_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.ETH}
         )
         SELECT
             token_id,
@@ -147,23 +156,47 @@ const getAddresses = (
     // Query to get total unique addresses across all tokens
     const totalAddresses = db[networkConfig.network]`
         WITH all_addresses AS (
+            -- Addresses from ETH to SUI (sender on ETH side)
             SELECT encode(sender_address, 'hex') AS address
             FROM public.token_transfer_data
             WHERE 
                 is_finalized = true
-                AND timestamp_ms >= ${fromInterval}
-                AND timestamp_ms <= ${toInterval}
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
                 AND sender_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.SUI}
             
             UNION
             
+            -- Addresses from SUI to ETH (recipient on ETH side)
             SELECT encode(recipient_address, 'hex') AS address
             FROM public.token_transfer_data
             WHERE 
                 is_finalized = true
-                AND timestamp_ms >= ${fromInterval}
-                AND timestamp_ms <= ${toInterval}
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
                 AND recipient_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.ETH}
+            
+            UNION
+            
+            -- Addresses from ETH to SUI (recipient on SUI side)
+            SELECT encode(recipient_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                AND recipient_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.SUI}
+            
+            UNION
+            
+            -- Addresses from SUI to ETH (sender on SUI side)
+            SELECT encode(sender_address, 'hex') AS address
+            FROM public.token_transfer_data
+            WHERE 
+                is_finalized = true
+                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                AND sender_address IS NOT NULL
+                AND destination_chain = ${networkConfig.config.networkId.ETH}
         )
         SELECT
             -1 as token_id,

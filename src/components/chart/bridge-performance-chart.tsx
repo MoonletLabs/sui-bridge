@@ -155,8 +155,12 @@ export default function BridgePerformanceChart() {
                                             {performanceData && (
                                                 <>
                                                     {/* Total Bridges */}
-                                                    <Box mb={3}>
-                                                        <Typography variant="h5" color="primary">
+                                                    <Box mb={4}>
+                                                        <Typography
+                                                            variant="h5"
+                                                            color="primary"
+                                                            gutterBottom
+                                                        >
                                                             {performanceData
                                                                 ? fNumber(
                                                                       performanceData
@@ -168,6 +172,7 @@ export default function BridgePerformanceChart() {
                                                         <Typography
                                                             variant="body2"
                                                             color="text.secondary"
+                                                            gutterBottom
                                                         >
                                                             Total Bridges {timePeriod.toLowerCase()}
                                                         </Typography>
@@ -175,78 +180,198 @@ export default function BridgePerformanceChart() {
                                                         {/* Network Breakdown for Transaction Counts */}
                                                         <Box
                                                             sx={{
-                                                                display: 'grid',
-                                                                gridTemplateColumns: '1fr 1fr',
-                                                                gap: 2,
-                                                                mt: 1,
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                gap: 1,
+                                                                mt: 1.5,
                                                             }}
                                                         >
-                                                            {/* SUI */}
-                                                            <Box
-                                                                sx={{
-                                                                    p: 1.5,
-                                                                    borderRadius: 1,
-                                                                    bgcolor: 'background.neutral',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: 1,
-                                                                }}
-                                                            >
-                                                                <Box
-                                                                    component="img"
-                                                                    src="/assets/icons/brands/sui.svg"
-                                                                    alt="SUI"
-                                                                    sx={{
-                                                                        width: 20,
-                                                                        height: 20,
-                                                                    }}
-                                                                />
-                                                                <Typography variant="body2">
-                                                                    {fNumber(
-                                                                        performanceData
-                                                                            .transactionCount.sui ||
-                                                                            0,
-                                                                    )}
-                                                                </Typography>
-                                                            </Box>
+                                                            {/* Calculate percentages */}
+                                                            {(() => {
+                                                                const total =
+                                                                    performanceData
+                                                                        ?.transactionCount?.total ||
+                                                                    0
+                                                                const suiCount =
+                                                                    performanceData
+                                                                        ?.transactionCount?.sui || 0
+                                                                const ethCount =
+                                                                    performanceData
+                                                                        ?.transactionCount?.eth || 0
+                                                                const suiPercent =
+                                                                    total > 0
+                                                                        ? (suiCount / total) * 100
+                                                                        : 0
+                                                                const ethPercent =
+                                                                    total > 0
+                                                                        ? (ethCount / total) * 100
+                                                                        : 0
 
-                                                            {/* ETH */}
-                                                            <Box
-                                                                sx={{
-                                                                    p: 1.5,
-                                                                    borderRadius: 1,
-                                                                    bgcolor: 'background.neutral',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: 1,
-                                                                }}
-                                                            >
-                                                                <Box
-                                                                    component="img"
-                                                                    src="/assets/icons/brands/eth.svg"
-                                                                    alt="ETH"
-                                                                    sx={{
-                                                                        width: 20,
-                                                                        height: 20,
-                                                                    }}
-                                                                />
-                                                                <Typography variant="body2">
-                                                                    {fNumber(
-                                                                        performanceData
-                                                                            .transactionCount.eth ||
-                                                                            0,
-                                                                    )}
-                                                                </Typography>
-                                                            </Box>
+                                                                return (
+                                                                    <>
+                                                                        {/* SUI */}
+                                                                        <Box
+                                                                            sx={{
+                                                                                p: 1.5,
+                                                                                borderRadius: 1,
+                                                                                bgcolor:
+                                                                                    'background.neutral',
+                                                                                display: 'flex',
+                                                                                alignItems:
+                                                                                    'center',
+                                                                                justifyContent:
+                                                                                    'space-between',
+                                                                            }}
+                                                                        >
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Box
+                                                                                    component="img"
+                                                                                    src="/assets/icons/brands/sui.svg"
+                                                                                    alt="SUI"
+                                                                                    sx={{
+                                                                                        width: 20,
+                                                                                        height: 20,
+                                                                                    }}
+                                                                                />
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    fontWeight="medium"
+                                                                                >
+                                                                                    SUI
+                                                                                </Typography>
+                                                                            </Box>
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Typography variant="body2">
+                                                                                    {fNumber(
+                                                                                        suiCount,
+                                                                                    )}
+                                                                                </Typography>
+                                                                                <Typography
+                                                                                    variant="caption"
+                                                                                    sx={{
+                                                                                        bgcolor:
+                                                                                            '#E6F4FF',
+                                                                                        color: '#0063CC',
+                                                                                        borderRadius:
+                                                                                            '3px',
+                                                                                        px: 0.5,
+                                                                                        py: 0.1,
+                                                                                        fontWeight:
+                                                                                            'medium',
+                                                                                        fontSize:
+                                                                                            '0.65rem',
+                                                                                    }}
+                                                                                >
+                                                                                    {suiPercent.toFixed(
+                                                                                        1,
+                                                                                    )}
+                                                                                    %
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        </Box>
+
+                                                                        {/* ETH */}
+                                                                        <Box
+                                                                            sx={{
+                                                                                p: 1.5,
+                                                                                borderRadius: 1,
+                                                                                bgcolor:
+                                                                                    'background.neutral',
+                                                                                display: 'flex',
+                                                                                alignItems:
+                                                                                    'center',
+                                                                                justifyContent:
+                                                                                    'space-between',
+                                                                            }}
+                                                                        >
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Box
+                                                                                    component="img"
+                                                                                    src="/assets/icons/brands/eth.svg"
+                                                                                    alt="ETH"
+                                                                                    sx={{
+                                                                                        width: 20,
+                                                                                        height: 20,
+                                                                                    }}
+                                                                                />
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    fontWeight="medium"
+                                                                                >
+                                                                                    ETH
+                                                                                </Typography>
+                                                                            </Box>
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Typography variant="body2">
+                                                                                    {fNumber(
+                                                                                        ethCount,
+                                                                                    )}
+                                                                                </Typography>
+                                                                                <Typography
+                                                                                    variant="caption"
+                                                                                    sx={{
+                                                                                        bgcolor:
+                                                                                            '#EBF8FF',
+                                                                                        color: '#006399',
+                                                                                        borderRadius:
+                                                                                            '3px',
+                                                                                        px: 0.5,
+                                                                                        py: 0.1,
+                                                                                        fontWeight:
+                                                                                            'medium',
+                                                                                        fontSize:
+                                                                                            '0.65rem',
+                                                                                    }}
+                                                                                >
+                                                                                    {ethPercent.toFixed(
+                                                                                        1,
+                                                                                    )}
+                                                                                    %
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        </Box>
+                                                                    </>
+                                                                )
+                                                            })()}
                                                         </Box>
                                                     </Box>
 
                                                     {/* Unique Wallets Section */}
                                                     <Box mb={3}>
                                                         {/* Total Count */}
-                                                        <Typography variant="h5" color="info.main">
+                                                        <Typography
+                                                            variant="h5"
+                                                            color="info.main"
+                                                            gutterBottom
+                                                        >
                                                             {fNumber(
                                                                 performanceData.uniqueAddressesCount
                                                                     ?.total || 0,
@@ -255,6 +380,7 @@ export default function BridgePerformanceChart() {
                                                         <Typography
                                                             variant="body2"
                                                             color="text.secondary"
+                                                            gutterBottom
                                                         >
                                                             Unique Wallets{' '}
                                                             {timePeriod.toLowerCase()}
@@ -263,71 +389,189 @@ export default function BridgePerformanceChart() {
                                                         {/* Network Breakdown */}
                                                         <Box
                                                             sx={{
-                                                                display: 'grid',
-                                                                gridTemplateColumns: '1fr 1fr',
-                                                                gap: 2,
-                                                                mt: 1,
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                gap: 1,
+                                                                mt: 1.5,
                                                             }}
                                                         >
-                                                            {/* SUI */}
-                                                            <Box
-                                                                sx={{
-                                                                    p: 1.5,
-                                                                    borderRadius: 1,
-                                                                    bgcolor: 'background.neutral',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: 1,
-                                                                }}
-                                                            >
-                                                                <Box
-                                                                    component="img"
-                                                                    src="/assets/icons/brands/sui.svg"
-                                                                    alt="SUI"
-                                                                    sx={{
-                                                                        width: 20,
-                                                                        height: 20,
-                                                                    }}
-                                                                />
-                                                                <Typography variant="body2">
-                                                                    {fNumber(
-                                                                        performanceData
-                                                                            .uniqueAddressesCount
-                                                                            ?.sui || 0,
-                                                                    )}
-                                                                </Typography>
-                                                            </Box>
+                                                            {/* Calculate percentages */}
+                                                            {(() => {
+                                                                const total =
+                                                                    performanceData
+                                                                        ?.uniqueAddressesCount
+                                                                        ?.total || 0
+                                                                const suiCount =
+                                                                    performanceData
+                                                                        ?.uniqueAddressesCount
+                                                                        ?.sui || 0
+                                                                const ethCount =
+                                                                    performanceData
+                                                                        ?.uniqueAddressesCount
+                                                                        ?.eth || 0
+                                                                const suiPercent =
+                                                                    total > 0
+                                                                        ? (suiCount / total) * 100
+                                                                        : 0
+                                                                const ethPercent =
+                                                                    total > 0
+                                                                        ? (ethCount / total) * 100
+                                                                        : 0
 
-                                                            {/* ETH */}
-                                                            <Box
-                                                                sx={{
-                                                                    p: 1.5,
-                                                                    borderRadius: 1,
-                                                                    bgcolor: 'background.neutral',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: 1,
-                                                                }}
-                                                            >
-                                                                <Box
-                                                                    component="img"
-                                                                    src="/assets/icons/brands/eth.svg"
-                                                                    alt="ETH"
-                                                                    sx={{
-                                                                        width: 20,
-                                                                        height: 20,
-                                                                    }}
-                                                                />
-                                                                <Typography variant="body2">
-                                                                    {fNumber(
-                                                                        performanceData
-                                                                            .uniqueAddressesCount
-                                                                            ?.eth || 0,
-                                                                    )}
-                                                                </Typography>
-                                                            </Box>
+                                                                return (
+                                                                    <>
+                                                                        {/* SUI */}
+                                                                        <Box
+                                                                            sx={{
+                                                                                p: 1.5,
+                                                                                borderRadius: 1,
+                                                                                bgcolor:
+                                                                                    'background.neutral',
+                                                                                display: 'flex',
+                                                                                alignItems:
+                                                                                    'center',
+                                                                                justifyContent:
+                                                                                    'space-between',
+                                                                            }}
+                                                                        >
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Box
+                                                                                    component="img"
+                                                                                    src="/assets/icons/brands/sui.svg"
+                                                                                    alt="SUI"
+                                                                                    sx={{
+                                                                                        width: 20,
+                                                                                        height: 20,
+                                                                                    }}
+                                                                                />
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    fontWeight="medium"
+                                                                                >
+                                                                                    SUI
+                                                                                </Typography>
+                                                                            </Box>
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Typography variant="body2">
+                                                                                    {fNumber(
+                                                                                        suiCount,
+                                                                                    )}
+                                                                                </Typography>
+                                                                                <Typography
+                                                                                    variant="caption"
+                                                                                    sx={{
+                                                                                        bgcolor:
+                                                                                            '#E6F4FF',
+                                                                                        color: '#0063CC',
+                                                                                        borderRadius:
+                                                                                            '3px',
+                                                                                        px: 0.5,
+                                                                                        py: 0.1,
+                                                                                        fontWeight:
+                                                                                            'medium',
+                                                                                        fontSize:
+                                                                                            '0.65rem',
+                                                                                    }}
+                                                                                >
+                                                                                    {suiPercent.toFixed(
+                                                                                        1,
+                                                                                    )}
+                                                                                    %
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        </Box>
+
+                                                                        {/* ETH */}
+                                                                        <Box
+                                                                            sx={{
+                                                                                p: 1.5,
+                                                                                borderRadius: 1,
+                                                                                bgcolor:
+                                                                                    'background.neutral',
+                                                                                display: 'flex',
+                                                                                alignItems:
+                                                                                    'center',
+                                                                                justifyContent:
+                                                                                    'space-between',
+                                                                            }}
+                                                                        >
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Box
+                                                                                    component="img"
+                                                                                    src="/assets/icons/brands/eth.svg"
+                                                                                    alt="ETH"
+                                                                                    sx={{
+                                                                                        width: 20,
+                                                                                        height: 20,
+                                                                                    }}
+                                                                                />
+                                                                                <Typography
+                                                                                    variant="body2"
+                                                                                    fontWeight="medium"
+                                                                                >
+                                                                                    ETH
+                                                                                </Typography>
+                                                                            </Box>
+                                                                            <Box
+                                                                                sx={{
+                                                                                    display: 'flex',
+                                                                                    alignItems:
+                                                                                        'center',
+                                                                                    gap: 1,
+                                                                                }}
+                                                                            >
+                                                                                <Typography variant="body2">
+                                                                                    {fNumber(
+                                                                                        ethCount,
+                                                                                    )}
+                                                                                </Typography>
+                                                                                <Typography
+                                                                                    variant="caption"
+                                                                                    sx={{
+                                                                                        bgcolor:
+                                                                                            '#EBF8FF',
+                                                                                        color: '#006399',
+                                                                                        borderRadius:
+                                                                                            '3px',
+                                                                                        px: 0.5,
+                                                                                        py: 0.1,
+                                                                                        fontWeight:
+                                                                                            'medium',
+                                                                                        fontSize:
+                                                                                            '0.65rem',
+                                                                                    }}
+                                                                                >
+                                                                                    {ethPercent.toFixed(
+                                                                                        1,
+                                                                                    )}
+                                                                                    %
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        </Box>
+                                                                    </>
+                                                                )
+                                                            })()}
                                                         </Box>
                                                     </Box>
                                                 </>
