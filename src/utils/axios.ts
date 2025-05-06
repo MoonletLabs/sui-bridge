@@ -38,6 +38,7 @@ export const endpoints = {
     userStats: '/api/user-stats',
     transaction: '/api/transaction',
     outflows: '/api/outflows',
+    bridgeMetrics: '/api/bridge-metrics', // Add this line
     volume: {
         daily: '/api/volume/daily',
         hourly: '/api/volume/hourly',

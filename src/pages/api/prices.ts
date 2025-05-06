@@ -1,5 +1,5 @@
 import { IPrice } from 'src/config/helper'
-import db from './dabatase'
+import db from './database'
 import { NETWORK } from 'src/hooks/get-network-storage'
 
 export const getPrices = async (network: NETWORK): Promise<IPrice[]> => {

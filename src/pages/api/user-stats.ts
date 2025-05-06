@@ -7,7 +7,7 @@ import {
     removePrefix,
     transformTransfers,
 } from 'src/utils/helper'
-import db from './dabatase'
+import db from './database'
 import { sendError, sendReply } from './utils'
 import { getPrices } from './prices'
 

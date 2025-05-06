@@ -28,6 +28,7 @@ type Props<T> = CardProps & {
     hidePagination?: boolean
     loading?: boolean
     rowHeight?: number
+    minHeight?: number
     pagination?: {
         count: number
         page: number
@@ -46,18 +47,19 @@ export function CustomTable<T>({
     loading,
     hidePagination,
     pagination,
+    minHeight,
     ...other
 }: Props<T>) {
     return (
         <Card {...other} sx={{ mt: 4 }}>
             <CardHeader title={title} subheader={subheader} sx={{ mb: 3 }} />
 
-            <Scrollbar sx={{ minHeight: 800 }}>
+            <Scrollbar sx={{ minHeight: minHeight || 800 }}>
                 <Table sx={{ width: '100%', tableLayout: 'fixed', minWidth: 720 }}>
                     <TableHeadCustom headLabel={headLabel} />
                     <TableBody>
                         {loading
-                            ? Array.from(new Array(pagination?.rowsPerPage || 10)).map(
+                            ? Array.from(new Array(pagination?.rowsPerPage || 5)).map(
                                   (_, index) => (
                                       <SkeletonRow
                                           rowHeight={rowHeight}

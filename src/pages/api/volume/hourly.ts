@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { sendError, sendReply } from '../utils'
-import db from '../dabatase'
+import db from '../database'
 import { getNetworkConfig } from 'src/config/helper'
 import { setFlowDirection, transformAmount } from 'src/utils/helper'
 import dayjs from 'dayjs'
