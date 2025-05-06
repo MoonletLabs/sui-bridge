@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { sendError, sendReply } from './utils'
-import db from './dabatase'
+import db from './database'
 import { getNetworkConfig } from 'src/config/helper'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

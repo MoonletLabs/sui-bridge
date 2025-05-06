@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import { sendError, sendReply } from './utils'
-import db from './dabatase'
+import db from './database'
 import { computerIntervals } from './cards'
 import { getPrices } from './prices'
 import { TimePeriod } from 'src/config/helper'
