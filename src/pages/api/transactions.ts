@@ -46,19 +46,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const sql = db[networkConfig.network]
 
-        const conditionalQuery = buildConditionalQuery(
-            sql,
-            {
-                suiAddress,
-                ethAddress,
-                flow,
-                senders,
-                recipients,
-                amountFrom,
-                amountTo,
-            },
-            networkConfig,
-        )
+        const conditionalQuery = buildConditionalQuery(sql, {
+            suiAddress,
+            ethAddress,
+            flow,
+            senders,
+            recipients,
+            amountFrom,
+            amountTo,
+        })
 
         const query = await sql`
             SELECT
@@ -89,8 +85,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 ON t.token_id = p.token_id
             WHERE is_finalized = true ${conditionalQuery}`
 
+        const prices = await getPrices(networkConfig.network)
         sendReply(res, {
-            transactions: transformTransfers(networkConfig, query as any[]),
+            transactions: transformTransfers(networkConfig, query as any[], prices),
             total: Number(queryCount?.[0]?.count),
         })
     } catch (error) {

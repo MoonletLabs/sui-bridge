@@ -165,7 +165,6 @@ export const buildConditionalQuery = (
         amountFrom?: number
         amountTo?: number
     },
-    networkConfig: INetworkConfig,
 ) => {
     const conditions: any[] = []
 
@@ -311,11 +310,13 @@ export const transformTransfers = (
         amount: number
         amount_usd: number
     }[],
+    prices: IPrice[],
 ) => {
     return transformNumberFields(
         data
             .map(it => {
                 const tokenData = networkConfig?.config?.coins?.[it.token_id]
+                const priceData = prices.find(price => price.token_id === it.token_id)
 
                 if (tokenData) {
                     const destination_chain = getNetworkName(
@@ -337,7 +338,7 @@ export const transformTransfers = (
                     return {
                         ...it,
                         amount: Number(it.amount) / tokenData.deno,
-                        amount_usd: it.amount_usd,
+                        amount_usd: (Number(it.amount) / tokenData.deno) * Number(priceData?.price),
                         token_info: tokenData,
                         destination_chain,
                         from_chain,
