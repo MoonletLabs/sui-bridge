@@ -92,7 +92,6 @@ export function TransactionsTable({
         }
     }, [data?.total])
 
-    console.log('data', data)
     const onNavigateTx = (tx: string) => {
         router.push(`${paths.transactions.root}/${tx}`)
     }
