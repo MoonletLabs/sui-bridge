@@ -189,7 +189,7 @@ export const buildConditionalQuery = (
     }
 
     // 3) arbitrary senders list
-    if (senders && senders?.length) {
+    if (senders && senders.length) {
         const decodedSenders = senders.map(s => sql`decode(${s}, 'hex')`)
         const list = joinSQL(sql, decodedSenders, sql`, `)
         conditions.push(sql`sender_address IN (${list})`)
