@@ -148,10 +148,28 @@ const joinSQL = (sql: any, fragments: any[], separator: any) => {
 
 export const buildConditionalQuery = (
     sql: any,
-    { suiAddress, ethAddress }: { suiAddress?: string; ethAddress?: string },
+    {
+        suiAddress,
+        ethAddress,
+        flow = 'all',
+        senders,
+        recipients,
+        amountFrom,
+        amountTo,
+    }: {
+        suiAddress?: string
+        ethAddress?: string
+        flow?: 'all' | 'inflow' | 'outflow'
+        senders?: string[]
+        recipients?: string[]
+        amountFrom?: number
+        amountTo?: number
+    },
+    networkConfig: INetworkConfig,
 ) => {
     const conditions: any[] = []
 
+    // 1) address
     if (suiAddress) {
         conditions.push(
             sql`(sender_address = decode(${suiAddress}, 'hex') OR recipient_address = decode(${suiAddress}, 'hex'))`,
@@ -161,6 +179,37 @@ export const buildConditionalQuery = (
         conditions.push(
             sql`(sender_address = decode(${ethAddress}, 'hex') OR recipient_address = decode(${ethAddress}, 'hex'))`,
         )
+    }
+
+    // 2) inflow/outflow
+    if (flow === 'inflow') {
+        conditions.push(sql`destination_chain = 0`)
+    } else if (flow === 'outflow') {
+        conditions.push(sql`destination_chain != 0`)
+    }
+
+    // 3) arbitrary senders list
+    if (senders && senders?.length) {
+        const decodedSenders = senders.map(s => sql`decode(${s}, 'hex')`)
+        const list = joinSQL(sql, decodedSenders, sql`, `)
+        conditions.push(sql`sender_address IN (${list})`)
+    }
+
+    // 4) arbitrary recipients list
+    if (recipients && recipients?.length) {
+        const decodedRecipients = recipients.map(r => sql`decode(${r}, 'hex')`)
+        const list = joinSQL(sql, decodedRecipients, sql`, `)
+        conditions.push(sql`recipient_address IN (${list})`)
+    }
+
+    // 5) amount range
+    if (amountFrom !== undefined) {
+        conditions.push(
+            sql`(t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8) >= ${amountFrom}`,
+        )
+    }
+    if (amountTo !== undefined) {
+        conditions.push(sql`(t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8) <= ${amountTo}`)
     }
 
     return conditions.length ? sql`AND (${joinSQL(sql, conditions, sql` AND `)})` : sql``
@@ -260,14 +309,13 @@ export const transformTransfers = (
         timestamp_ms: number
         token_id: number
         amount: number
+        amount_usd: number
     }[],
-    prices: IPrice[],
 ) => {
     return transformNumberFields(
         data
             .map(it => {
                 const tokenData = networkConfig?.config?.coins?.[it.token_id]
-                const priceData = prices.find(price => price.token_id === it.token_id)
 
                 if (tokenData) {
                     const destination_chain = getNetworkName(
@@ -289,7 +337,7 @@ export const transformTransfers = (
                     return {
                         ...it,
                         amount: Number(it.amount) / tokenData.deno,
-                        amount_usd: (Number(it.amount) / tokenData.deno) * Number(priceData?.price),
+                        amount_usd: it.amount_usd,
                         token_info: tokenData,
                         destination_chain,
                         from_chain,
