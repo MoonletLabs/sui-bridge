@@ -19,6 +19,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const suiAddress = removePrefix(req.query.suiAddress?.toString() || '')
         const ethAddress = removePrefix(req.query.ethAddress?.toString() || '')
+        const flow = (req.query.flow as 'all' | 'inflow' | 'outflow') || 'all'
+        const senders = (req.query.senders?.toString() || '')
+            .split(',')
+            .map(s => removePrefix(s))
+            .filter(s => s.length > 0)
+
+        const recipients = (req.query.recipients?.toString() || '')
+            .split(',')
+            .map(r => removePrefix(r))
+            .filter(r => r.length > 0)
+
+        const amountFrom = req.query.amount_from ? Number(req.query.amount_from) : undefined
+        const amountTo = req.query.amount_to ? Number(req.query.amount_to) : undefined
 
         if (
             (suiAddress && !isHexadecimal(suiAddress)) ||
@@ -33,33 +46,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const sql = db[networkConfig.network]
 
-        const conditionalQuery = buildConditionalQuery(sql, { suiAddress, ethAddress })
+        const conditionalQuery = buildConditionalQuery(
+            sql,
+            {
+                suiAddress,
+                ethAddress,
+                flow,
+                senders,
+                recipients,
+                amountFrom,
+                amountTo,
+            },
+            networkConfig,
+        )
 
         const query = await sql`
-                SELECT
-                  encode(txn_hash, 'hex') AS tx_hash,
-                  encode(sender_address, 'hex') AS sender_address,
-                  encode(recipient_address, 'hex') AS recipient_address,
-                  chain_id,
-                  destination_chain,
-                  nonce,
-                  block_height,
-                  timestamp_ms,
-                  token_id,
-                  amount
-                FROM token_transfer_data
-                WHERE
-                  is_finalized = true ${conditionalQuery}
-                ORDER BY timestamp_ms DESC
-                OFFSET ${offset} LIMIT ${limit}`
+            SELECT
+                encode(t.txn_hash, 'hex')           AS tx_hash,
+                encode(t.sender_address, 'hex')     AS sender_address,
+                encode(t.recipient_address, 'hex')  AS recipient_address,
+                t.chain_id,
+                t.destination_chain,
+                t.nonce,
+                t.block_height,
+                t.timestamp_ms,
+                t.token_id,
+                t.amount,
+                p.price,
+                (t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8) AS amount_usd
+            FROM token_transfer_data AS t
+            JOIN prices AS p
+                ON t.token_id = p.token_id
+            WHERE
+                is_finalized = true ${conditionalQuery}
+            ORDER BY timestamp_ms DESC
+            OFFSET ${offset} LIMIT ${limit}`
 
         const queryCount = await sql`
-                SELECT COUNT(*)
-                FROM token_transfer_data
-                WHERE is_finalized = true ${conditionalQuery}`
+            SELECT COUNT(*)
+            FROM token_transfer_data AS t
+            JOIN prices AS p
+                ON t.token_id = p.token_id
+            WHERE is_finalized = true ${conditionalQuery}`
 
         const prices = await getPrices(networkConfig.network)
-
         sendReply(res, {
             transactions: transformTransfers(networkConfig, query as any[], prices),
             total: Number(queryCount?.[0]?.count),

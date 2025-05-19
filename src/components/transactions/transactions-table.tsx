@@ -1,4 +1,15 @@
-import { Box, Link, TableCell, TableRow, Typography } from '@mui/material'
+import {
+    Box,
+    FormControl,
+    InputLabel,
+    Link,
+    MenuItem,
+    Select,
+    TableCell,
+    TableRow,
+    TextField,
+    Typography,
+} from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
@@ -12,6 +23,8 @@ import { AllTxsResponse, getTokensList, TransactionType } from 'src/utils/types'
 import useSWR from 'swr'
 import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
+import { InputAdornment } from '@mui/material'
+import { MultiAddressAutocomplete } from './multi-address'
 
 export function TransactionsTable({
     ethAddress,
@@ -34,11 +47,35 @@ export function TransactionsTable({
     const router = useRouter()
     const [page, setPage] = useState(0)
     const [totalItems, setTotalItems] = useState(0)
+    const [showFilters, setShowFilters] = useState(false)
+    const [filters, setFilters] = useState<{
+        flow: 'all' | 'inflow' | 'outflow'
+        senders: string[]
+        recipients: string[]
+        amountFrom: string
+        amountTo: string
+    }>({
+        flow: 'all',
+        senders: [],
+        recipients: [],
+        amountFrom: '',
+        amountTo: '',
+    })
     const pageSize = limit
 
     // Fetch paginated data
+    const query = new URLSearchParams({
+        offset: String(page * pageSize),
+        limit: String(pageSize),
+        flow: filters.flow,
+        senders: filters.senders.join(','),
+        recipients: filters.recipients.join(','),
+        amount_from: filters.amountFrom,
+        amount_to: filters.amountTo,
+        /* … */
+    }).toString()
     const { data, isLoading, mutate } = useSWR<AllTxsResponse>(
-        `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
+        `${endpoints.transactions}?network=${network}&${query}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''}`,
         fetcher,
     )
 
@@ -57,6 +94,13 @@ export function TransactionsTable({
 
     const onNavigateTx = (tx: string) => {
         router.push(`${paths.transactions.root}/${tx}`)
+    }
+
+    const handleFilterChange = <K extends keyof typeof filters>(
+        key: K,
+        value: (typeof filters)[K],
+    ) => {
+        setFilters(prev => ({ ...prev, [key]: value }))
     }
 
     return (
@@ -94,8 +138,87 @@ export function TransactionsTable({
                         </Typography>
                     )) as any
                 }
+                filters={
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                            padding: 2,
+                            pt: 0,
+                            alignItems: 'end',
+                        }}
+                    >
+                        <FormControl size="medium" sx={{ minWidth: 140 }}>
+                            <InputLabel id="flow-filter-label">Flow</InputLabel>
+                            <Select
+                                labelId="flow-filter-label"
+                                label="Flow"
+                                value={filters.flow}
+                                onChange={e =>
+                                    handleFilterChange(
+                                        'flow',
+                                        e.target.value as 'all' | 'inflow' | 'outflow',
+                                    )
+                                }
+                            >
+                                <MenuItem value="all">All</MenuItem>
+                                <MenuItem value="inflow">Inflow</MenuItem>
+                                <MenuItem value="outflow">Outflow</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <MultiAddressAutocomplete
+                            label="Sender Address"
+                            values={filters.senders}
+                            onChange={newSenders =>
+                                setFilters(f => ({ ...f, senders: newSenders }))
+                            }
+                        />
+                        <MultiAddressAutocomplete
+                            label="Recipient Address"
+                            values={filters.recipients}
+                            onChange={newRecipients =>
+                                setFilters(f => ({ ...f, recipients: newRecipients }))
+                            }
+                        />
+                        <FormControl component="fieldset" sx={{ minWidth: 240 }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                    label="Amount from"
+                                    size="medium"
+                                    type="number"
+                                    value={filters.amountFrom}
+                                    onChange={e => handleFilterChange('amountFrom', e.target.value)}
+                                    placeholder="min"
+                                    fullWidth
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">$</InputAdornment>
+                                        ),
+                                    }}
+                                />
+                                <TextField
+                                    label="Amount to"
+                                    size="medium"
+                                    type="number"
+                                    value={filters.amountTo}
+                                    onChange={e => handleFilterChange('amountTo', e.target.value)}
+                                    placeholder="max"
+                                    fullWidth
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">$</InputAdornment>
+                                        ),
+                                    }}
+                                />
+                            </Box>
+                        </FormControl>
+                    </Box>
+                }
                 rowHeight={85}
                 minHeight={minHeight}
+                setShowFilters={setShowFilters}
+                showFilters={showFilters}
                 RowComponent={props => (
                     <ActivitiesRow {...props} network={network} onNavigateTx={onNavigateTx} />
                 )}
