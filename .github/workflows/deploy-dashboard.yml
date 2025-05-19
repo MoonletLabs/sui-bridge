@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  GITHUB_IMAGE: ghcr.io/moonlet/sui-bridge:v${{ github.run_number }}
+  GITHUB_IMAGE: ghcr.io/moonletlabs/sui-bridge:v${{ github.run_number }}
   IMAGE_ENV_VAR: DASHBOARD_IMAGE
   DEPLOYMENT_PATH: deployment
   STACK_NAME: sui_bridge
