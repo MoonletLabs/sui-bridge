@@ -5,6 +5,8 @@ on:
     branches:
       - main
 
+  workflow_dispatch:
+
 env:
   GITHUB_IMAGE: ghcr.io/moonletlabs/sui-bridge:v${{ github.run_number }}
   IMAGE_ENV_VAR: DASHBOARD_IMAGE
