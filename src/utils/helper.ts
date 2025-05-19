@@ -165,6 +165,7 @@ export const buildConditionalQuery = (
         amountFrom?: number
         amountTo?: number
     },
+    networkConfig?: INetworkConfig,
 ) => {
     const conditions: any[] = []
 
@@ -182,9 +183,9 @@ export const buildConditionalQuery = (
 
     // 2) inflow/outflow
     if (flow === 'inflow') {
-        conditions.push(sql`destination_chain = 0`)
+        conditions.push(sql`destination_chain = ${networkConfig?.config?.networkId?.SUI}`)
     } else if (flow === 'outflow') {
-        conditions.push(sql`destination_chain != 0`)
+        conditions.push(sql`destination_chain != ${networkConfig?.config?.networkId?.SUI}`)
     }
 
     // 3) arbitrary senders list

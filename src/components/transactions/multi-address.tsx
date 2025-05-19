@@ -1,8 +1,6 @@
 import { Autocomplete, TextField, Chip, InputAdornment, Popper, Box } from '@mui/material'
 import { useState } from 'react'
-
-const trimAddress = (addr: string) =>
-    addr.length <= 6 ? addr : `${addr.slice(0, 3)}…${addr.slice(-3)}`
+import { truncateAddress } from 'src/config/helper'
 
 export function MultiAddressAutocomplete({
     label,
@@ -70,7 +68,7 @@ export function MultiAddressAutocomplete({
                         <Chip
                             {...getTagProps({ index })}
                             key={option}
-                            label={trimAddress(option)}
+                            label={truncateAddress(option)}
                             size="small"
                             sx={{ flexShrink: 0 }}
                         />

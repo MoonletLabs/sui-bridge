@@ -46,15 +46,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const sql = db[networkConfig.network]
 
-        const conditionalQuery = buildConditionalQuery(sql, {
-            suiAddress,
-            ethAddress,
-            flow,
-            senders,
-            recipients,
-            amountFrom,
-            amountTo,
-        })
+        const conditionalQuery = buildConditionalQuery(
+            sql,
+            {
+                suiAddress,
+                ethAddress,
+                flow,
+                senders,
+                recipients,
+                amountFrom,
+                amountTo,
+            },
+            networkConfig,
+        )
 
         const query = await sql`
             SELECT
