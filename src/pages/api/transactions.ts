@@ -33,9 +33,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const amountFrom = req.query.amount_from ? Number(req.query.amount_from) : undefined
         const amountTo = req.query.amount_to ? Number(req.query.amount_to) : undefined
 
+        const badSenders = senders.some(s => !isHexadecimal(s))
+        const badRecipients = recipients.some(r => !isHexadecimal(r))
+
         if (
             (suiAddress && !isHexadecimal(suiAddress)) ||
-            (ethAddress && !isHexadecimal(ethAddress))
+            (ethAddress && !isHexadecimal(ethAddress)) ||
+            badRecipients ||
+            badSenders
         ) {
             sendError(res, {
                 code: 400,

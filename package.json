@@ -37,6 +37,7 @@
         "@fontsource/barlow": "^5.0.14",
         "@hookform/resolvers": "^3.9.0",
         "@iconify/react": "^5.0.2",
+        "@mui/icons-material": "^5.16.7",
         "@mui/lab": "^5.0.0-alpha.173",
         "@mui/material": "^5.16.7",
         "@mui/material-nextjs": "^5.16.6",
@@ -46,7 +47,7 @@
         "apexcharts": "^4.0.0",
         "autosuggest-highlight": "^3.3.4",
         "axios": "^1.7.4",
-        "date-fns": "^4.1.0",
+        "date-fns": "^3.6.0",
         "dayjs": "^1.11.13",
         "framer-motion": "^11.3.29",
         "next": "^14.2.5",
@@ -61,6 +62,7 @@
         "stylis": "^4.3.2",
         "stylis-plugin-rtl": "^2.1.1",
         "swr": "^2.2.5",
+        "use-debounce": "^10.0.4",
         "zod": "^3.23.8"
     },
     "devDependencies": {
