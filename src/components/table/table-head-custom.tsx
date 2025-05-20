@@ -30,7 +30,12 @@ export type TableHeadCustomProps = {
     numSelected?: number
     order?: 'asc' | 'desc'
     onSort?: (id: string) => void
-    headLabel: { id: string; label: string; align?: 'left' | 'right' | 'center' }[]
+    headLabel: {
+        id: string
+        label: string
+        align?: 'left' | 'right' | 'center'
+        minWidth?: number
+    }[]
     onSelectAllRows?: (checked: boolean) => void
 }
 
@@ -68,6 +73,7 @@ export function TableHeadCustom({
                         key={headCell.id}
                         align={headCell.align || 'left'}
                         sortDirection={orderBy === headCell.id ? order : false}
+                        sx={{ width: { xs: headCell.minWidth, sm: 'auto' } }}
                     >
                         {onSort ? (
                             <TableSortLabel

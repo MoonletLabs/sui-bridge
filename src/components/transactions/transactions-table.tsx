@@ -113,13 +113,13 @@ export function TransactionsTable({
         <Box>
             <CustomTable
                 headLabel={[
-                    { id: 'chain', label: 'Flow' },
-                    { id: 'sender', label: 'Sender' },
-                    { id: 'recipient', label: 'Recipient' },
-                    { id: 'amount', label: 'Amount' },
-                    { id: 'tx', label: 'Tx' },
-                    { id: 'timestamp_ms', label: 'Date' },
-                    { id: 'view', label: 'More details', align: 'center' },
+                    { id: 'chain', label: 'Flow', minWidth: 100 },
+                    { id: 'sender', label: 'Sender', minWidth: 150 },
+                    { id: 'recipient', label: 'Recipient', minWidth: 150 },
+                    { id: 'amount', label: 'Amount', minWidth: 150 },
+                    { id: 'tx', label: 'Tx', minWidth: 150 },
+                    { id: 'timestamp_ms', label: 'Date', minWidth: 100 },
+                    { id: 'view', label: 'More details', align: 'center', minWidth: 120 },
                 ]}
                 tableData={data?.transactions || []}
                 loading={isLoading}
@@ -201,18 +201,23 @@ export function TransactionsTable({
                                         startAdornment: (
                                             <InputAdornment position="start">$</InputAdornment>
                                         ),
-                                        endAdornment: filters.amountFrom ? (
+                                        endAdornment: (
                                             <InputAdornment position="end">
                                                 <IconButton
                                                     size="small"
                                                     onClick={() =>
                                                         handleFilterChange('amountFrom', '')
                                                     }
+                                                    sx={{
+                                                        visibility: filters.amountFrom
+                                                            ? 'visible'
+                                                            : 'hidden',
+                                                    }}
                                                 >
                                                     <CloseIcon fontSize="small" />
                                                 </IconButton>
                                             </InputAdornment>
-                                        ) : null,
+                                        ),
                                     }}
                                 />
                                 <TextField
@@ -227,18 +232,23 @@ export function TransactionsTable({
                                         startAdornment: (
                                             <InputAdornment position="start">$</InputAdornment>
                                         ),
-                                        endAdornment: filters.amountTo ? (
+                                        endAdornment: (
                                             <InputAdornment position="end">
                                                 <IconButton
                                                     size="small"
                                                     onClick={() =>
                                                         handleFilterChange('amountTo', '')
                                                     }
+                                                    sx={{
+                                                        visibility: filters.amountTo
+                                                            ? 'visible'
+                                                            : 'hidden',
+                                                    }}
                                                 >
                                                     <CloseIcon fontSize="small" />
                                                 </IconButton>
                                             </InputAdornment>
-                                        ) : null,
+                                        ),
                                     }}
                                 />
                             </Box>
@@ -315,7 +325,7 @@ const ActivitiesRow: React.FC<{
             </TableCell>
 
             {/* Sender with Improved Visibility */}
-            <TableCell>
+            <TableCell sx={{ paddingY: { xs: 0, sm: 2 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Tooltip title="Copy sender address">
                         <IconButton
