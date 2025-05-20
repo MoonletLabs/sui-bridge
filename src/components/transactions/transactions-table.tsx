@@ -1,6 +1,7 @@
 import {
     Box,
     FormControl,
+    IconButton,
     InputLabel,
     Link,
     MenuItem,
@@ -8,6 +9,7 @@ import {
     TableCell,
     TableRow,
     TextField,
+    Tooltip,
     Typography,
 } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
@@ -25,6 +27,9 @@ import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
 import { InputAdornment } from '@mui/material'
 import { MultiAddressAutocomplete } from './multi-address'
+import { useDebounce } from 'use-debounce'
+import CloseIcon from '@mui/icons-material/Close'
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 
 export function TransactionsTable({
     ethAddress,
@@ -63,19 +68,20 @@ export function TransactionsTable({
     })
     const pageSize = limit
 
+    const [debouncedFilters] = useDebounce(filters, 500)
+
     // Fetch paginated data
-    const query = new URLSearchParams({
+    const debouncedQuery = new URLSearchParams({
         offset: String(page * pageSize),
         limit: String(pageSize),
-        flow: filters.flow,
-        senders: filters.senders.join(','),
-        recipients: filters.recipients.join(','),
-        amount_from: filters.amountFrom,
-        amount_to: filters.amountTo,
-        /* … */
+        flow: debouncedFilters.flow,
+        senders: debouncedFilters.senders.join(','),
+        recipients: debouncedFilters.recipients.join(','),
+        amount_from: debouncedFilters.amountFrom,
+        amount_to: debouncedFilters.amountTo,
     }).toString()
     const { data, isLoading, mutate } = useSWR<AllTxsResponse>(
-        `${endpoints.transactions}?network=${network}&${query}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''}`,
+        `${endpoints.transactions}?network=${network}&${debouncedQuery}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''}`,
         fetcher,
     )
 
@@ -192,9 +198,21 @@ export function TransactionsTable({
                                     placeholder="min"
                                     fullWidth
                                     InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">$</InputAdornment>
+                                        startAdornment: (
+                                            <InputAdornment position="start">$</InputAdornment>
                                         ),
+                                        endAdornment: filters.amountFrom ? (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() =>
+                                                        handleFilterChange('amountFrom', '')
+                                                    }
+                                                >
+                                                    <CloseIcon fontSize="small" />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ) : null,
                                     }}
                                 />
                                 <TextField
@@ -206,9 +224,21 @@ export function TransactionsTable({
                                     placeholder="max"
                                     fullWidth
                                     InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">$</InputAdornment>
+                                        startAdornment: (
+                                            <InputAdornment position="start">$</InputAdornment>
                                         ),
+                                        endAdornment: filters.amountTo ? (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() =>
+                                                        handleFilterChange('amountTo', '')
+                                                    }
+                                                >
+                                                    <CloseIcon fontSize="small" />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ) : null,
                                     }}
                                 />
                             </Box>
@@ -286,7 +316,15 @@ const ActivitiesRow: React.FC<{
 
             {/* Sender with Improved Visibility */}
             <TableCell>
-                <Box sx={{ display: 'flex' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title="Copy sender address">
+                        <IconButton
+                            size="small"
+                            onClick={() => navigator.clipboard.writeText(row.sender_address)}
+                        >
+                            <ContentCopyOutlinedIcon fontSize="small" sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Tooltip>
                     <Link
                         href={formatExplorerUrl({
                             network,
@@ -318,6 +356,14 @@ const ActivitiesRow: React.FC<{
             {/* Recipient with Improved Visibility */}
             <TableCell>
                 <Box sx={{ display: 'flex' }}>
+                    <Tooltip title="Copy recipient address">
+                        <IconButton
+                            size="small"
+                            onClick={() => navigator.clipboard.writeText(row.recipient_address)}
+                        >
+                            <ContentCopyOutlinedIcon fontSize="small" sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Tooltip>
                     <Link
                         href={formatExplorerUrl({
                             network,
