@@ -46,7 +46,7 @@
         "apexcharts": "^4.0.0",
         "autosuggest-highlight": "^3.3.4",
         "axios": "^1.7.4",
-        "date-fns": "^4.1.0",
+        "date-fns": "^3.6.0",
         "dayjs": "^1.11.13",
         "framer-motion": "^11.3.29",
         "next": "^14.2.5",
