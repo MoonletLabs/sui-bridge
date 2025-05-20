@@ -24,7 +24,12 @@ type RowComponentProps<T> = {
 type Props<T> = CardProps & {
     title?: ReactNode | any
     subheader?: string
-    headLabel: { id: string; label: string; align?: 'left' | 'right' | 'center' }[]
+    headLabel: {
+        id: string
+        label: string
+        align?: 'left' | 'right' | 'center'
+        minWidth?: number
+    }[]
     tableData: T[]
     RowComponent: ComponentType<RowComponentProps<T>>
     filters?: ReactNode
