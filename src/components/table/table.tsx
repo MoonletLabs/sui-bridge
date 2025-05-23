@@ -1,5 +1,6 @@
 import {
     Box,
+    Button,
     Card,
     CardHeader,
     CardProps,
@@ -14,6 +15,7 @@ import {
 import { ComponentType, FC, ReactNode } from 'react'
 import { Scrollbar } from '../scrollbar'
 import { TableHeadCustom } from './table-head-custom'
+import { Iconify } from '../iconify'
 
 type RowComponentProps<T> = {
     row: T
@@ -22,13 +24,21 @@ type RowComponentProps<T> = {
 type Props<T> = CardProps & {
     title?: ReactNode | any
     subheader?: string
-    headLabel: { id: string; label: string; align?: 'left' | 'right' | 'center' }[]
+    headLabel: {
+        id: string
+        label: string
+        align?: 'left' | 'right' | 'center'
+        minWidth?: number
+    }[]
     tableData: T[]
     RowComponent: ComponentType<RowComponentProps<T>>
+    filters?: ReactNode
     hidePagination?: boolean
     loading?: boolean
     rowHeight?: number
     minHeight?: number
+    showFilters?: boolean
+    setShowFilters?: (s: boolean) => void
     pagination?: {
         count: number
         page: number
@@ -47,12 +57,52 @@ export function CustomTable<T>({
     loading,
     hidePagination,
     pagination,
+    filters,
+    showFilters,
+    setShowFilters,
     minHeight,
     ...other
 }: Props<T>) {
     return (
         <Card {...other} sx={{ mt: 4 }}>
-            <CardHeader title={title} subheader={subheader} sx={{ mb: 3 }} />
+            <CardHeader
+                title={
+                    setShowFilters ? (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                justifyContent: 'space-between',
+                            }}
+                        >
+                            {title}
+                            <Button
+                                style={{ display: 'flex', gap: 4, fontSize: 14 }}
+                                onClick={() => setShowFilters(!showFilters)}
+                            >
+                                {showFilters ? (
+                                    <>
+                                        <Iconify icon="mdi:eye-off" />
+                                        {'Hide filters'}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Iconify icon="mdi:eye" />
+                                        {'Show filters'}
+                                    </>
+                                )}
+                            </Button>
+                        </Box>
+                    ) : (
+                        title
+                    )
+                }
+                subheader={subheader}
+                sx={{ mb: 3 }}
+            />
+
+            {showFilters && filters}
 
             <Scrollbar sx={{ minHeight: minHeight || 800 }}>
                 <Table sx={{ width: '100%', tableLayout: 'fixed', minWidth: 720 }}>

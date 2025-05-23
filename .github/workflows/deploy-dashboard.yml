@@ -5,8 +5,10 @@ on:
     branches:
       - main
 
+  workflow_dispatch:
+
 env:
-  GITHUB_IMAGE: ghcr.io/moonlet/sui-bridge:v${{ github.run_number }}
+  GITHUB_IMAGE: ghcr.io/moonletlabs/sui-bridge:v${{ github.run_number }}
   IMAGE_ENV_VAR: DASHBOARD_IMAGE
   DEPLOYMENT_PATH: deployment
   STACK_NAME: sui_bridge
@@ -70,7 +72,7 @@ jobs:
           echo "${{ env.IMAGE_ENV_VAR }}=$GITHUB_IMAGE" >> ${{ env.DEPLOYMENT_PATH }}/${{ env.ENV_NAME_SHORT }}.env
 
       - name: Deploy in swarm
-        uses: Moonlet/portainer-swarm-deploy-action@main
+        uses: MoonletLabs/portainer-swarm-deploy-action@main
         with:
           portainer_url: https://portainer.moonlet.cloud
           portainer_access_token: ${{ secrets.PORTAINER_ACCESS_TOKEN }}
@@ -100,7 +102,7 @@ jobs:
           echo "${{ env.IMAGE_ENV_VAR }}=$GITHUB_IMAGE" >> ${{ env.DEPLOYMENT_PATH }}/${{ env.ENV_NAME_SHORT }}.env
 
       - name: Deploy in swarm
-        uses: Moonlet/portainer-swarm-deploy-action@main
+        uses: MoonletLabs/portainer-swarm-deploy-action@main
         with:
           portainer_url: https://portainer.moonlet.cloud
           portainer_access_token: ${{ secrets.PORTAINER_ACCESS_TOKEN }}

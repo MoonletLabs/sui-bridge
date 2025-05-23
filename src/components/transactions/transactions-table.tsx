@@ -1,4 +1,17 @@
-import { Box, Link, TableCell, TableRow, Typography } from '@mui/material'
+import {
+    Box,
+    FormControl,
+    IconButton,
+    InputLabel,
+    Link,
+    MenuItem,
+    Select,
+    TableCell,
+    TableRow,
+    TextField,
+    Tooltip,
+    Typography,
+} from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
@@ -12,6 +25,11 @@ import { AllTxsResponse, getTokensList, TransactionType } from 'src/utils/types'
 import useSWR from 'swr'
 import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
+import { InputAdornment } from '@mui/material'
+import { MultiAddressAutocomplete } from './multi-address'
+import { useDebounce } from 'use-debounce'
+import CloseIcon from '@mui/icons-material/Close'
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 
 export function TransactionsTable({
     ethAddress,
@@ -34,11 +52,36 @@ export function TransactionsTable({
     const router = useRouter()
     const [page, setPage] = useState(0)
     const [totalItems, setTotalItems] = useState(0)
+    const [showFilters, setShowFilters] = useState(false)
+    const [filters, setFilters] = useState<{
+        flow: 'all' | 'inflow' | 'outflow'
+        senders: string[]
+        recipients: string[]
+        amountFrom: string
+        amountTo: string
+    }>({
+        flow: 'all',
+        senders: [],
+        recipients: [],
+        amountFrom: '',
+        amountTo: '',
+    })
     const pageSize = limit
 
+    const [debouncedFilters] = useDebounce(filters, 500)
     // Fetch paginated data
+    const debouncedQuery = new URLSearchParams({
+        offset: String(page * pageSize),
+        limit: String(pageSize),
+        flow: debouncedFilters.flow,
+        senders: debouncedFilters.senders.join(','),
+        recipients: debouncedFilters.recipients.join(','),
+        amount_from: debouncedFilters.amountFrom,
+        amount_to: debouncedFilters.amountTo,
+    }).toString()
+
     const { data, isLoading, mutate } = useSWR<AllTxsResponse>(
-        `${endpoints.transactions}?network=${network}&offset=${pageSize * page}&limit=${pageSize}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''} `,
+        `${endpoints.transactions}?network=${network}&${debouncedQuery}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''}`,
         fetcher,
     )
 
@@ -59,17 +102,24 @@ export function TransactionsTable({
         router.push(`${paths.transactions.root}/${tx}`)
     }
 
+    const handleFilterChange = <K extends keyof typeof filters>(
+        key: K,
+        value: (typeof filters)[K],
+    ) => {
+        setFilters(prev => ({ ...prev, [key]: value }))
+    }
+
     return (
         <Box>
             <CustomTable
                 headLabel={[
-                    { id: 'chain', label: 'Flow' },
-                    { id: 'sender', label: 'Sender' },
-                    { id: 'recipient', label: 'Recipient' },
-                    { id: 'amount', label: 'Amount' },
-                    { id: 'tx', label: 'Tx' },
-                    { id: 'timestamp_ms', label: 'Date' },
-                    { id: 'view', label: 'More details', align: 'center' },
+                    { id: 'chain', label: 'Flow', minWidth: 100 },
+                    { id: 'sender', label: 'Sender', minWidth: 150 },
+                    { id: 'recipient', label: 'Recipient', minWidth: 150 },
+                    { id: 'amount', label: 'Amount', minWidth: 150 },
+                    { id: 'tx', label: 'Tx', minWidth: 150 },
+                    { id: 'timestamp_ms', label: 'Date', minWidth: 100 },
+                    { id: 'view', label: 'More details', align: 'center', minWidth: 120 },
                 ]}
                 tableData={data?.transactions || []}
                 loading={isLoading}
@@ -94,8 +144,121 @@ export function TransactionsTable({
                         </Typography>
                     )) as any
                 }
+                filters={
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                            padding: 2,
+                            pt: 0,
+                            alignItems: 'end',
+                        }}
+                    >
+                        <FormControl size="medium" sx={{ minWidth: 140 }}>
+                            <InputLabel id="flow-filter-label">Flow</InputLabel>
+                            <Select
+                                labelId="flow-filter-label"
+                                label="Flow"
+                                value={filters.flow}
+                                onChange={e =>
+                                    handleFilterChange(
+                                        'flow',
+                                        e.target.value as 'all' | 'inflow' | 'outflow',
+                                    )
+                                }
+                            >
+                                <MenuItem value="all">All</MenuItem>
+                                <MenuItem value="inflow">Inflow</MenuItem>
+                                <MenuItem value="outflow">Outflow</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <MultiAddressAutocomplete
+                            label="Sender Address"
+                            values={filters.senders}
+                            onChange={newSenders =>
+                                setFilters(f => ({ ...f, senders: newSenders }))
+                            }
+                        />
+                        <MultiAddressAutocomplete
+                            label="Recipient Address"
+                            values={filters.recipients}
+                            onChange={newRecipients =>
+                                setFilters(f => ({ ...f, recipients: newRecipients }))
+                            }
+                        />
+                        <FormControl component="fieldset" sx={{ minWidth: 240 }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                    label="Amount from"
+                                    size="medium"
+                                    type="number"
+                                    value={filters.amountFrom}
+                                    onChange={e => handleFilterChange('amountFrom', e.target.value)}
+                                    placeholder="min"
+                                    fullWidth
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">$</InputAdornment>
+                                        ),
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() =>
+                                                        handleFilterChange('amountFrom', '')
+                                                    }
+                                                    sx={{
+                                                        visibility: filters.amountFrom
+                                                            ? 'visible'
+                                                            : 'hidden',
+                                                    }}
+                                                >
+                                                    <CloseIcon fontSize="small" />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                                <TextField
+                                    label="Amount to"
+                                    size="medium"
+                                    type="number"
+                                    value={filters.amountTo}
+                                    onChange={e => handleFilterChange('amountTo', e.target.value)}
+                                    placeholder="max"
+                                    fullWidth
+                                    InputProps={{
+                                        startAdornment: (
+                                            <InputAdornment position="start">$</InputAdornment>
+                                        ),
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() =>
+                                                        handleFilterChange('amountTo', '')
+                                                    }
+                                                    sx={{
+                                                        visibility: filters.amountTo
+                                                            ? 'visible'
+                                                            : 'hidden',
+                                                    }}
+                                                >
+                                                    <CloseIcon fontSize="small" />
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                            </Box>
+                        </FormControl>
+                    </Box>
+                }
                 rowHeight={85}
                 minHeight={minHeight}
+                setShowFilters={setShowFilters}
+                showFilters={showFilters}
                 RowComponent={props => (
                     <ActivitiesRow {...props} network={network} onNavigateTx={onNavigateTx} />
                 )}
@@ -162,8 +325,16 @@ const ActivitiesRow: React.FC<{
             </TableCell>
 
             {/* Sender with Improved Visibility */}
-            <TableCell>
-                <Box sx={{ display: 'flex' }}>
+            <TableCell sx={{ paddingY: { xs: 0, sm: 2 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title="Copy sender address">
+                        <IconButton
+                            size="small"
+                            onClick={() => navigator.clipboard.writeText(row.sender_address)}
+                        >
+                            <ContentCopyOutlinedIcon fontSize="small" sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Tooltip>
                     <Link
                         href={formatExplorerUrl({
                             network,
@@ -194,7 +365,15 @@ const ActivitiesRow: React.FC<{
 
             {/* Recipient with Improved Visibility */}
             <TableCell>
-                <Box sx={{ display: 'flex' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title="Copy recipient address">
+                        <IconButton
+                            size="small"
+                            onClick={() => navigator.clipboard.writeText(row.recipient_address)}
+                        >
+                            <ContentCopyOutlinedIcon fontSize="small" sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Tooltip>
                     <Link
                         href={formatExplorerUrl({
                             network,
