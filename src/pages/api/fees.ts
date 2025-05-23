@@ -15,9 +15,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const query = await db[networkConfig.network]`
             SELECT
                 DATE_TRUNC('day', TO_TIMESTAMP(timestamp_ms / 1000)) AS transfer_date,
-                SUM(gas_usage) AS total_gas_usage
+                SUM(CASE WHEN data_source = 'ETH' THEN gas_usage ELSE 0 END) AS eth_gas_usage,
+                SUM(CASE WHEN data_source = 'SUI' THEN gas_usage ELSE 0 END) AS sui_gas_usage
             FROM
                 public.token_transfer
+            WHERE
+                is_finalized = true
             GROUP BY
                 DATE_TRUNC('day', TO_TIMESTAMP(timestamp_ms / 1000))
             ORDER BY
