@@ -1,0 +1,53 @@
+name: Trivy Scan
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  trivy-scan:
+    name: Trivy Scan
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create templates directory
+        run: mkdir -p .github/templates
+
+      - name: Run Trivy vulnerability scanner in repo mode Output
+        uses: aquasecurity/trivy-action@0.28.0
+        env:
+          TRIVY_DISABLE_VEX_NOTICE: 'true'
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'json'
+          output: 'trivy-results.json'           
+          severity: 'HIGH,CRITICAL'
+          
+      - name: Format Trivy results as a Markdown table
+        run: |
+          echo "## 🛡️ Trivy Vulnerability Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if jq -e '.Results[]?.Vulnerabilities? | length > 0' trivy-results.json > /dev/null; then
+            echo "| Target | Package | Vulnerability ID | Severity | Status | Fixed Version | Title |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|---------|------------------|----------|--------|----------------|-------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '
+              .Results[]
+              | select(.Vulnerabilities)
+              | .Target as $target
+              | .Vulnerabilities[]
+              | "| \($target) | \(.PkgName)@\(.InstalledVersion) | \(.VulnerabilityID) | \(.Severity) | \(.Status // "vulnerable") | \(.FixedVersion // "-") | \(.Title | gsub("[|]"; "\\|")) |"
+            ' trivy-results.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No vulnerabilities found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+
+            
