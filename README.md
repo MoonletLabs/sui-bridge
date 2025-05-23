@@ -10,11 +10,18 @@ The **Sui Bridge Analytics Dashboard** is a web application designed to provide 
 
 ## Screenshots
 
-<img width="1512" alt="image" src="https://github.com/user-attachments/assets/7ae043a3-9424-4b45-bd80-d71f6296bf26" />
+![image](https://github.com/user-attachments/assets/d50edaa2-247d-49ce-9df3-0ef2ad8daf94)
 
-<img width="1512" alt="image" src="https://github.com/user-attachments/assets/7b71bc75-35bc-432d-af5b-1fe6660c9126" />
+![image](https://github.com/user-attachments/assets/c6df9aad-2b86-451d-a225-1b9505189837)
 
-<img width="1512" alt="image" src="https://github.com/user-attachments/assets/519a5daa-618b-415b-8db8-cb739895a7d4" />
+![image](https://github.com/user-attachments/assets/afdd7c47-eaeb-44b1-956d-3f901a360225)
+
+![image](https://github.com/user-attachments/assets/ef382160-140b-4488-871a-e5f83cbece81)
+
+![image](https://github.com/user-attachments/assets/d17bac49-da89-4a36-929c-b0edf401e005)
+
+
+
 
 ## Getting Started
 
@@ -27,7 +34,7 @@ The **Sui Bridge Analytics Dashboard** is a web application designed to provide 
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/your-org/sui-bridge.git
+   git clone https://github.com/MoonletLabs/sui-bridge.git
    cd sui-bridge
    ```
 2. Install dependencies
