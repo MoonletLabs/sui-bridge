@@ -19,3 +19,23 @@ The **Sui Bridge Analytics Dashboard** is a web application designed to provide 
 ## Contributing
 
 We welcome contributions! Please feel free to submit issues or pull requests.
+
+## Fees API
+
+Daily gas usage statistics can be retrieved via:
+
+```bash
+GET /api/fees?network=mainnet
+```
+
+Example response:
+
+```json
+[
+  {
+    "transfer_date": "2024-05-01",
+    "eth_gas_usage": "123456",
+    "sui_gas_usage": "78910"
+  }
+]
+```
