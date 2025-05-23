@@ -9,3 +9,5 @@ export * from './chart-select'
 export * from './chart-legends'
 
 export * from './chart-loading'
+
+export { default as GasUsageChart } from './gas-usage-chart'

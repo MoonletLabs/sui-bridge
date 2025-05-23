@@ -17,9 +17,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 DATE_TRUNC('day', TO_TIMESTAMP(timestamp_ms / 1000)) AS transfer_date,
                 SUM(gas_usage) AS total_gas_usage
             FROM
-                public.token_transfer
+                public.token_transfer_data
+            WHERE
+                is_finalized = true
             GROUP BY
-                DATE_TRUNC('day', TO_TIMESTAMP(timestamp_ms / 1000))
+                transfer_date
             ORDER BY
                 transfer_date;`
 

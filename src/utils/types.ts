@@ -217,3 +217,8 @@ export type BridgeMetricsResponse = {
     }
     // Keep number for backward compatibility
 }
+
+export interface GasUsageDailyType {
+    transfer_date: string
+    total_gas_usage: number
+}

@@ -19,3 +19,22 @@ The **Sui Bridge Analytics Dashboard** is a web application designed to provide 
 ## Contributing
 
 We welcome contributions! Please feel free to submit issues or pull requests.
+
+## API
+
+The analytics dashboard exposes several REST endpoints under `/api`. For example, gas usage statistics can be retrieved via:
+
+```
+GET /api/fees?network=testnet|mainnet
+```
+
+This returns an array of objects containing the daily gas consumed by bridge transactions:
+
+```json
+[
+  {
+    "transfer_date": "2024-05-10",
+    "total_gas_usage": "123.45"
+  }
+]
+```
