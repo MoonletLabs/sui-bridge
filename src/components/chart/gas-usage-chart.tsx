@@ -1,66 +1,241 @@
 'use client'
-import { Box, Card, CardHeader } from '@mui/material'
-import { Chart, useChart } from 'src/components/chart'
+import { Box, Card, CardHeader, Grid } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import dayjs from 'dayjs'
+import { useCallback, useEffect, useState } from 'react'
+import { Chart } from 'src/components/chart'
+import {
+    getDefaultTimeIntervalForPeriod,
+    getTimeIntervalForPeriod,
+    TimeInterval,
+} from 'src/config/helper'
 import { getNetwork } from 'src/hooks/get-network-storage'
+import { useGlobalContext } from 'src/provider/global-provider'
 import { endpoints, fetcher } from 'src/utils/axios'
-import useSWR from 'swr'
 import { fNumber } from 'src/utils/format-number'
 import { GasUsageDailyType } from 'src/utils/types'
+import useSWR from 'swr'
 
 export default function GasUsageChart() {
     const network = getNetwork()
+    const { timePeriod } = useGlobalContext()
+    const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
+        getDefaultTimeIntervalForPeriod(timePeriod),
+    )
+    const theme = useTheme()
+
+    useEffect(() => {
+        const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
+        const valuesValues = getTimeIntervalForPeriod(timePeriod)
+
+        if (selectedSeries !== defaultValue) {
+            if (!valuesValues?.find(it => it === selectedSeries)) {
+                setSelectedSeries(defaultValue)
+            }
+        }
+    }, [timePeriod])
 
     const { data } = useSWR<GasUsageDailyType[]>(
-        `${endpoints.fees}?network=${network}`,
+        `${endpoints.fees}?network=${network}&period=${timePeriod}`,
         fetcher,
         { revalidateOnFocus: false },
     )
 
-    const chartOptions = useChart({
-        chart: { zoom: { enabled: false } },
-        colors: ['#7A0CFA', '#FF5630'],
-        xaxis: { type: 'datetime' },
-        yaxis: {
+    const chartOptions = {
+        chart: {
+            stacked: false,
+            zoom: { enabled: false },
+            toolbar: { show: false },
+            fontFamily: 'inherit',
+        },
+        dataLabels: {
+            enabled: false,
+        },
+        colors: [theme.palette.primary.main, theme.palette.secondary.main],
+        fill: {
+            type: 'solid',
+            opacity: 1,
+        },
+        plotOptions: {
+            area: {
+                // fillTo: "end", // removed to fix linter error
+            },
+        },
+        // fill: {
+        //     type: 'gradient',
+        //     gradient: {
+        //         colorStops: [
+        //             {
+        //                 offset: 0,
+        //                 color: '#7A0CFA',
+        //                 opacity: 0.5,
+        //             },
+        //             {
+        //                 offset: 100,
+        //                 color: '#7A0CFA',
+        //                 opacity: 0.0,
+        //             },
+        //         ],
+        //     },
+        // },
+        stroke: { curve: 'smooth' as const, width: 3 },
+        grid: {
+            strokeDashArray: 3,
+            borderColor: 'rgba(145, 158, 171, 0.2)',
+        },
+        xaxis: {
+            type: 'datetime' as const,
+            axisBorder: { show: false },
+            axisTicks: { show: false },
             labels: {
-                formatter: (value: number) => fNumber(value, { maximumFractionDigits: 2 }),
+                format: 'dd MMM',
+            },
+            tooltip: {
+                enabled: false,
             },
         },
+        yaxis: [
+            {
+                opposite: true,
+                labels: {
+                    show: false,
+                },
+                title: {
+                    text: 'ETH (gwei)',
+                    style: { color: theme.palette.primary.main },
+                },
+            },
+            {
+                labels: {
+                    show: false,
+                },
+                title: {
+                    text: 'SUI (MIST)',
+                    style: { color: theme.palette.secondary.main },
+                },
+            },
+        ],
         tooltip: {
-            y: {
-                formatter: (val: number) => fNumber(val),
+            shared: true,
+            followCursor: true,
+            intersect: false,
+            custom: ({
+                series,
+                seriesIndex,
+                dataPointIndex,
+                w,
+            }: {
+                series: any
+                seriesIndex: any
+                dataPointIndex: any
+                w: any
+            }) => {
+                const timestamp = w.globals.seriesX[seriesIndex][dataPointIndex]
+                const date = dayjs(timestamp)
+                const formattedDate = date.format('D MMM YYYY')
+
+                const tooltips = w.globals.series
+                    .map((_: any, i: any) => {
+                        const value = series[i][dataPointIndex]
+                        if (value === null || value === undefined) return ''
+                        const seriesName = w.globals.seriesNames[i]
+                        const color = w.globals.colors[i]
+                        const formattedValue = `${fNumber(value, { maximumFractionDigits: 7 })}`
+
+                        return `
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                padding: 6px;
+                                background-color: rgba(255, 255, 255, 0.8);
+                                color: #333;
+                                border-radius: 4px;
+                                text-align: left;
+                                font-size: 12px;
+                                border-left: 4px solid ${color};
+                                margin-bottom: 4px;">
+                                <span style="margin-left: 8px;">
+                                    <strong>${seriesName}:</strong> ${formattedValue}
+                                </span>
+                            </div>
+                        `
+                    })
+                    .join('')
+
+                return `
+                    <div style="
+                        padding: 8px;
+                        background-color: #e0e0e0;
+                        border-radius: 6px;
+                        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+                        min-width: 120px;
+                        text-align: left;
+                        color: white;">
+                        <strong style="color: black">${formattedDate}</strong>
+                        ${tooltips}
+                    </div>
+                `
             },
         },
-    })
+        markers: { size: 0 },
+        legend: {
+            show: true,
+            position: 'top',
+            horizontalAlign: 'right',
+            fontSize: '12px',
+            markers: {
+                size: 12,
+            },
+            itemMargin: {
+                horizontal: 8,
+            },
+        },
+    }
+
+    const handleChangeSeries = useCallback((newValue: string) => {
+        setSelectedSeries(newValue as TimeInterval)
+    }, [])
 
     return (
-        <Card>
-            <CardHeader title="Daily Gas Usage" />
-            <Box sx={{ p: 3 }}>
-                <Chart
-                    type="area"
-                    series={[
-                        {
-                            name: 'ETH',
-                            data:
-                                data?.map(d => ({
-                                    x: new Date(d.transfer_date).getTime(),
-                                    y: Number(d.eth_gas_usage),
-                                })) || [],
-                        },
-                        {
-                            name: 'SUI',
-                            data:
-                                data?.map(d => ({
-                                    x: new Date(d.transfer_date).getTime(),
-                                    y: Number(d.sui_gas_usage),
-                                })) || [],
-                        },
-                    ]}
-                    options={chartOptions}
-                    height={340}
-                    loadingProps={{ sx: { p: 2.5 } }}
-                />
-            </Box>
-        </Card>
+        <Grid container spacing={4} marginTop={2}>
+            <Grid item xs={12}>
+                <Card>
+                    <CardHeader title="Average Gas Usage" subheader="" />
+                    <Box sx={{ p: 3 }}>
+                        <Chart
+                            type="area"
+                            series={[
+                                {
+                                    name: 'ETH',
+                                    data:
+                                        data?.map(d => ({
+                                            x: new Date(d.transfer_date).getTime(),
+                                            y: Number(d.eth_gas_usage),
+                                        })) || [],
+                                },
+                                {
+                                    name: 'SUI',
+                                    data:
+                                        data?.map(d => ({
+                                            x: new Date(d.transfer_date).getTime(),
+                                            y: Number(d.sui_gas_usage),
+                                        })) || [],
+                                },
+                            ]}
+                            options={{
+                                ...chartOptions,
+                                legend: {
+                                    ...chartOptions.legend,
+                                    position: 'top',
+                                    horizontalAlign: 'right',
+                                },
+                            }}
+                            height={340}
+                            loadingProps={{ sx: { p: 2.5 } }}
+                        />
+                    </Box>
+                </Card>
+            </Grid>
+        </Grid>
     )
 }
