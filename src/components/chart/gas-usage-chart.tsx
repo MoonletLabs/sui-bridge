@@ -17,17 +17,16 @@ import { GasUsageDailyType } from 'src/utils/types'
 import useSWR from 'swr'
 
 export default function GasUsageChart() {
+    const theme = useTheme()
     const network = getNetwork()
     const { timePeriod } = useGlobalContext()
     const [selectedSeries, setSelectedSeries] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
-    const theme = useTheme()
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
         const valuesValues = getTimeIntervalForPeriod(timePeriod)
-
         if (selectedSeries !== defaultValue) {
             if (!valuesValues?.find(it => it === selectedSeries)) {
                 setSelectedSeries(defaultValue)
@@ -43,6 +42,7 @@ export default function GasUsageChart() {
 
     const chartOptions = {
         chart: {
+            type: 'area' as const,
             stacked: false,
             zoom: { enabled: false },
             toolbar: { show: false },
@@ -51,34 +51,31 @@ export default function GasUsageChart() {
         dataLabels: {
             enabled: false,
         },
-        colors: [theme.palette.primary.main, theme.palette.secondary.main],
-        fill: {
-            type: 'solid',
-            opacity: 1,
+        colors: ['#5c6bc0', '#26A17B'],
+        stroke: {
+            curve: 'smooth' as const,
+            width: 3,
         },
-        plotOptions: {
-            area: {
-                // fillTo: "end", // removed to fix linter error
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                type: 'vertical',
+                opacityFrom: 0.5,
+                opacityTo: 0,
+                stops: [0, 100],
+                colorStops: [
+                    [
+                        { offset: 0, color: '#5c6bc0', opacity: 0.5 },
+                        { offset: 100, color: '#5c6bc0', opacity: 0 },
+                    ],
+                    [
+                        { offset: 0, color: '#26A17B', opacity: 0.5 },
+                        { offset: 100, color: '#26A17B', opacity: 0 },
+                    ],
+                ],
             },
         },
-        // fill: {
-        //     type: 'gradient',
-        //     gradient: {
-        //         colorStops: [
-        //             {
-        //                 offset: 0,
-        //                 color: '#7A0CFA',
-        //                 opacity: 0.5,
-        //             },
-        //             {
-        //                 offset: 100,
-        //                 color: '#7A0CFA',
-        //                 opacity: 0.0,
-        //             },
-        //         ],
-        //     },
-        // },
-        stroke: { curve: 'smooth' as const, width: 3 },
         grid: {
             strokeDashArray: 3,
             borderColor: 'rgba(145, 158, 171, 0.2)',
@@ -96,22 +93,28 @@ export default function GasUsageChart() {
         },
         yaxis: [
             {
-                opposite: true,
+                // ETH axis (left)
                 labels: {
-                    show: false,
+                    show: true,
+                    formatter: (val: number) => val?.toFixed(5),
+                    style: { colors: ['#5c6bc0'] },
                 },
                 title: {
                     text: 'ETH (gwei)',
-                    style: { color: theme.palette.primary.main },
+                    style: { color: '#5c6bc0' },
                 },
             },
             {
+                // SUI axis (right)
+                opposite: true,
                 labels: {
-                    show: false,
+                    show: true,
+                    formatter: (val: number) => val?.toFixed(4),
+                    style: { colors: ['#26A17B'] },
                 },
                 title: {
                     text: 'SUI (MIST)',
-                    style: { color: theme.palette.secondary.main },
+                    style: { color: '#26A17B' },
                 },
             },
         ],
@@ -121,19 +124,16 @@ export default function GasUsageChart() {
             intersect: false,
             custom: ({
                 series,
-                seriesIndex,
                 dataPointIndex,
                 w,
             }: {
                 series: any
-                seriesIndex: any
                 dataPointIndex: any
                 w: any
             }) => {
-                const timestamp = w.globals.seriesX[seriesIndex][dataPointIndex]
+                const timestamp = w.globals.seriesX[0][dataPointIndex]
                 const date = dayjs(timestamp)
                 const formattedDate = date.format('D MMM YYYY')
-
                 const tooltips = w.globals.series
                     .map((_: any, i: any) => {
                         const value = series[i][dataPointIndex]
@@ -141,7 +141,6 @@ export default function GasUsageChart() {
                         const seriesName = w.globals.seriesNames[i]
                         const color = w.globals.colors[i]
                         const formattedValue = `${fNumber(value, { maximumFractionDigits: 7 })}`
-
                         return `
                             <div style="
                                 display: flex;
@@ -161,7 +160,6 @@ export default function GasUsageChart() {
                         `
                     })
                     .join('')
-
                 return `
                     <div style="
                         padding: 8px;
@@ -180,14 +178,23 @@ export default function GasUsageChart() {
         markers: { size: 0 },
         legend: {
             show: true,
-            position: 'top',
-            horizontalAlign: 'right',
-            fontSize: '12px',
+            position: 'top' as const,
+            horizontalAlign: 'right' as const,
+            fontSize: '13px',
+            fontWeight: 500,
             markers: {
-                size: 12,
+                width: 16,
+                height: 16,
+                radius: 12,
+                fillColors: undefined,
             },
             itemMargin: {
-                horizontal: 8,
+                horizontal: 12,
+                vertical: 8,
+            },
+            labels: {
+                colors: theme.palette.text.primary,
+                useSeriesColors: false,
             },
         },
     }
@@ -201,12 +208,12 @@ export default function GasUsageChart() {
             <Grid item xs={12}>
                 <Card>
                     <CardHeader title="Average Gas Usage" subheader="" />
-                    <Box sx={{ p: 3 }}>
+                    <Box sx={{ p: 1 }}>
                         <Chart
                             type="area"
                             series={[
                                 {
-                                    name: 'ETH',
+                                    name: 'Ethereum',
                                     data:
                                         data?.map(d => ({
                                             x: new Date(d.transfer_date).getTime(),
@@ -214,7 +221,7 @@ export default function GasUsageChart() {
                                         })) || [],
                                 },
                                 {
-                                    name: 'SUI',
+                                    name: 'Sui',
                                     data:
                                         data?.map(d => ({
                                             x: new Date(d.transfer_date).getTime(),
@@ -222,14 +229,7 @@ export default function GasUsageChart() {
                                         })) || [],
                                 },
                             ]}
-                            options={{
-                                ...chartOptions,
-                                legend: {
-                                    ...chartOptions.legend,
-                                    position: 'top',
-                                    horizontalAlign: 'right',
-                                },
-                            }}
+                            options={chartOptions}
                             height={340}
                             loadingProps={{ sx: { p: 2.5 } }}
                         />

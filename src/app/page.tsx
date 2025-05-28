@@ -21,8 +21,8 @@ export default function Page() {
                 <LatestTransactions />
                 <InflowOutflowCharts />
                 {/* <StockOfAssetsChart /> */}
-                <TokenVolumePieChart />
                 <GasUsageChart />
+                <TokenVolumePieChart />
             </DashboardContent>
         </DashboardLayout>
     )
