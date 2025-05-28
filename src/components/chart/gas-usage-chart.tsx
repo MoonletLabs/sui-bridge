@@ -40,7 +40,7 @@ export default function GasUsageChart() {
         { revalidateOnFocus: false },
     )
 
-    const chartOptions = {
+    const chartOptions = useMemo(() => ({
         chart: {
             type: 'area' as const,
             stacked: false,
