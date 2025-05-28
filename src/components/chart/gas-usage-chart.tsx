@@ -2,7 +2,7 @@
 import { Box, Card, CardHeader, Grid } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chart } from 'src/components/chart'
 import {
     getDefaultTimeIntervalForPeriod,
@@ -40,108 +40,109 @@ export default function GasUsageChart() {
         { revalidateOnFocus: false },
     )
 
-    const chartOptions = useMemo(() => ({
-        chart: {
-            type: 'area' as const,
-            stacked: false,
-            zoom: { enabled: false },
-            toolbar: { show: false },
-            fontFamily: 'inherit',
-        },
-        dataLabels: {
-            enabled: false,
-        },
-        colors: ['#5c6bc0', '#26A17B'],
-        stroke: {
-            curve: 'smooth' as const,
-            width: 3,
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shadeIntensity: 1,
-                type: 'vertical',
-                opacityFrom: 0.5,
-                opacityTo: 0,
-                stops: [0, 100],
-                colorStops: [
-                    [
-                        { offset: 0, color: '#5c6bc0', opacity: 0.5 },
-                        { offset: 100, color: '#5c6bc0', opacity: 0 },
-                    ],
-                    [
-                        { offset: 0, color: '#26A17B', opacity: 0.5 },
-                        { offset: 100, color: '#26A17B', opacity: 0 },
-                    ],
-                ],
+    const chartOptions = useMemo(
+        () => ({
+            chart: {
+                type: 'area' as const,
+                stacked: false,
+                zoom: { enabled: false },
+                toolbar: { show: false },
+                fontFamily: 'inherit',
             },
-        },
-        grid: {
-            strokeDashArray: 3,
-            borderColor: 'rgba(145, 158, 171, 0.2)',
-        },
-        xaxis: {
-            type: 'datetime' as const,
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            labels: {
-                format: 'dd MMM',
-            },
-            tooltip: {
+            dataLabels: {
                 enabled: false,
             },
-        },
-        yaxis: [
-            {
-                // ETH axis (left)
-                labels: {
-                    show: true,
-                    formatter: (val: number) => val?.toFixed(5),
-                    style: { colors: ['#5c6bc0'] },
-                },
-                title: {
-                    text: 'ETH (gwei)',
-                    style: { color: '#5c6bc0' },
+            colors: ['#5c6bc0', '#26A17B'],
+            stroke: {
+                curve: 'smooth' as const,
+                width: 3,
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    type: 'vertical',
+                    opacityFrom: 0.5,
+                    opacityTo: 0,
+                    stops: [0, 100],
+                    colorStops: [
+                        [
+                            { offset: 0, color: '#5c6bc0', opacity: 0.5 },
+                            { offset: 100, color: '#5c6bc0', opacity: 0 },
+                        ],
+                        [
+                            { offset: 0, color: '#26A17B', opacity: 0.5 },
+                            { offset: 100, color: '#26A17B', opacity: 0 },
+                        ],
+                    ],
                 },
             },
-            {
-                // SUI axis (right)
-                opposite: true,
+            grid: {
+                strokeDashArray: 3,
+                borderColor: 'rgba(145, 158, 171, 0.2)',
+            },
+            xaxis: {
+                type: 'datetime' as const,
+                axisBorder: { show: false },
+                axisTicks: { show: false },
                 labels: {
-                    show: true,
-                    formatter: (val: number) => val?.toFixed(4),
-                    style: { colors: ['#26A17B'] },
+                    format: 'dd MMM',
                 },
-                title: {
-                    text: 'SUI (MIST)',
-                    style: { color: '#26A17B' },
+                tooltip: {
+                    enabled: false,
                 },
             },
-        ],
-        tooltip: {
-            shared: true,
-            followCursor: true,
-            intersect: false,
-            custom: ({
-                series,
-                dataPointIndex,
-                w,
-            }: {
-                series: any
-                dataPointIndex: any
-                w: any
-            }) => {
-                const timestamp = w.globals.seriesX[0][dataPointIndex]
-                const date = dayjs(timestamp)
-                const formattedDate = date.format('D MMM YYYY')
-                const tooltips = w.globals.series
-                    .map((_: any, i: any) => {
-                        const value = series[i][dataPointIndex]
-                        if (value === null || value === undefined) return ''
-                        const seriesName = w.globals.seriesNames[i]
-                        const color = w.globals.colors[i]
-                        const formattedValue = `${fNumber(value, { maximumFractionDigits: 7 })}`
-                        return `
+            yaxis: [
+                {
+                    // ETH axis (left)
+                    labels: {
+                        show: true,
+                        formatter: (val: number) => val?.toFixed(5),
+                        style: { colors: ['#5c6bc0'] },
+                    },
+                    title: {
+                        text: 'ETH (gwei)',
+                        style: { color: '#5c6bc0' },
+                    },
+                },
+                {
+                    // SUI axis (right)
+                    opposite: true,
+                    labels: {
+                        show: true,
+                        formatter: (val: number) => val?.toFixed(4),
+                        style: { colors: ['#26A17B'] },
+                    },
+                    title: {
+                        text: 'SUI (MIST)',
+                        style: { color: '#26A17B' },
+                    },
+                },
+            ],
+            tooltip: {
+                shared: true,
+                followCursor: true,
+                intersect: false,
+                custom: ({
+                    series,
+                    dataPointIndex,
+                    w,
+                }: {
+                    series: any
+                    dataPointIndex: any
+                    w: any
+                }) => {
+                    const timestamp = w.globals.seriesX[0][dataPointIndex]
+                    const date = dayjs(timestamp)
+                    const formattedDate = date.format('D MMM YYYY')
+                    const tooltips = w.globals.series
+                        .map((_: any, i: any) => {
+                            const value = series[i][dataPointIndex]
+                            if (value === null || value === undefined) return ''
+                            const seriesName = w.globals.seriesNames[i]
+                            const color = w.globals.colors[i]
+                            const formattedValue = `${fNumber(value, { maximumFractionDigits: 7 })}`
+                            return `
                             <div style="
                                 display: flex;
                                 align-items: center;
@@ -158,9 +159,9 @@ export default function GasUsageChart() {
                                 </span>
                             </div>
                         `
-                    })
-                    .join('')
-                return `
+                        })
+                        .join('')
+                    return `
                     <div style="
                         padding: 8px;
                         background-color: #e0e0e0;
@@ -173,31 +174,33 @@ export default function GasUsageChart() {
                         ${tooltips}
                     </div>
                 `
+                },
             },
-        },
-        markers: { size: 0 },
-        legend: {
-            show: true,
-            position: 'top' as const,
-            horizontalAlign: 'right' as const,
-            fontSize: '13px',
-            fontWeight: 500,
-            markers: {
-                width: 16,
-                height: 16,
-                radius: 12,
-                fillColors: undefined,
+            markers: { size: 0 },
+            legend: {
+                show: true,
+                position: 'top' as const,
+                horizontalAlign: 'right' as const,
+                fontSize: '13px',
+                fontWeight: 500,
+                markers: {
+                    width: 16,
+                    height: 16,
+                    radius: 12,
+                    fillColors: undefined,
+                },
+                itemMargin: {
+                    horizontal: 12,
+                    vertical: 8,
+                },
+                labels: {
+                    colors: theme.palette.text.primary,
+                    useSeriesColors: false,
+                },
             },
-            itemMargin: {
-                horizontal: 12,
-                vertical: 8,
-            },
-            labels: {
-                colors: theme.palette.text.primary,
-                useSeriesColors: false,
-            },
-        },
-    }
+        }),
+        [data],
+    )
 
     const handleChangeSeries = useCallback((newValue: string) => {
         setSelectedSeries(newValue as TimeInterval)
