@@ -3,6 +3,7 @@ import BridgePerformanceChart from 'src/components/chart/bridge-performance-char
 import CumulativeNetInflow from 'src/components/chart/cumulative-net-inflow'
 import InflowOutflowCharts from 'src/components/chart/inflow-outflow-charts'
 import TokenVolumePieChart from 'src/components/chart/pie-charts'
+import GasUsageChart from 'src/components/chart/gas-usage-chart'
 // import StockOfAssetsChart from 'src/components/chart/total-stock-assets'
 import { LatestTransactions } from 'src/components/transactions/latest-transactions'
 import CustomWidgets from 'src/components/widgets/custom-widgets'
@@ -20,6 +21,7 @@ export default function Page() {
                 <LatestTransactions />
                 <InflowOutflowCharts />
                 {/* <StockOfAssetsChart /> */}
+                <GasUsageChart />
                 <TokenVolumePieChart />
             </DashboardContent>
         </DashboardLayout>
