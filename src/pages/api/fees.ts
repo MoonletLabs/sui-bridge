@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const startDate = calculateStartDate(period as string)
 
         /**
-         * Average Gas Usage per Transaction
+         * Average Gas Usage per chain per day
          *
          * Shows average gas usage in native units:
          * - ETH gas is in gwei (1e9 wei)
