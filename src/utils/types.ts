@@ -180,6 +180,12 @@ export type TransactionHistoryType = {
     is_finalized: boolean
 }
 
+export type GasUsageDailyType = {
+    transfer_date: string
+    eth_gas_usage: string | number
+    sui_gas_usage: string | number
+}
+
 export type CumulativeInflowType = {
     transfer_date: string
     token_id: string | number

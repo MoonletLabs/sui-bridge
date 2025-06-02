@@ -31,7 +31,7 @@ const CustomWidgets: React.FC = () => {
         <Grid container>
             {isLoading
                 ? Array.from(new Array(4)).map((_, index) => (
-                      <Grid xs={6} md={4} lg={3} key={index} padding={1}>
+                      <Grid xs={12} sm={6} md={4} lg={3} key={index} padding={1}>
                           <CardWidget
                               title={<Skeleton width={180} height={22} />}
                               total={<Skeleton width={140} height={48} />}

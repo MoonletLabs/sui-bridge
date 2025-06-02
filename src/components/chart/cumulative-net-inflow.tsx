@@ -1,5 +1,5 @@
 'use client'
-import { Card, CardHeader, Grid, Switch, FormControlLabel } from '@mui/material'
+import { Card, CardHeader, Grid } from '@mui/material'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { Chart, useChart } from 'src/components/chart'
@@ -7,7 +7,6 @@ import {
     getCumulativeInflowEndpointForPeriod,
     getDefaultTimeIntervalForPeriod,
     getTimeIntervalForPeriod,
-    TIME_INTERVALS,
     TimeInterval,
 } from 'src/config/helper'
 import { getNetwork } from 'src/hooks/get-network-storage'
