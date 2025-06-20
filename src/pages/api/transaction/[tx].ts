@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
-import { removePrefix, transformHistory, transformTransfers } from 'src/utils/helper'
+import { transformHistory, transformTransfers, parseTransactionHash } from 'src/utils/helper'
 import db from '../database'
 import { sendError, sendReply } from '../utils'
 import { getPrices } from '../prices'
@@ -9,7 +9,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         const networkConfig = getNetworkConfig({ req })
 
-        const tx = removePrefix(req.query.tx?.toString())
+        const tx = req.query.tx?.toString()
+
+        if (!tx) {
+            sendError(res, { code: 400, message: 'Transaction hash is required' })
+            return
+        }
+
+        // Parse and normalize transaction hash for database query
+        let hexTx: string
+        try {
+            hexTx = parseTransactionHash(tx)
+        } catch (error) {
+            console.error('Transaction hash parsing error:', error)
+            sendError(res, { code: 400, message: `Invalid transaction hash format: ${tx}` })
+            return
+        }
 
         /**
          * Get bridge transactions
@@ -30,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 is_finalized
             FROM token_transfer_data
             WHERE
-                txn_hash = decode(${tx}, 'hex')`
+                txn_hash = decode(${hexTx}, 'hex')`
 
         const tokendata = queryTokenData?.[0]
 
@@ -63,6 +78,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             tx: transformTransfers(networkConfig, [tokendata] as any, prices)?.[0],
         })
     } catch (error) {
-        sendError(res)
+        console.error('Transaction API error:', error)
+        sendError(res, {
+            code: 500,
+            message: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        })
     }
 }
