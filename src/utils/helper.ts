@@ -326,7 +326,7 @@ export const transformTransfers = (
                     )
                     const from_chain = getNetworkName(it.chain_id, networkConfig.config.networkId)
 
-                    let tx_hash = it.tx_hash // todo: fix hash for SUI
+                    let tx_hash = it.tx_hash
                     let sender_address = it.sender_address
                     let recipient_address = it.recipient_address
 
@@ -334,6 +334,8 @@ export const transformTransfers = (
                         tx_hash = `0x${it.tx_hash}`
                         sender_address = `0x${it.sender_address}`
                     } else {
+                        // For SUI transactions, convert only tx_hash to base58 format
+                        tx_hash = base58Encode(it.tx_hash)
                         recipient_address = `0x${it.recipient_address}`
                     }
                     return {
@@ -358,11 +360,14 @@ export const transformTransfers = (
 export const transformHistory = (data: TransactionHistoryType[]) => {
     return transformNumberFields(data)
         ?.map(it => {
-            let tx_hash = it.tx_hash // todo: fix hash for SUI
+            let tx_hash = it.tx_hash
             let txn_sender = it.txn_sender
             if (it.data_source === 'ETH') {
                 tx_hash = `0x${it.tx_hash}`
                 txn_sender = `0x${it.txn_sender}`
+            } else {
+                // For SUI transactions, convert only tx_hash to base58 format
+                tx_hash = base58Encode(it.tx_hash)
             }
             return {
                 ...it,
@@ -759,4 +764,100 @@ export function addCumulativeNetInflow(
 // Helper to calculate sum from query results
 export const sumQueryField = (data: any[], field: string): number => {
     return data.reduce((sum, item) => sum + parseInt(item[field] || '0'), 0)
+}
+
+// Base58 encoding function for SUI transaction hashes
+const base58Encode = (hexString: string): string => {
+    const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+    const base = alphabet.length
+
+    // Convert hex to decimal
+    let decimal = BigInt('0x' + hexString)
+
+    if (decimal === BigInt(0)) return '1'
+
+    let result = ''
+    while (decimal > BigInt(0)) {
+        const remainder = Number(decimal % BigInt(base))
+        result = alphabet[remainder] + result
+        decimal = decimal / BigInt(base)
+    }
+
+    // Add leading zeros for each leading zero byte in the original hex
+    let leadingZeros = 0
+    for (let i = 0; i < hexString.length; i += 2) {
+        if (hexString.substr(i, 2) === '00') {
+            leadingZeros++
+        } else {
+            break
+        }
+    }
+
+    return '1'.repeat(leadingZeros) + result
+}
+
+// Base58 decoding function to convert base58 strings back to hex
+export const base58Decode = (base58String: string): string => {
+    const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+    const base = alphabet.length
+
+    let decimal = BigInt(0)
+    let power = BigInt(1)
+
+    // Convert base58 to decimal
+    for (let i = base58String.length - 1; i >= 0; i--) {
+        const char = base58String[i]
+        const value = alphabet.indexOf(char)
+        if (value === -1) {
+            throw new Error(`Invalid base58 character: ${char}`)
+        }
+        decimal += BigInt(value) * power
+        power *= BigInt(base)
+    }
+
+    // Convert decimal to hex
+    let hex = decimal.toString(16)
+
+    // Add leading zeros for each leading '1' in the base58 string
+    let leadingOnes = 0
+    for (let i = 0; i < base58String.length && base58String[i] === '1'; i++) {
+        leadingOnes++
+    }
+
+    // Add leading zeros (each leading '1' in base58 represents a leading '00' in hex)
+    hex = '00'.repeat(leadingOnes) + hex
+
+    // Ensure the hex string has an even number of digits
+    if (hex.length % 2 !== 0) {
+        hex = '0' + hex
+    }
+
+    return hex
+}
+
+/**
+ * Parse and normalize transaction hash for database queries
+ * Handles both base58 (SUI) and hex (ETH) formats
+ * @param tx - Transaction hash in any format
+ * @returns Hex string without 0x prefix for PostgreSQL decode() function
+ */
+export const parseTransactionHash = (tx: string): string => {
+    if (!tx) {
+        throw new Error('Transaction hash is required')
+    }
+
+    const cleanTx = removePrefix(tx)
+
+    // Check if it's likely a base58 SUI transaction hash
+    // Base58 strings are typically shorter than hex and contain alphanumeric characters
+    if (cleanTx && !cleanTx.startsWith('0x') && cleanTx.length < 64) {
+        // Likely a base58 SUI transaction hash, convert to hex
+        return base58Decode(cleanTx)
+    } else if (cleanTx && cleanTx.startsWith('0x')) {
+        // Hex string with 0x prefix, remove the prefix for PostgreSQL decode()
+        return cleanTx.slice(2)
+    } else {
+        // Hex string without 0x prefix, use as-is
+        return cleanTx
+    }
 }
