@@ -121,6 +121,13 @@ export default function InflowOutflowCharts() {
 
             setInflowSeries(inflowData)
             setOutflowSeries(outflowData)
+            const formattedData = formatChartData(
+                filteredData,
+                selectedSeriesInflow,
+                getTokensList(network),
+                timePeriod,
+            )
+            setChartData(formattedData)
         }
     }, [data, timePeriod, selectedTokens, selectedSeriesInflow])
 
