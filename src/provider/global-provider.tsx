@@ -3,6 +3,16 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react'
 import { TimePeriod } from 'src/config/helper'
 import { NETWORK } from 'src/hooks/get-network-storage'
+import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import { WagmiProvider } from 'wagmi'
+import { mainnet, sepolia } from 'wagmi/chains'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+    createNetworkConfig,
+    SuiClientProvider,
+    WalletProvider as SuiWalletProvider,
+} from '@mysten/dapp-kit'
+import { getFullnodeUrl } from '@mysten/sui/client'
 
 interface GlobalContextProps {
     network: NETWORK
@@ -15,6 +25,21 @@ interface GlobalContextProps {
 }
 
 const GlobalContext = createContext<GlobalContextProps | undefined>(undefined)
+
+// Ethereum wagmi + RainbowKit config
+const config = getDefaultConfig({
+    appName: 'Sui Bridge',
+    projectId: '09f18e7b8dd3f981804e0f45c18b15c3', // Replace with your WalletConnect projectId
+    chains: [mainnet, sepolia],
+    ssr: true,
+})
+
+// Sui dapp-kit network config
+const { networkConfig } = createNetworkConfig({
+    mainnet: { url: getFullnodeUrl('mainnet') },
+    testnet: { url: getFullnodeUrl('testnet') },
+})
+const queryClient = new QueryClient()
 
 export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     const [network, setNetworkState] = useState<NETWORK>(NETWORK.MAINNET)
@@ -68,19 +93,29 @@ export const GlobalProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return (
-        <GlobalContext.Provider
-            value={{
-                network,
-                toggleNetwork,
-                setNetwork,
-                timePeriod,
-                setTimePeriod,
-                selectedTokens,
-                setSelectedTokens,
-            }}
-        >
-            {children}
-        </GlobalContext.Provider>
+        <QueryClientProvider client={queryClient}>
+            <WagmiProvider config={config} reconnectOnMount={false}>
+                <RainbowKitProvider>
+                    <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
+                        <SuiWalletProvider>
+                            <GlobalContext.Provider
+                                value={{
+                                    network,
+                                    toggleNetwork,
+                                    setNetwork,
+                                    timePeriod,
+                                    setTimePeriod,
+                                    selectedTokens,
+                                    setSelectedTokens,
+                                }}
+                            >
+                                {children}
+                            </GlobalContext.Provider>
+                        </SuiWalletProvider>
+                    </SuiClientProvider>
+                </RainbowKitProvider>
+            </WagmiProvider>
+        </QueryClientProvider>
     )
 }
 
