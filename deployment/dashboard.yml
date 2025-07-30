@@ -5,7 +5,7 @@ services:
   dashboard:
     image: ${DASHBOARD_IMAGE}
     secrets:
-      - source: SUI_BRIDGE_POSTGRES_URL_V2
+      - source: SUI_BRIDGE_POSTGRES_URL_V3
         target: /run/secrets/sui-bridge-postgres-url
       - source: SUI_BRIDGE_TESTNET_POSTGRES_URL
         target: /run/secrets/sui-bridge-testnet-postgres-url
@@ -27,7 +27,7 @@ networks:
     external: true
 
 secrets:
-  SUI_BRIDGE_POSTGRES_URL_V2:
+  SUI_BRIDGE_POSTGRES_URL_V3:
     external: true
   SUI_BRIDGE_TESTNET_POSTGRES_URL:
     external: true
