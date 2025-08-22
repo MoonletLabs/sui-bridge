@@ -627,7 +627,9 @@ export const calculateCardsTotals = (
             color: '#FCBD05', // red
             icon: 'solar:square-transfer-horizontal-bold-duotone',
             dollars: true,
-            percentageChange: numberToFixed(((netFlow - netFlowPrevious) / netFlowPrevious) * 100),
+            percentageChange: numberToFixed(
+                ((netFlow - netFlowPrevious) / Math.abs(netFlowPrevious)) * 100,
+            ),
         },
         {
             title: 'Unique Addresses',

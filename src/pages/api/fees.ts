@@ -1,16 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { sendError, sendReply } from './utils'
 import db from './database'
-import { getNetworkConfig } from 'src/config/helper'
+import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { calculateStartDate } from 'src/utils/format-chart-data'
 import dayjs from 'dayjs'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
-        const { period = '7d' } = req.query
+        const timePeriod = (req.query.period as TimePeriod) || 'Last Week'
 
-        const startDate = calculateStartDate(period as string)
+        const startDate = calculateStartDate(timePeriod)
 
         /**
          * Average Gas Usage per chain per day
