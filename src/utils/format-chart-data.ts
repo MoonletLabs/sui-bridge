@@ -155,6 +155,8 @@ export const calculateStartDate = (timePeriod: string) => {
             return dayjs().subtract(7, 'day')
         case 'Last Month':
             return dayjs().subtract(30, 'day')
+        case 'Last 6 months':
+            return dayjs().subtract(6, 'month')
         case 'Last year':
             return dayjs().subtract(365, 'day')
         case 'All time':

@@ -95,12 +95,19 @@ export interface TrasformedType {
     }
 }
 
-export type TimePeriod = 'Last 24h' | 'Last Week' | 'Last Month' | 'Last year' | 'All time'
+export type TimePeriod =
+    | 'Last 24h'
+    | 'Last Week'
+    | 'Last Month'
+    | 'Last 6 months'
+    | 'Last year'
+    | 'All time'
 
 export const TIME_PERIODS: TimePeriod[] = [
     'Last 24h',
     'Last Week',
     'Last Month',
+    'Last 6 months',
     'Last year',
     'All time',
 ]
@@ -116,6 +123,7 @@ export const getTimeIntervalForPeriod = (period: TimePeriod): TimeInterval[] => 
         case 'Last Week':
             return ['Hourly', 'Daily']
         case 'Last Month':
+        case 'Last 6 months':
             return ['Daily', 'Weekly']
 
         default:
@@ -129,6 +137,7 @@ export const getDefaultTimeIntervalForPeriod = (period: TimePeriod): TimeInterva
             return 'Hourly'
         case 'Last Week':
         case 'Last Month':
+        case 'Last 6 months':
             return 'Daily'
         default:
             return 'Weekly'
@@ -140,6 +149,9 @@ export const getVolumeEndpointForPeriod = (period: TimePeriod, network: NETWORK)
         case 'Last 24h':
         case 'Last Week':
             return `${endpoints.volume.hourly}?network=${network}`
+        case 'Last Month':
+        case 'Last 6 months':
+            return `${endpoints.volume.daily}?network=${network}`
         default:
             return `${endpoints.volume.daily}?network=${network}`
     }
@@ -153,6 +165,9 @@ export const getCumulativeInflowEndpointForPeriod = (
         case 'Last 24h':
         case 'Last Week':
             return `${endpoints.cumulative_inflow.hourly}?network=${network}`
+        case 'Last Month':
+        case 'Last 6 months':
+            return `${endpoints.cumulative_inflow.daily}?network=${network}`
         default:
             return `${endpoints.cumulative_inflow.daily}?network=${network}`
     }
