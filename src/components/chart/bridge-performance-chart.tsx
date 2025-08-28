@@ -22,116 +22,116 @@ export default function BridgePerformanceChart() {
         { revalidateOnFocus: false },
     )
 
+    // Move useChart call to the top level to fix Rules of Hooks violation
+    const chartOptions = useChart({
+        chart: {
+            stacked: false,
+            zoom: { enabled: false },
+            toolbar: { show: false },
+            fontFamily: 'inherit',
+        },
+        colors: ['#3780FF'],
+        plotOptions: {
+            area: {
+                fillTo: 'end',
+            },
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                colorStops: [
+                    {
+                        offset: 0,
+                        color: '#3780FF',
+                        opacity: 0.5,
+                    },
+                    {
+                        offset: 100,
+                        color: '#3780FF',
+                        opacity: 0.0,
+                    },
+                ],
+            },
+        },
+        stroke: { curve: 'smooth', width: 3 },
+        grid: {
+            strokeDashArray: 3,
+            borderColor: 'rgba(145, 158, 171, 0.2)',
+        },
+        xaxis: {
+            type: 'datetime',
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+            labels: {
+                format: 'dd MMM',
+            },
+            tooltip: {
+                enabled: false, // Disable the x-axis tooltip to avoid duplication with main tooltip
+            },
+        },
+        tooltip: {
+            shared: true,
+            followCursor: true,
+            intersect: false,
+            custom: ({
+                series,
+                seriesIndex,
+                dataPointIndex,
+                w,
+            }: {
+                series: any
+                seriesIndex: any
+                dataPointIndex: any
+                w: any
+            }) => {
+                const timestamp = w.globals.seriesX[seriesIndex][dataPointIndex]
+                const value = series[seriesIndex][dataPointIndex]
+
+                // Format date using dayjs for consistency with the rest of the app
+                const date = dayjs(timestamp)
+                const formattedDate = date.format('D MMM YYYY')
+
+                // Format the transaction count
+                const formattedValue = `${fNumber(value)}`
+
+                return `
+                    <div style="
+                        padding: 8px;
+                        background-color: #e0e0e0;
+                        border-radius: 6px;
+                        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+                        min-width: 120px;
+                        text-align: left;
+                        color: white;">
+                        <strong style="color: black">${formattedDate}</strong>
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            padding: 6px;
+                            background-color: rgba(255, 255, 255, 0.8);
+                            color: #333;
+                            border-radius: 4px;
+                            text-align: left;
+                            font-size: 12px;
+                            border-left: 4px solid #3780FF;
+                            margin-bottom: 4px;">
+                            <span style="margin-left: 8px;"><strong>Bridges:</strong> ${formattedValue}</span>
+                        </div>
+                    </div>
+                `
+            },
+        },
+        markers: { size: 0 },
+        legend: {
+            show: false,
+        },
+    })
+
     const renderLoading = () => (
         <Box display="flex" justifyContent="center" alignItems="center" height={340}>
             <CircularProgress />
         </Box>
     )
-
-    const chartOptions = () =>
-        useChart({
-            chart: {
-                stacked: false,
-                zoom: { enabled: false },
-                toolbar: { show: false },
-                fontFamily: 'inherit',
-            },
-            colors: ['#3780FF'],
-            plotOptions: {
-                area: {
-                    fillTo: 'end',
-                },
-            },
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    colorStops: [
-                        {
-                            offset: 0,
-                            color: '#3780FF',
-                            opacity: 0.5,
-                        },
-                        {
-                            offset: 100,
-                            color: '#3780FF',
-                            opacity: 0.0,
-                        },
-                    ],
-                },
-            },
-            stroke: { curve: 'smooth', width: 3 },
-            grid: {
-                strokeDashArray: 3,
-                borderColor: 'rgba(145, 158, 171, 0.2)',
-            },
-            xaxis: {
-                type: 'datetime',
-                axisBorder: { show: false },
-                axisTicks: { show: false },
-                labels: {
-                    format: 'dd MMM',
-                },
-                tooltip: {
-                    enabled: false, // Disable the x-axis tooltip to avoid duplication with main tooltip
-                },
-            },
-            tooltip: {
-                shared: true,
-                followCursor: true,
-                intersect: false,
-                custom: ({
-                    series,
-                    seriesIndex,
-                    dataPointIndex,
-                    w,
-                }: {
-                    series: any
-                    seriesIndex: any
-                    dataPointIndex: any
-                    w: any
-                }) => {
-                    const timestamp = w.globals.seriesX[seriesIndex][dataPointIndex]
-                    const value = series[seriesIndex][dataPointIndex]
-
-                    // Format date using dayjs for consistency with the rest of the app
-                    const date = dayjs(timestamp)
-                    const formattedDate = date.format('D MMM YYYY')
-
-                    // Format the transaction count
-                    const formattedValue = `${fNumber(value)}`
-
-                    return `
-                        <div style="
-                            padding: 8px;
-                            background-color: #e0e0e0;
-                            border-radius: 6px;
-                            box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-                            min-width: 120px;
-                            text-align: left;
-                            color: white;">
-                            <strong style="color: black">${formattedDate}</strong>
-                            <div style="
-                                display: flex;
-                                align-items: center;
-                                padding: 6px;
-                                background-color: rgba(255, 255, 255, 0.8);
-                                color: #333;
-                                border-radius: 4px;
-                                text-align: left;
-                                font-size: 12px;
-                                border-left: 4px solid #3780FF;
-                                margin-bottom: 4px;">
-                                <span style="margin-left: 8px;"><strong>Bridges:</strong> ${formattedValue}</span>
-                            </div>
-                        </div>
-                    `
-                },
-            },
-            markers: { size: 0 },
-            legend: {
-                show: false,
-            },
-        })
 
     return (
         <Grid container spacing={4} marginTop={2}>
@@ -597,7 +597,7 @@ export default function BridgePerformanceChart() {
                                                         : [],
                                                 },
                                             ]}
-                                            options={chartOptions()}
+                                            options={chartOptions}
                                             height={340}
                                             loadingProps={{ sx: { p: 2.5 } }}
                                         />

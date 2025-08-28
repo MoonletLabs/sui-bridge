@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Grid, Card, CardHeader, Box, Skeleton } from '@mui/material'
 import { useChart, ChartSelect, Chart } from 'src/components/chart'
 import { endpoints, fetcher } from 'src/utils/axios'
@@ -32,6 +32,64 @@ export default function TokenVolumePieChart() {
 
     const volumeEndpoint = `${endpoints.volume.daily}?network=${network}`
     const { data, isLoading } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
+
+    // Move useChart calls to the top level and memoize them
+    const inflowChartOptions = useChart({
+        chart: { sparkline: { enabled: true } },
+        labels: inflowData.labels,
+        tooltip: {
+            y: {
+                formatter: (value: number) =>
+                    `$${value?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+            },
+        },
+        colors: inflowData.colors,
+        legend: {
+            show: true,
+            position: 'right',
+        },
+        plotOptions: { pie: { donut: { labels: { show: false } } } },
+        stroke: { width: 0 },
+        dataLabels: { enabled: true, dropShadow: { enabled: false } },
+    })
+
+    const outflowChartOptions = useChart({
+        chart: { sparkline: { enabled: true } },
+        labels: outflowData.labels,
+        tooltip: {
+            y: {
+                formatter: (value: number) =>
+                    `$${value?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+            },
+        },
+        colors: outflowData.colors,
+        legend: {
+            show: true,
+            position: 'right',
+        },
+        plotOptions: { pie: { donut: { labels: { show: false } } } },
+        stroke: { width: 0 },
+        dataLabels: { enabled: true, dropShadow: { enabled: false } },
+    })
+
+    const totalChartOptions = useChart({
+        chart: { sparkline: { enabled: true } },
+        labels: pieChartData.labels,
+        tooltip: {
+            y: {
+                formatter: (value: number) =>
+                    `$${value?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+            },
+        },
+        colors: pieChartData.colors,
+        legend: {
+            show: true,
+            position: 'right',
+        },
+        plotOptions: { pie: { donut: { labels: { show: false } } } },
+        stroke: { width: 0 },
+        dataLabels: { enabled: true, dropShadow: { enabled: false } },
+    })
 
     useEffect(() => {
         if (data?.length > 0) {
@@ -107,26 +165,6 @@ export default function TokenVolumePieChart() {
         }
     }, [data, timePeriod, selectedTokens])
 
-    const pieChartOptions = (data: { labels: string[]; colors: string[] }) =>
-        useChart({
-            chart: { sparkline: { enabled: true } },
-            labels: data.labels,
-            tooltip: {
-                y: {
-                    formatter: (value: number) =>
-                        `$${value?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-                },
-            },
-            colors: data.colors,
-            legend: {
-                show: true,
-                position: 'right',
-            },
-            plotOptions: { pie: { donut: { labels: { show: false } } } },
-            stroke: { width: 0 },
-            dataLabels: { enabled: true, dropShadow: { enabled: false } },
-        })
-
     return (
         <Grid container spacing={4} marginTop={2}>
             <Grid item xs={12} md={6}>
@@ -150,7 +188,7 @@ export default function TokenVolumePieChart() {
                         <Chart
                             type="pie"
                             series={inflowData.series}
-                            options={pieChartOptions(inflowData)}
+                            options={inflowChartOptions}
                             height={370}
                             loadingProps={{ sx: { p: 2.5 } }}
                             sx={{ py: 2.5, pl: 1, pr: 2.5, height: { xs: 250, md: 370 } }}
@@ -178,7 +216,7 @@ export default function TokenVolumePieChart() {
                         <Chart
                             type="pie"
                             series={outflowData.series}
-                            options={pieChartOptions(outflowData)}
+                            options={outflowChartOptions}
                             height={370}
                             loadingProps={{ sx: { p: 2.5 } }}
                             sx={{ py: 2.5, pl: 1, pr: 2.5, height: { xs: 250, md: 370 } }}
@@ -207,7 +245,7 @@ export default function TokenVolumePieChart() {
                         <Chart
                             type="pie"
                             series={pieChartData.series}
-                            options={pieChartOptions(pieChartData)}
+                            options={totalChartOptions}
                             height={370}
                             loadingProps={{ sx: { p: 2.5 } }}
                             sx={{ py: 2.5, pl: 1, pr: 2.5, height: { xs: 250, md: 370 } }}
