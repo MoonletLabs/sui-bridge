@@ -35,6 +35,7 @@ const CustomWidgets: React.FC = () => {
                           <CardWidget
                               title={<Skeleton width={180} height={22} />}
                               total={<Skeleton width={140} height={48} />}
+                              isLoader={true}
                               color={''}
                               key={`card-widget-${index}`}
                           />
