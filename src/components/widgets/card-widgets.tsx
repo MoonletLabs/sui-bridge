@@ -115,7 +115,7 @@ const CardWidget: React.FC<ICardWidget> = ({
                             </Box>
                         </>
                     ) : (
-                        <div style={{ height: '24px' }} />
+                        <div style={{ height: '9px' }} />
                     )}
                 </Box>
             </Box>

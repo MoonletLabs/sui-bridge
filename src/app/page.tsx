@@ -1,13 +1,16 @@
 'use client'
-import BridgePerformanceChart from 'src/components/chart/bridge-performance-chart'
-import CumulativeNetInflow from 'src/components/chart/cumulative-net-inflow'
-import InflowOutflowCharts from 'src/components/chart/inflow-outflow-charts'
-import TokenVolumePieChart from 'src/components/chart/pie-charts'
-import GasUsageChart from 'src/components/chart/gas-usage-chart'
-// import StockOfAssetsChart from 'src/components/chart/total-stock-assets'
+import { Suspense, lazy } from 'react'
+import { ChartSkeleton, VisibilityChart } from 'src/components/skeletons'
 import { LatestTransactions } from 'src/components/transactions/latest-transactions'
 import CustomWidgets from 'src/components/widgets/custom-widgets'
 import { DashboardContent, DashboardLayout } from 'src/layouts/dashboard'
+
+// Lazy load chart components for better performance
+const InflowOutflowCharts = lazy(() => import('src/components/chart/inflow-outflow-charts'))
+const TokenVolumePieChart = lazy(() => import('src/components/chart/pie-charts'))
+const GasUsageChart = lazy(() => import('src/components/chart/gas-usage-chart'))
+import BridgePerformanceChart from 'src/components/chart/bridge-performance-chart'
+import CumulativeNetInflow from 'src/components/chart/cumulative-net-inflow'
 
 // ----------------------------------------------------------------------
 
@@ -16,13 +19,27 @@ export default function Page() {
         <DashboardLayout>
             <DashboardContent maxWidth="xl">
                 <CustomWidgets />
+
                 <CumulativeNetInflow />
                 <BridgePerformanceChart />
-                <LatestTransactions />
-                <InflowOutflowCharts />
-                {/* <StockOfAssetsChart /> */}
-                <GasUsageChart />
+
+                {/* Latest Transactions - also use visibility system */}
+                <VisibilityChart fallback={<ChartSkeleton title="Latest Transactions" />}>
+                    <LatestTransactions />
+                </VisibilityChart>
+
+                {/* Bottom charts - render only when visible */}
+                <VisibilityChart fallback={<ChartSkeleton title="Inflow/Outflow Charts" />}>
+                    <InflowOutflowCharts />
+                </VisibilityChart>
+
+                <VisibilityChart fallback={<ChartSkeleton title="Gas Usage" />}>
+                    <GasUsageChart />
+                </VisibilityChart>
+
+                {/* <VisibilityChart fallback={<ChartSkeleton title="Token Volume" />}> */}
                 <TokenVolumePieChart />
+                {/* </VisibilityChart> */}
             </DashboardContent>
         </DashboardLayout>
     )
