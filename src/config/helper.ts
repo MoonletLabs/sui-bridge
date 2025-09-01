@@ -137,6 +137,7 @@ export const getDefaultTimeIntervalForPeriod = (period: TimePeriod): TimeInterva
             return 'Hourly'
         case 'Last Week':
         case 'Last Month':
+            return 'Daily'
         case 'Last 6 months':
             return 'Weekly'
         default:
