@@ -124,7 +124,7 @@ export const getTimeIntervalForPeriod = (period: TimePeriod): TimeInterval[] => 
             return ['Hourly', 'Daily']
         case 'Last Month':
         case 'Last 6 months':
-            return ['Daily', 'Weekly']
+            return ['Daily', 'Weekly', 'Monthly']
 
         default:
             return TIME_INTERVALS
@@ -138,7 +138,7 @@ export const getDefaultTimeIntervalForPeriod = (period: TimePeriod): TimeInterva
         case 'Last Week':
         case 'Last Month':
         case 'Last 6 months':
-            return 'Daily'
+            return 'Weekly'
         default:
             return 'Weekly'
     }
