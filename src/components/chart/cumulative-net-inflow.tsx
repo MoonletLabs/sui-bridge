@@ -45,7 +45,7 @@ export default function CumulativeNetInflow() {
         }
     }, [timePeriod])
 
-    const { data } = useSWR<CumulativeInflowType[]>(
+    const { data, isLoading } = useSWR<CumulativeInflowType[]>(
         getCumulativeInflowEndpointForPeriod(timePeriod, network),
         fetcher,
         {
@@ -80,61 +80,66 @@ export default function CumulativeNetInflow() {
         }
     }, [data, timePeriod, selectedTokens, selectedSeries])
 
-    // Chart Options
-    const chartOptions = (isInflowOutflow: boolean) =>
-        useChart({
-            chart: {
-                stacked: true,
-                zoom: {
-                    enabled: true,
-                    type: 'x',
-                },
+    // Chart Options - Get base options from useChart Hook
+    const baseChartOptions = useChart({
+        chart: {
+            stacked: true,
+            zoom: {
+                enabled: true,
+                type: 'x',
             },
-            colors: isInflowOutflow ? ['#00A76F', '#FF5630'] : chartData.map(item => item.color),
-            stroke: {
-                width: 0,
+        },
+        colors: ['#00A76F', '#FF5630'], // Default colors
+        stroke: {
+            width: 0,
+        },
+        legend: {
+            show: true,
+        },
+        plotOptions: {
+            bar: {
+                borderRadius: 0,
             },
-            legend: {
-                show: true,
-            },
-            plotOptions: {
-                bar: {
-                    borderRadius: 0,
-                },
-            },
-            xaxis: {
-                categories: formatCategories(chartData, selectedSeries),
-                labels: {
-                    formatter: (value, index, opts) => {
-                        if (index === undefined) return value // Return full value if index is undefined
+        },
+        xaxis: {
+            categories: formatCategories(chartData, selectedSeries),
+            labels: {
+                formatter: (value, index, opts) => {
+                    if (index === undefined) return value // Return full value if index is undefined
 
-                        const totalPoints = chartData[0]?.data.length
-                        const skipInterval =
-                            totalPoints && totalPoints > 100 ? 8 : totalPoints > 20 ? 2 : 1
+                    const totalPoints = chartData[0]?.data.length
+                    const skipInterval =
+                        totalPoints && totalPoints > 100 ? 8 : totalPoints > 20 ? 2 : 1
 
-                        if (selectedSeries === 'Daily') {
-                            const skip = totalPoints && totalPoints > 100 ? 4 : 2
-                            return opts?.i % skip === 0 ? value : ''
-                        } else {
-                            return opts?.i % skipInterval === 0 ? value : ''
-                        }
-                    },
-                    style: {
-                        fontSize: '12px',
-                    },
+                    if (selectedSeries === 'Daily') {
+                        const skip = totalPoints && totalPoints > 100 ? 4 : 2
+                        return opts?.i % skip === 0 ? value : ''
+                    } else {
+                        return opts?.i % skipInterval === 0 ? value : ''
+                    }
+                },
+                style: {
+                    fontSize: '12px',
                 },
             },
-            yaxis: {
-                labels: {
-                    formatter: value => labelFormatted(value),
-                },
+        },
+        yaxis: {
+            labels: {
+                formatter: value => labelFormatted(value),
             },
-            tooltip: buildTooltip({
-                chartData,
-                showTotal: !showMergedValues,
-                showToken: true,
-            }), // Use showToken state
-        })
+        },
+        tooltip: buildTooltip({
+            chartData,
+            showTotal: !showMergedValues,
+            showToken: true,
+        }), // Use showToken state
+    })
+
+    // Create chart options function that uses the base options
+    const chartOptions = (isInflowOutflow: boolean) => ({
+        ...baseChartOptions,
+        colors: isInflowOutflow ? ['#00A76F', '#FF5630'] : chartData.map(item => item.color),
+    })
 
     const handleChangeSeries = useCallback((newValue: string) => {
         setSelectedSeries(newValue as TimeInterval)
@@ -197,6 +202,7 @@ export default function CumulativeNetInflow() {
                         options={chartOptions(showMergedValues)}
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
+                        forceLoading={isLoading}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
                     />
                 </Card>

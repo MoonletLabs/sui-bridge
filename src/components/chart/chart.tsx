@@ -35,9 +35,13 @@ export function Chart({
     options,
     className,
     loadingProps,
+    forceLoading,
     width = '100%',
     ...other
 }: BoxProps & ChartProps) {
+    // Performance optimization: prevent unnecessary re-renders
+    const chartKey = `${type}-${height}-${JSON.stringify(series?.length || 0)}`
+
     return (
         <Box
             dir="ltr"
@@ -52,14 +56,34 @@ export function Chart({
             }}
             {...other}
         >
-            <ApexChart
-                type={type}
-                series={series}
-                options={options}
-                width="100%"
-                height="100%"
-                loading={loadingProps}
-            />
+            {forceLoading ? (
+                <ChartLoading type={type} sx={loadingProps?.sx} />
+            ) : (
+                <ApexChart
+                    key={chartKey} // Add key to prevent unnecessary re-renders
+                    type={type}
+                    series={series}
+                    options={{
+                        ...options,
+                        // Additional performance optimizations
+                        chart: {
+                            ...options?.chart,
+                            redrawOnWindowResize: false,
+                            redrawOnParentResize: false,
+                            selection: { enabled: false }, // Disable selection for better performance
+                            events: {
+                                ...options?.chart?.events,
+                                // Reduce event handling for better performance
+                                beforeMount: undefined,
+                                mounted: undefined,
+                            },
+                        },
+                    }}
+                    width="100%"
+                    height="100%"
+                    loading={loadingProps}
+                />
+            )}
         </Box>
     )
 }

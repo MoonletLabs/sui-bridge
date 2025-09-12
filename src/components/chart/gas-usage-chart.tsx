@@ -34,7 +34,7 @@ export default function GasUsageChart() {
         }
     }, [timePeriod])
 
-    const { data } = useSWR<GasUsageDailyType[]>(
+    const { data, isLoading } = useSWR<GasUsageDailyType[]>(
         `${endpoints.fees}?network=${network}&period=${timePeriod}`,
         fetcher,
         { revalidateOnFocus: false },
@@ -234,6 +234,7 @@ export default function GasUsageChart() {
                             ]}
                             options={chartOptions}
                             height={340}
+                            forceLoading={isLoading}
                             loadingProps={{ sx: { p: 2.5 } }}
                         />
                     </Box>

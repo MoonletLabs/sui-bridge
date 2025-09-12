@@ -1,6 +1,7 @@
 import { useTheme } from '@mui/material/styles'
 
 import { varAlpha } from 'src/theme/styles'
+import { mergePerformanceConfig } from './performance-config'
 import type { ChartOptions } from './types'
 
 // ----------------------------------------------------------------------
@@ -48,7 +49,11 @@ export function useChart(options?: ChartOptions): ChartOptions {
         ...(options?.responsive ?? []),
     ]
 
-    return {
+    // Safely derive yAxis labels when yaxis is a single object (not an array)
+    const yaxisOption = options?.yaxis as ApexYAxis | ApexYAxis[] | undefined
+    const yaxisLabels = !Array.isArray(yaxisOption) ? yaxisOption?.labels : undefined
+
+    const baseOptions = {
         ...options,
 
         /** **************************************
@@ -65,13 +70,13 @@ export function useChart(options?: ChartOptions): ChartOptions {
             fontFamily: theme.typography.fontFamily,
             foreColor: theme.vars.palette.text.disabled,
             ...options?.chart,
-            animations: {
-                enabled: true,
-                speed: 360,
-                animateGradually: { enabled: true, delay: 120 },
-                dynamicAnimation: { enabled: true, speed: 360 },
-                ...options?.chart?.animations,
-            },
+            // animations: {
+            //     enabled: true,
+            //     speed: 360,
+            //     animateGradually: { enabled: true, delay: 120 },
+            //     dynamicAnimation: { enabled: true, speed: 360 },
+            //     ...options?.chart?.animations,
+            // },
         },
 
         /** **************************************
@@ -149,52 +154,33 @@ export function useChart(options?: ChartOptions): ChartOptions {
                 top: 0,
                 right: 0,
                 bottom: 0,
-                ...options?.grid?.padding,
-            },
-            xaxis: {
-                lines: {
-                    show: false,
-                },
-                ...options?.grid?.xaxis,
+                left: 0,
             },
         },
 
         /** **************************************
-         * Axis
+         * X axis
          *************************************** */
         xaxis: {
-            axisBorder: {
-                show: false,
-            },
-            axisTicks: {
-                show: false,
-            },
+            axisBorder: { show: false },
+            axisTicks: { show: false },
             ...options?.xaxis,
         },
+
+        /** **************************************
+         * Y axis
+         *************************************** */
         yaxis: {
-            tickAmount: 5,
-            ...options?.yaxis,
-        },
-
-        /** **************************************
-         * Markers
-         *************************************** */
-        markers: {
-            size: 0,
-            strokeColors: theme.vars.palette.background.paper,
-            ...options?.markers,
-        },
-
-        /** **************************************
-         * Tooltip
-         *************************************** */
-        tooltip: {
-            theme: 'false',
-            fillSeriesColor: false,
-            x: {
-                show: true,
+            labels: {
+                ...yaxisLabels,
+                formatter: (value: number) => {
+                    if (yaxisLabels?.formatter) {
+                        return yaxisLabels.formatter(value as any)
+                    }
+                    return value.toLocaleString()
+                },
             },
-            ...options?.tooltip,
+            ...options?.yaxis,
         },
 
         /** **************************************
@@ -223,104 +209,57 @@ export function useChart(options?: ChartOptions): ChartOptions {
         },
 
         /** **************************************
-         * plotOptions
+         * Tooltip
+         *************************************** */
+        tooltip: {
+            enabled: true,
+            followCursor: true,
+            intersect: false,
+            ...options?.tooltip,
+        },
+
+        /** **************************************
+         * Plot options
          *************************************** */
         plotOptions: {
-            ...options?.plotOptions,
-            // plotOptions: Bar
             bar: {
-                borderRadius: 4,
-                columnWidth: '48%',
-                borderRadiusApplication: 'end',
+                borderRadius: 0,
+                columnWidth: '70%',
                 ...options?.plotOptions?.bar,
             },
-
-            // plotOptions: Pie + Donut
             pie: {
-                ...options?.plotOptions?.pie,
                 donut: {
+                    size: '0%',
                     ...options?.plotOptions?.pie?.donut,
-                    labels: {
-                        show: true,
-                        ...options?.plotOptions?.pie?.donut?.labels,
-                        value: {
-                            ...LABEL_VALUE,
-                            ...options?.plotOptions?.pie?.donut?.labels?.value,
-                        },
-                        total: {
-                            ...LABEL_TOTAL,
-                            ...options?.plotOptions?.pie?.donut?.labels?.total,
-                        },
-                    },
                 },
+                ...options?.plotOptions?.pie,
             },
-
-            // plotOptions: Radialbar
-            radialBar: {
-                ...options?.plotOptions?.radialBar,
-                hollow: {
-                    margin: -8,
-                    size: '100%',
-                    ...options?.plotOptions?.radialBar?.hollow,
-                },
-                track: {
-                    margin: -8,
-                    strokeWidth: '50%',
-                    background: varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
-                    ...options?.plotOptions?.radialBar?.track,
-                },
-                dataLabels: {
-                    ...options?.plotOptions?.radialBar?.dataLabels,
-                    value: {
-                        ...LABEL_VALUE,
-                        ...options?.plotOptions?.radialBar?.dataLabels?.value,
-                    },
-                    total: {
-                        ...LABEL_TOTAL,
-                        ...options?.plotOptions?.radialBar?.dataLabels?.total,
-                    },
-                },
-            },
-
-            // plotOptions: Radar
-            radar: {
-                ...options?.plotOptions?.radar,
-                polygons: {
-                    fill: {
-                        colors: ['transparent'],
-                    },
-                    strokeColors: theme.vars.palette.divider,
-                    connectorColors: theme.vars.palette.divider,
-                    ...options?.plotOptions?.radar?.polygons,
-                },
-            },
-
-            // plotOptions: polarArea
-            polarArea: {
-                rings: {
-                    strokeColor: theme.vars.palette.divider,
-                },
-                spokes: {
-                    connectorColors: theme.vars.palette.divider,
-                },
-                ...options?.plotOptions?.polarArea,
-            },
-
-            // plotOptions: heatmap
-            heatmap: {
-                distributed: true,
-                ...options?.plotOptions?.heatmap,
-            },
+            ...options?.plotOptions,
         },
 
         /** **************************************
          * Responsive
          *************************************** */
-        responsive: RESPONSIVE.reduce((acc: typeof RESPONSIVE, cur) => {
-            if (!acc.some(item => item.breakpoint === cur.breakpoint)) {
-                acc.push(cur)
-            }
-            return acc
-        }, []),
+        responsive: RESPONSIVE,
+
+        /** **************************************
+         * No data
+         *************************************** */
+        noData: {
+            // text: 'No data',
+            align: 'center',
+            verticalAlign: 'middle',
+            offsetX: 0,
+            offsetY: 0,
+            style: {
+                color: theme.vars.palette.text.disabled,
+                fontSize: '14px',
+                fontFamily: theme.typography.fontFamily,
+            },
+            ...options?.noData,
+        },
     }
+
+    // Apply performance optimizations
+    return mergePerformanceConfig(baseOptions)
 }

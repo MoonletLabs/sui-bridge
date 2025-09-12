@@ -8,6 +8,7 @@ export type ChartProps = {
     series: Props['series']
     options: Props['options']
     loadingProps?: ChartLoadingProps
+    forceLoading?: boolean
 }
 
 export type ChartBaseProps = Props

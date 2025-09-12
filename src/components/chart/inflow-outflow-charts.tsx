@@ -40,9 +40,13 @@ export default function InflowOutflowCharts() {
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
 
-    const { data } = useSWR<any>(getVolumeEndpointForPeriod(timePeriod, network), fetcher, {
-        revalidateOnFocus: false,
-    })
+    const { data, isLoading } = useSWR<any>(
+        getVolumeEndpointForPeriod(timePeriod, network),
+        fetcher,
+        {
+            revalidateOnFocus: false,
+        },
+    )
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
@@ -131,72 +135,88 @@ export default function InflowOutflowCharts() {
         }
     }, [data, timePeriod, selectedTokens, selectedSeriesInflow])
 
-    // Chart Options
+    // Chart Options - Get base options from useChart Hook
+    const baseChartOptions = useChart({
+        chart: {
+            stacked: true,
+            zoom: {
+                enabled: true,
+                type: 'x',
+            },
+        },
+        colors: chartData.map(item => item.color), // Default colors
+        stroke: {
+            width: 2,
+        },
+        legend: {
+            show: true,
+        },
+        plotOptions: {
+            bar: {
+                borderRadius: 0,
+            },
+        },
+        xaxis: {
+            categories: formatCategories(chartData, selectedSeries),
+            labels: {
+                formatter: (value, index, opts) => {
+                    if (index === undefined) return value // Return full value if index is undefined
+
+                    const totalPoints = chartData[0]?.data.length
+
+                    const skipInterval =
+                        totalPoints && totalPoints > 100 ? 8 : totalPoints > 20 ? 2 : 1
+
+                    if (selectedSeries === 'Daily') {
+                        const skip = totalPoints && totalPoints > 100 ? 4 : 2
+                        return opts?.i % skip === 0 ? value : ''
+                    } else {
+                        return opts?.i % skipInterval === 0 ? value : ''
+                    }
+                },
+                style: {
+                    fontSize: '12px',
+                },
+            },
+        },
+        yaxis: {
+            labels: {
+                formatter: value => labelFormatted(value),
+            },
+        },
+        tooltip: buildTooltip({
+            chartData,
+            showTotal: true,
+            showToken: true,
+        }),
+    })
+
+    // Create chart options function that uses the base options
     const chartOptions = (
         isInflowOutflow: boolean,
         tooltipList: { period: string; value: number }[],
-    ) =>
-        useChart({
-            chart: {
-                stacked: true,
-                zoom: {
-                    enabled: true,
-                    type: 'x',
-                },
-            },
+    ) => {
+        if (!baseChartOptions) return {}
+
+        return {
+            ...baseChartOptions,
             colors: isInflowOutflow
                 ? ['#00A76F', '#FF5630', '#007BFF']
                 : chartData.map(item => item.color),
-            stroke: {
-                width: 2,
-            },
-            legend: {
-                show: true,
-            },
-            plotOptions: {
-                bar: {
-                    borderRadius: 0,
-                },
-            },
             xaxis: {
+                ...baseChartOptions.xaxis,
                 categories: formatCategories(
                     isInflowOutflow ? inflowSeries : chartData,
                     isInflowOutflow ? selectedSeriesInflow : selectedSeries,
                 ),
-                labels: {
-                    formatter: (value, index, opts) => {
-                        if (index === undefined) return value // Return full value if index is undefined
-
-                        const totalPoints = isInflowOutflow
-                            ? inflowSeries[0]?.data.length
-                            : chartData[0]?.data.length
-
-                        const skipInterval =
-                            totalPoints && totalPoints > 100 ? 8 : totalPoints > 20 ? 2 : 1
-
-                        if (selectedSeries === 'Daily') {
-                            const skip = totalPoints && totalPoints > 100 ? 4 : 2
-                            return opts?.i % skip === 0 ? value : ''
-                        } else {
-                            return opts?.i % skipInterval === 0 ? value : ''
-                        }
-                    },
-                    style: {
-                        fontSize: '12px',
-                    },
-                },
-            },
-            yaxis: {
-                labels: {
-                    formatter: value => labelFormatted(value),
-                },
             },
             tooltip: buildTooltip({
                 chartData,
                 showTotal: !isInflowOutflow,
                 showToken: !isInflowOutflow,
             }),
-        })
+        }
+    }
 
     const handleChangeSeries = useCallback((newValue: string) => {
         setSelectedSeries(newValue as TimeInterval)
@@ -310,6 +330,7 @@ export default function InflowOutflowCharts() {
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
+                        forceLoading={isLoading}
                     />
                 </Card>
             </Grid>
@@ -346,6 +367,7 @@ export default function InflowOutflowCharts() {
                         height={370}
                         loadingProps={{ sx: { p: 2.5 } }}
                         sx={{ py: 2.5, pl: { xs: 0, md: 1 }, pr: 2.5 }}
+                        forceLoading={isLoading}
                     />
                 </Card>
             </Grid>

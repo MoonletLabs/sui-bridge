@@ -12,6 +12,7 @@ interface ICardWidget {
     color: string
     percentageChange?: number
     timePeriod?: string
+    isLoader?: boolean
 }
 
 const CardWidget: React.FC<ICardWidget> = ({
@@ -22,6 +23,7 @@ const CardWidget: React.FC<ICardWidget> = ({
     color,
     percentageChange,
     timePeriod,
+    isLoader,
 }) => {
     const textStyle = {
         fontSize: '2rem',
@@ -115,7 +117,7 @@ const CardWidget: React.FC<ICardWidget> = ({
                             </Box>
                         </>
                     ) : (
-                        <div style={{ height: '24px' }} />
+                        <div style={{ height: isLoader ? '9px' : '24px' }} />
                     )}
                 </Box>
             </Box>
