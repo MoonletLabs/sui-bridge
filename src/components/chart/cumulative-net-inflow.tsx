@@ -1,5 +1,5 @@
 'use client'
-import { Card, CardHeader, Grid } from '@mui/material'
+import { Card, CardHeader, Grid, Button } from '@mui/material'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { Chart, useChart } from 'src/components/chart'
@@ -23,6 +23,7 @@ import {
 import { CumulativeInflowType, getTokensList } from 'src/utils/types'
 import useSWR from 'swr'
 import { ChartActionButtons } from './chart-action-buttons'
+import { downloadCsv } from 'src/utils/csv'
 
 export default function CumulativeNetInflow() {
     const network = getNetwork()
@@ -52,6 +53,20 @@ export default function CumulativeNetInflow() {
             revalidateOnFocus: false,
         },
     )
+
+    const handleExport = () => {
+        if (!data?.length) return
+        const startDate = calculateStartDate(timePeriod)
+        const rows = data
+            .filter((item: any) => dayjs(item.transfer_date).isAfter(startDate))
+            .map((it: any) => ({
+                transfer_date: it.transfer_date,
+                token: it?.token_info?.name,
+                total_volume_usd: it?.total_volume_usd,
+                total_volume: it?.total_volume,
+            }))
+        downloadCsv('cumulative-net-inflow.csv', rows)
+    }
 
     useEffect(() => {
         if (data && data?.length > 0) {
@@ -168,12 +183,7 @@ export default function CumulativeNetInflow() {
                         title="Cumulative Net inflow"
                         subheader=""
                         action={
-                            <Grid
-                                container
-                                alignItems="center"
-                                spacing={2}
-                                direction={{ xs: 'column', sm: 'row' }} // Responsive layout
-                            >
+                            <Grid container alignItems="center" spacing={1} wrap="nowrap">
                                 <Grid item>
                                     <ChartActionButtons
                                         showTotal={showMergedValues}
@@ -182,6 +192,11 @@ export default function CumulativeNetInflow() {
                                         handleChangeSeries={handleChangeSeries}
                                         timePeriod={timePeriod}
                                     />
+                                </Grid>
+                                <Grid item>
+                                    <Button size="small" variant="outlined" onClick={handleExport}>
+                                        Export CSV
+                                    </Button>
                                 </Grid>
                             </Grid>
                         }

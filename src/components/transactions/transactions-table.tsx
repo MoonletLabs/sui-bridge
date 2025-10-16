@@ -30,6 +30,7 @@ import { MultiAddressAutocomplete } from './multi-address'
 import { useDebounce } from 'use-debounce'
 import CloseIcon from '@mui/icons-material/Close'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
+import { downloadCsv } from 'src/utils/csv'
 
 export function TransactionsTable({
     ethAddress,
@@ -109,6 +110,21 @@ export function TransactionsTable({
         setFilters(prev => ({ ...prev, [key]: value }))
     }
 
+    const handleExport = () => {
+        const rows = (data?.transactions || []).map(tx => ({
+            tx_hash: tx.tx_hash,
+            from_chain: tx.from_chain,
+            destination_chain: tx.destination_chain,
+            sender_address: tx.sender_address,
+            recipient_address: tx.recipient_address,
+            token: tx.token_info?.name,
+            amount: tx.amount,
+            amount_usd: tx.amount_usd,
+            timestamp_ms: tx.timestamp_ms,
+        }))
+        downloadCsv(`latest-transactions-${network}.csv`, rows)
+    }
+
     return (
         <Box>
             <CustomTable
@@ -123,6 +139,7 @@ export function TransactionsTable({
                 ]}
                 tableData={data?.transactions || []}
                 loading={isLoading}
+                handleExport={handleExport}
                 title={
                     (showTitleLink ? (
                         <Link

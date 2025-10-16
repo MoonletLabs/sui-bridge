@@ -1,8 +1,5 @@
-import { Box, Card, Link, Typography } from '@mui/material'
 import { useTransactionsAutoRefresh } from 'src/hooks/use-transactions-auto-refresh'
 import { TransactionsTable } from './transactions-table'
-import { paths } from 'src/routes/paths'
-import { Iconify } from '../iconify'
 
 export function LatestTransactions() {
     // Custom hook for auto-refresh every 15 seconds

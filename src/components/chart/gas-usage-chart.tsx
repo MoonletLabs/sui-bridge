@@ -1,5 +1,5 @@
 'use client'
-import { Box, Card, CardHeader, Grid } from '@mui/material'
+import { Box, Card, CardHeader, Grid, Button } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -15,6 +15,7 @@ import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
 import { GasUsageDailyType } from 'src/utils/types'
 import useSWR from 'swr'
+import { downloadCsv } from 'src/utils/csv'
 
 export default function GasUsageChart() {
     const theme = useTheme()
@@ -39,6 +40,16 @@ export default function GasUsageChart() {
         fetcher,
         { revalidateOnFocus: false },
     )
+
+    const handleExport = () => {
+        if (!data?.length) return
+        const rows = data.map(d => ({
+            transfer_date: d.transfer_date,
+            eth_gas_usage: d.eth_gas_usage,
+            sui_gas_usage: d.sui_gas_usage,
+        }))
+        downloadCsv('average-gas-usage.csv', rows)
+    }
 
     const chartOptions = useMemo(
         () => ({
@@ -210,7 +221,15 @@ export default function GasUsageChart() {
         <Grid container spacing={4} marginTop={2}>
             <Grid item xs={12}>
                 <Card>
-                    <CardHeader title="Average Gas Usage" subheader="" />
+                    <CardHeader
+                        title="Average Gas Usage"
+                        subheader=""
+                        action={
+                            <Button size="small" variant="outlined" onClick={handleExport}>
+                                Export CSV
+                            </Button>
+                        }
+                    />
                     <Box sx={{ p: 1 }}>
                         <Chart
                             type="area"

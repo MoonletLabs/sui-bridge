@@ -200,17 +200,20 @@ export type BridgeMetricsResponse = {
         chart: {
             transfer_date: string
             total_count: number
-            total_volume: number
-            total_volume_usd: number
-            direction: string
-            token_id: number
-            token_info: {
+            // Optional fields depending on the specific query/transform
+            sui_count?: number
+            eth_count?: number
+            total_volume?: number
+            total_volume_usd?: number
+            direction?: string
+            token_id?: number
+            token_info?: {
                 id: number
                 name: string
                 deno: number
                 coingeckoId: string
             }
-            destination_chain: string
+            destination_chain?: string
         }[]
         total: number
         sui: number

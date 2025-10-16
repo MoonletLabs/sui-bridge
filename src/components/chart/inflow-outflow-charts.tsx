@@ -1,5 +1,5 @@
 'use client'
-import { Card, CardHeader, Grid } from '@mui/material'
+import { Card, CardHeader, Grid, Button } from '@mui/material'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { Chart, ChartSelect, useChart } from 'src/components/chart'
@@ -23,6 +23,7 @@ import {
 import { getTokensList } from 'src/utils/types'
 import useSWR from 'swr'
 import { ChartActionButtons } from './chart-action-buttons'
+import { downloadCsv } from 'src/utils/csv'
 
 export default function InflowOutflowCharts() {
     const network = getNetwork()
@@ -47,6 +48,27 @@ export default function InflowOutflowCharts() {
             revalidateOnFocus: false,
         },
     )
+
+    const handleExportTotal = () => {
+        if (!data?.length) return
+        const startDate = calculateStartDate(timePeriod)
+        const dateFilter = data.filter((item: any) => dayjs(item.transfer_date).isAfter(startDate))
+        const filtered = selectedTokens.includes('All')
+            ? dateFilter
+            : dateFilter.filter(
+                  (item: any) =>
+                      selectedTokens.includes('All') ||
+                      selectedTokens.includes(item?.token_info?.name),
+              )
+        const rows = filtered.map((it: any) => ({
+            transfer_date: it.transfer_date,
+            token: it?.token_info?.name,
+            direction: it?.direction,
+            total_volume_usd: it?.total_volume_usd,
+            total_volume: it?.total_volume,
+        }))
+        downloadCsv('inflow-outflow.csv', rows)
+    }
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
@@ -249,11 +271,24 @@ export default function InflowOutflowCharts() {
                         title="Inflow/Outflow Volume"
                         subheader=""
                         action={
-                            <ChartSelect
-                                options={getTimeIntervalForPeriod(timePeriod)}
-                                value={selectedSeriesInflow}
-                                onChange={handleChangeSeriesInflow}
-                            />
+                            <Grid container alignItems="center" spacing={1} wrap="nowrap">
+                                <Grid item>
+                                    <ChartSelect
+                                        options={getTimeIntervalForPeriod(timePeriod)}
+                                        value={selectedSeriesInflow}
+                                        onChange={handleChangeSeriesInflow}
+                                    />
+                                </Grid>
+                                <Grid item>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={handleExportTotal}
+                                    >
+                                        Export CSV
+                                    </Button>
+                                </Grid>
+                            </Grid>
                         }
                     />
 
@@ -340,13 +375,26 @@ export default function InflowOutflowCharts() {
                         title="Total Volume (inflow + outflow)"
                         subheader=""
                         action={
-                            <ChartActionButtons
-                                showTotal={showMergedValues}
-                                setShowTotal={setShowMergedValues}
-                                selectedSeries={selectedSeries}
-                                handleChangeSeries={handleChangeSeries}
-                                timePeriod={timePeriod}
-                            />
+                            <Grid container alignItems="center" spacing={1} wrap="nowrap">
+                                <Grid item>
+                                    <ChartActionButtons
+                                        showTotal={showMergedValues}
+                                        setShowTotal={setShowMergedValues}
+                                        selectedSeries={selectedSeries}
+                                        handleChangeSeries={handleChangeSeries}
+                                        timePeriod={timePeriod}
+                                    />
+                                </Grid>
+                                <Grid item>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={handleExportTotal}
+                                    >
+                                        Export CSV
+                                    </Button>
+                                </Grid>
+                            </Grid>
                         }
                     />
 
