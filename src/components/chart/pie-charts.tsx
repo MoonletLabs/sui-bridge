@@ -34,7 +34,7 @@ export default function TokenVolumePieChart() {
     const volumeEndpoint = `${endpoints.volume.daily}?network=${network}`
     const { data, isLoading } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
 
-    const handleExport = () => {
+    const handleExport = (kind: 'inflow' | 'outflow' | 'total') => {
         if (!data?.length) return
         const startDate = calculateStartDate(timePeriod)
         const dateFilteredData = data.filter((item: any) =>
@@ -50,7 +50,13 @@ export default function TokenVolumePieChart() {
             total_volume_usd: it?.total_volume_usd,
             total_volume: it?.total_volume,
         }))
-        downloadCsv('token-volume.csv', rows)
+        const suffix =
+            kind === 'inflow'
+                ? 'token-inflow'
+                : kind === 'outflow'
+                  ? 'token-outflow'
+                  : 'token-volume'
+        downloadCsv(`${suffix}.csv`, rows)
     }
 
     // Move useChart calls to the top level and memoize them
@@ -193,7 +199,11 @@ export default function TokenVolumePieChart() {
                         title="Token Inflow Distribution"
                         subheader=""
                         action={
-                            <Button size="small" variant="outlined" onClick={handleExport}>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleExport('inflow')}
+                            >
                                 Export CSV
                             </Button>
                         }
@@ -230,7 +240,11 @@ export default function TokenVolumePieChart() {
                         title="Token Outflow Distribution"
                         subheader=""
                         action={
-                            <Button size="small" variant="outlined" onClick={handleExport}>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleExport('outflow')}
+                            >
                                 Export CSV
                             </Button>
                         }
@@ -266,7 +280,11 @@ export default function TokenVolumePieChart() {
                         title="Token Volume Distribution"
                         subheader=""
                         action={
-                            <Button size="small" variant="outlined" onClick={handleExport}>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleExport('total')}
+                            >
                                 Export CSV
                             </Button>
                         }
