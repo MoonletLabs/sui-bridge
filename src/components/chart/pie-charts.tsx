@@ -200,9 +200,14 @@ export default function TokenVolumePieChart() {
                         subheader=""
                         action={
                             <Button
-                                size="small"
                                 variant="outlined"
                                 onClick={() => handleExport('inflow')}
+                                sx={{
+                                    height: 34,
+                                    typography: 'subtitle2',
+                                    px: 1.5,
+                                    borderRadius: 1,
+                                }}
                             >
                                 Export CSV
                             </Button>
@@ -241,9 +246,14 @@ export default function TokenVolumePieChart() {
                         subheader=""
                         action={
                             <Button
-                                size="small"
                                 variant="outlined"
                                 onClick={() => handleExport('outflow')}
+                                sx={{
+                                    height: 34,
+                                    typography: 'subtitle2',
+                                    px: 1.5,
+                                    borderRadius: 1,
+                                }}
                             >
                                 Export CSV
                             </Button>
@@ -281,9 +291,14 @@ export default function TokenVolumePieChart() {
                         subheader=""
                         action={
                             <Button
-                                size="small"
                                 variant="outlined"
                                 onClick={() => handleExport('total')}
+                                sx={{
+                                    height: 34,
+                                    typography: 'subtitle2',
+                                    px: 1.5,
+                                    borderRadius: 1,
+                                }}
                             >
                                 Export CSV
                             </Button>

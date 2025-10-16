@@ -194,7 +194,16 @@ export default function CumulativeNetInflow() {
                                     />
                                 </Grid>
                                 <Grid item>
-                                    <Button size="small" variant="outlined" onClick={handleExport}>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={handleExport}
+                                        sx={{
+                                            height: 34,
+                                            typography: 'subtitle2',
+                                            px: 1.5,
+                                            borderRadius: 1,
+                                        }}
+                                    >
                                         Export CSV
                                     </Button>
                                 </Grid>
