@@ -57,7 +57,6 @@ export default function InflowOutflowCharts() {
             ? dateFilter
             : dateFilter.filter(
                   (item: any) =>
-                      selectedTokens.includes('All') ||
                       selectedTokens.includes(item?.token_info?.name),
               )
         const rows = filtered.map((it: any) => ({
