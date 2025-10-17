@@ -40,6 +40,8 @@ export default function InflowOutflowCharts() {
     const [selectedSeriesInflow, setSelectedSeriesInflow] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
+    const [hiddenDirections, setHiddenDirections] = useState<number[]>([])
+    const [hiddenTokenSeries, setHiddenTokenSeries] = useState<number[]>([])
 
     const { data, isLoading } = useSWR<any>(
         getVolumeEndpointForPeriod(timePeriod, network),
@@ -68,13 +70,28 @@ export default function InflowOutflowCharts() {
     }
 
     const handleExportInflowOutflow = () => {
-        const rows = buildRows()
+        let rows = buildRows()
+        // Respect legend (seriesIndex 0 = Inflow, 1 = Outflow)
+        if (hiddenDirections.length) {
+            rows = rows.filter(r => {
+                if (r.direction === 'inflow' && hiddenDirections.includes(0)) return false
+                if (r.direction === 'outflow' && hiddenDirections.includes(1)) return false
+                return true
+            })
+        }
         if (!rows.length) return
         downloadCsv(`inflow-outflow-${getDateSuffix()}.csv`, rows)
     }
 
     const handleExportTotalVolume = () => {
-        const rows = buildRows()
+        let rows = buildRows()
+        // Respect legend only in per-asset mode
+        if (!showMergedValues && hiddenTokenSeries.length) {
+            const visible = new Set(
+                chartData.filter((_, i) => !hiddenTokenSeries.includes(i)).map(s => s.name),
+            )
+            rows = rows.filter(r => visible.has(r.token))
+        }
         if (!rows.length) return
         downloadCsv(`total-volume-${getDateSuffix()}.csv`, rows)
     }
@@ -240,6 +257,27 @@ export default function InflowOutflowCharts() {
                     isInflowOutflow ? inflowSeries : chartData,
                     isInflowOutflow ? selectedSeriesInflow : selectedSeries,
                 ),
+            },
+            chart: {
+                ...baseChartOptions.chart,
+                events: {
+                    legendClick: (_: any, seriesIndex: number) => {
+                        if (isInflowOutflow) {
+                            setHiddenDirections(prev =>
+                                prev.includes(seriesIndex)
+                                    ? prev.filter(i => i !== seriesIndex)
+                                    : [...prev, seriesIndex],
+                            )
+                        } else {
+                            setHiddenTokenSeries(prev =>
+                                prev.includes(seriesIndex)
+                                    ? prev.filter(i => i !== seriesIndex)
+                                    : [...prev, seriesIndex],
+                            )
+                        }
+                        return true
+                    },
+                },
             },
             tooltip: buildTooltip({
                 chartData,

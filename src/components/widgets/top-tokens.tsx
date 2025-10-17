@@ -9,6 +9,7 @@ import { fNumber } from 'src/utils/format-number'
 import { getTokensList } from 'src/utils/types'
 import { CustomTable } from 'src/components/table/table'
 import { downloadCsv } from 'src/utils/csv'
+import dayjs from 'dayjs'
 
 type SortMode = 'usd' | 'count'
 
@@ -123,8 +124,9 @@ export default function TopTokens() {
 
     const handleExport = () => {
         if (!rows?.length) return
+        const dateSuffix = dayjs().format('DD-MM-YYYY')
         downloadCsv(
-            'top-tokens.csv',
+            `top-tokens-${dateSuffix}.csv`,
             rows.map(r => ({
                 token: r.token,
                 inflow_usd: r.inflowUsd,

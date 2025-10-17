@@ -13,6 +13,7 @@ import {
     Typography,
 } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
+import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
@@ -122,7 +123,8 @@ export function TransactionsTable({
             amount_usd: tx.amount_usd,
             timestamp_ms: tx.timestamp_ms,
         }))
-        downloadCsv(`latest-transactions-${network}.csv`, rows)
+        const dateSuffix = dayjs().format('DD-MM-YYYY')
+        downloadCsv(`latest-transactions-${network}-${dateSuffix}.csv`, rows)
     }
 
     return (

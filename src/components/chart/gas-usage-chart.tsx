@@ -2,7 +2,7 @@
 import { Box, Card, CardHeader, Grid, Button } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import dayjs from 'dayjs'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chart } from 'src/components/chart'
 import {
     getDefaultTimeIntervalForPeriod,
@@ -41,14 +41,25 @@ export default function GasUsageChart() {
         { revalidateOnFocus: false },
     )
 
+    const hiddenSeriesRef = useRef<number[]>([])
+
     const handleExport = () => {
         if (!data?.length) return
-        const rows = data.map(d => ({
+        let rows = data.map(d => ({
             transfer_date: d.transfer_date,
             eth_gas_usage: d.eth_gas_usage,
             sui_gas_usage: d.sui_gas_usage,
         }))
-        downloadCsv('average-gas-usage.csv', rows)
+        const hidden = hiddenSeriesRef.current
+        if (hidden.length) {
+            rows = rows.map(r => ({
+                ...r,
+                eth_gas_usage: hidden.includes(0) ? undefined : r.eth_gas_usage,
+                sui_gas_usage: hidden.includes(1) ? undefined : r.sui_gas_usage,
+            }))
+        }
+        const dateSuffix = dayjs().format('DD-MM-YYYY')
+        downloadCsv(`average-gas-usage-${dateSuffix}.csv`, rows)
     }
 
     const chartOptions = useMemo(
@@ -59,6 +70,17 @@ export default function GasUsageChart() {
                 zoom: { enabled: false },
                 toolbar: { show: false },
                 fontFamily: 'inherit',
+                events: {
+                    legendClick: (_: any, seriesIndex: number, config: any) => {
+                        const hidden = hiddenSeriesRef.current
+                        if (hidden.includes(seriesIndex)) {
+                            hiddenSeriesRef.current = hidden.filter(i => i !== seriesIndex)
+                        } else {
+                            hiddenSeriesRef.current = [...hidden, seriesIndex]
+                        }
+                        // do not return anything to allow default toggle
+                    },
+                },
             },
             dataLabels: {
                 enabled: false,
