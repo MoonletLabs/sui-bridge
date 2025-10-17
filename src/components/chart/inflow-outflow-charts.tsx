@@ -51,9 +51,17 @@ export default function InflowOutflowCharts() {
         },
     )
 
+    type Row = {
+        transfer_date: string
+        token: string
+        direction: 'inflow' | 'outflow'
+        total_volume_usd: number
+        total_volume: number
+    }
+
     const getDateSuffix = () => dayjs().format('DD-MM-YYYY')
 
-    const buildRows = () => {
+    const buildRows = (): Row[] => {
         if (!data?.length) return []
         const startDate = calculateStartDate(timePeriod)
         const dateFilter = data.filter((item: any) => dayjs(item.transfer_date).isAfter(startDate))
@@ -62,18 +70,18 @@ export default function InflowOutflowCharts() {
             : dateFilter.filter((item: any) => selectedTokens.includes(item?.token_info?.name))
         return filtered.map((it: any) => ({
             transfer_date: it.transfer_date,
-            token: it?.token_info?.name,
-            direction: it?.direction,
-            total_volume_usd: it?.total_volume_usd,
-            total_volume: it?.total_volume,
+            token: it?.token_info?.name as string,
+            direction: it?.direction as 'inflow' | 'outflow',
+            total_volume_usd: it?.total_volume_usd as number,
+            total_volume: it?.total_volume as number,
         }))
     }
 
     const handleExportInflowOutflow = () => {
-        let rows = buildRows()
+        let rows: Row[] = buildRows()
         // Respect legend (seriesIndex 0 = Inflow, 1 = Outflow)
         if (hiddenDirections.length) {
-            rows = rows.filter(r => {
+            rows = rows.filter((r: Row) => {
                 if (r.direction === 'inflow' && hiddenDirections.includes(0)) return false
                 if (r.direction === 'outflow' && hiddenDirections.includes(1)) return false
                 return true
@@ -84,13 +92,13 @@ export default function InflowOutflowCharts() {
     }
 
     const handleExportTotalVolume = () => {
-        let rows = buildRows()
+        let rows: Row[] = buildRows()
         // Respect legend only in per-asset mode
         if (!showMergedValues && hiddenTokenSeries.length) {
             const visible = new Set(
                 chartData.filter((_, i) => !hiddenTokenSeries.includes(i)).map(s => s.name),
             )
-            rows = rows.filter(r => visible.has(r.token))
+            rows = rows.filter((r: Row) => visible.has(r.token))
         }
         if (!rows.length) return
         downloadCsv(`total-volume-${getDateSuffix()}.csv`, rows)
@@ -275,7 +283,7 @@ export default function InflowOutflowCharts() {
                                     : [...prev, seriesIndex],
                             )
                         }
-                        return true
+                        // allow default
                     },
                 },
             },
