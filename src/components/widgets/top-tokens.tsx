@@ -210,7 +210,7 @@ export default function TopTokens() {
                     { id: 'netUsd', label: 'Net (USD)', align: 'right' },
                     { id: 'sharePct', label: 'Share %', align: 'right' },
                     { id: 'tx', label: 'Tx (in/out)', align: 'right' },
-                    { id: 'uniqueAddresses', label: 'Unique addrs', align: 'right' },
+                    { id: 'uniqueAddresses', label: 'Unique addresses', align: 'right' },
                 ]}
                 tableData={rows}
                 RowComponent={({ row }) => (
