@@ -122,7 +122,7 @@ export function TransactionsTable({
             amount_usd: tx.amount_usd,
             timestamp_ms: tx.timestamp_ms,
         }))
-        downloadCsv(`latest-transactions-${network}.csv`, rows)
+        downloadCsv('latest-bridge-transactions', rows)
     }
 
     return (

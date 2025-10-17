@@ -124,7 +124,7 @@ export default function TopTokens() {
     const handleExport = () => {
         if (!rows?.length) return
         downloadCsv(
-            'top-tokens.csv',
+            'top-tokens',
             rows.map(r => ({
                 token: r.token,
                 inflow_usd: r.inflowUsd,
@@ -140,38 +140,66 @@ export default function TopTokens() {
 
     return (
         <Box>
-            <CustomTable<TopTokenRow>
+            <CustomTable
                 title="Top Tokens"
                 titleContent={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                            gap: 1,
+                            justifyContent: 'space-between',
+                        }}
+                    >
                         <Typography variant="h6" fontWeight="bold">
                             Top Tokens
                         </Typography>
-                        <ButtonGroup
-                            variant="outlined"
+                        <Box
                             sx={{
-                                ml: 'auto',
-                                '& .MuiButton-root': {
-                                    fontSize: '14px',
-                                    padding: '5px 12px',
-                                    lineHeight: 1.2,
-                                    minHeight: '36px',
-                                },
+                                display: 'flex',
+                                flexDirection: { xs: 'column', sm: 'row' },
+                                alignItems: { xs: 'flex-end', sm: 'center' },
+                                gap: 1,
                             }}
                         >
-                            <Button
-                                onClick={() => setSortMode('usd')}
-                                variant={sortMode === 'usd' ? 'contained' : 'outlined'}
+                            <ButtonGroup
+                                variant="outlined"
+                                sx={{
+                                    ml: 'auto',
+                                    '& .MuiButton-root': {
+                                        fontSize: '14px',
+                                        padding: '5px 12px',
+                                        lineHeight: 1.2,
+                                        minHeight: '34px',
+                                    },
+                                }}
                             >
-                                USD volume
-                            </Button>
+                                <Button
+                                    onClick={() => setSortMode('usd')}
+                                    variant={sortMode === 'usd' ? 'contained' : 'outlined'}
+                                >
+                                    USD volume
+                                </Button>
+                                <Button
+                                    onClick={() => setSortMode('count')}
+                                    variant={sortMode === 'count' ? 'contained' : 'outlined'}
+                                >
+                                    Tx count
+                                </Button>
+                            </ButtonGroup>
                             <Button
-                                onClick={() => setSortMode('count')}
-                                variant={sortMode === 'count' ? 'contained' : 'outlined'}
+                                variant="outlined"
+                                onClick={handleExport}
+                                sx={{
+                                    height: 34,
+                                    typography: 'subtitle2',
+                                    px: 1.5,
+                                    borderRadius: 1,
+                                }}
                             >
-                                Tx count
+                                Export CSV
                             </Button>
-                        </ButtonGroup>
+                        </Box>
                     </Box>
                 }
                 subheader={`Top by ${sortMode === 'usd' ? 'USD volume' : 'transactions'}`}
@@ -182,7 +210,7 @@ export default function TopTokens() {
                     { id: 'netUsd', label: 'Net (USD)', align: 'right' },
                     { id: 'sharePct', label: 'Share %', align: 'right' },
                     { id: 'tx', label: 'Tx (in/out)', align: 'right' },
-                    { id: 'uniqueAddresses', label: 'Unique addrs', align: 'right' },
+                    { id: 'uniqueAddresses', label: 'Unique addresses', align: 'right' },
                 ]}
                 tableData={rows}
                 RowComponent={({ row }) => (

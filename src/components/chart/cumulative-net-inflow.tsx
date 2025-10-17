@@ -34,6 +34,7 @@ export default function CumulativeNetInflow() {
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
     const [showMergedValues, setShowMergedValues] = useState(false)
+    const [hiddenSeries, setHiddenSeries] = useState<number[]>([])
 
     useEffect(() => {
         const defaultValue = getDefaultTimeIntervalForPeriod(timePeriod)
@@ -57,15 +58,25 @@ export default function CumulativeNetInflow() {
     const handleExport = () => {
         if (!data?.length) return
         const startDate = calculateStartDate(timePeriod)
+        // If not merged, respect legend-hidden series
+        const visibleTokenSet = new Set<string>(
+            showMergedValues
+                ? []
+                : chartData.filter((_, idx) => !hiddenSeries.includes(idx)).map(s => s.name),
+        )
+
         const rows = data
             .filter((item: any) => dayjs(item.transfer_date).isAfter(startDate))
+            .filter((it: any) =>
+                showMergedValues ? true : visibleTokenSet.has(it?.token_info?.name),
+            )
             .map((it: any) => ({
                 transfer_date: it.transfer_date,
                 token: it?.token_info?.name,
                 total_volume_usd: it?.total_volume_usd,
                 total_volume: it?.total_volume,
             }))
-        downloadCsv('cumulative-net-inflow.csv', rows)
+        downloadCsv('cumulative-net-inflow', rows)
     }
 
     useEffect(() => {
@@ -152,7 +163,20 @@ export default function CumulativeNetInflow() {
 
     // Create chart options function that uses the base options
     const chartOptions = (isInflowOutflow: boolean) => ({
-        ...baseChartOptions,
+        ...(baseChartOptions || {}),
+        chart: {
+            ...(baseChartOptions?.chart || {}),
+            events: {
+                legendClick: (_: any, seriesIndex: number) => {
+                    setHiddenSeries(prev =>
+                        prev.includes(seriesIndex)
+                            ? prev.filter(i => i !== seriesIndex)
+                            : [...prev, seriesIndex],
+                    )
+                    return true
+                },
+            },
+        },
         colors: isInflowOutflow ? ['#00A76F', '#FF5630'] : chartData.map(item => item.color),
     })
 

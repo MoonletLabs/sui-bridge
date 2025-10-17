@@ -40,6 +40,8 @@ export default function InflowOutflowCharts() {
     const [selectedSeriesInflow, setSelectedSeriesInflow] = useState<TimeInterval>(
         getDefaultTimeIntervalForPeriod(timePeriod),
     )
+    const [hiddenDirections, setHiddenDirections] = useState<number[]>([])
+    const [hiddenTokenSeries, setHiddenTokenSeries] = useState<number[]>([])
 
     const { data, isLoading } = useSWR<any>(
         getVolumeEndpointForPeriod(timePeriod, network),
@@ -49,9 +51,17 @@ export default function InflowOutflowCharts() {
         },
     )
 
+    type Row = {
+        transfer_date: string
+        token: string
+        direction: 'inflow' | 'outflow'
+        total_volume_usd: number
+        total_volume: number
+    }
+
     const getDateSuffix = () => dayjs().format('DD-MM-YYYY')
 
-    const buildRows = () => {
+    const buildRows = (): Row[] => {
         if (!data?.length) return []
         const startDate = calculateStartDate(timePeriod)
         const dateFilter = data.filter((item: any) => dayjs(item.transfer_date).isAfter(startDate))
@@ -60,23 +70,38 @@ export default function InflowOutflowCharts() {
             : dateFilter.filter((item: any) => selectedTokens.includes(item?.token_info?.name))
         return filtered.map((it: any) => ({
             transfer_date: it.transfer_date,
-            token: it?.token_info?.name,
-            direction: it?.direction,
-            total_volume_usd: it?.total_volume_usd,
-            total_volume: it?.total_volume,
+            token: it?.token_info?.name as string,
+            direction: it?.direction as 'inflow' | 'outflow',
+            total_volume_usd: it?.total_volume_usd as number,
+            total_volume: it?.total_volume as number,
         }))
     }
 
     const handleExportInflowOutflow = () => {
-        const rows = buildRows()
+        let rows: Row[] = buildRows()
+        // Respect legend (seriesIndex 0 = Inflow, 1 = Outflow)
+        if (hiddenDirections.length) {
+            rows = rows.filter((r: Row) => {
+                if (r.direction === 'inflow' && hiddenDirections.includes(0)) return false
+                if (r.direction === 'outflow' && hiddenDirections.includes(1)) return false
+                return true
+            })
+        }
         if (!rows.length) return
-        downloadCsv(`inflow-outflow-${getDateSuffix()}.csv`, rows)
+        downloadCsv('inflow-outflow', rows)
     }
 
     const handleExportTotalVolume = () => {
-        const rows = buildRows()
+        let rows: Row[] = buildRows()
+        // Respect legend only in per-asset mode
+        if (!showMergedValues && hiddenTokenSeries.length) {
+            const visible = new Set(
+                chartData.filter((_, i) => !hiddenTokenSeries.includes(i)).map(s => s.name),
+            )
+            rows = rows.filter((r: Row) => visible.has(r.token))
+        }
         if (!rows.length) return
-        downloadCsv(`total-volume-${getDateSuffix()}.csv`, rows)
+        downloadCsv('total-volume', rows)
     }
 
     useEffect(() => {
@@ -241,6 +266,27 @@ export default function InflowOutflowCharts() {
                     isInflowOutflow ? selectedSeriesInflow : selectedSeries,
                 ),
             },
+            chart: {
+                ...baseChartOptions.chart,
+                events: {
+                    legendClick: (_: any, seriesIndex: number) => {
+                        if (isInflowOutflow) {
+                            setHiddenDirections(prev =>
+                                prev.includes(seriesIndex)
+                                    ? prev.filter(i => i !== seriesIndex)
+                                    : [...prev, seriesIndex],
+                            )
+                        } else {
+                            setHiddenTokenSeries(prev =>
+                                prev.includes(seriesIndex)
+                                    ? prev.filter(i => i !== seriesIndex)
+                                    : [...prev, seriesIndex],
+                            )
+                        }
+                        // allow default
+                    },
+                },
+            },
             tooltip: buildTooltip({
                 chartData,
                 showTotal: !isInflowOutflow,
@@ -388,8 +434,17 @@ export default function InflowOutflowCharts() {
                     <CardHeader
                         title="Total Volume (inflow + outflow)"
                         subheader=""
+                        sx={{
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                        }}
                         action={
-                            <Grid container alignItems="center" spacing={1} wrap="nowrap">
+                            <Grid
+                                container
+                                alignItems={{ xs: 'flex-end', sm: 'center' }}
+                                spacing={1}
+                                wrap="nowrap"
+                                flexDirection={{ xs: 'column', sm: 'row' }}
+                            >
                                 <Grid item>
                                     <ChartActionButtons
                                         showTotal={showMergedValues}

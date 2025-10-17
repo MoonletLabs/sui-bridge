@@ -169,7 +169,7 @@ export default function BridgePerformanceChart() {
             sui_count: it.sui_count,
             eth_count: it.eth_count,
         }))
-        downloadCsv(`bridge-transactions-${network}-${timePeriod}.csv`, rows)
+        downloadCsv('bridge-transactions', rows)
     }
 
     return (
@@ -183,7 +183,16 @@ export default function BridgePerformanceChart() {
                             <CardHeader
                                 title="Bridge Transactions"
                                 action={
-                                    <Button size="small" onClick={handleExport} variant="outlined">
+                                    <Button
+                                        variant="outlined"
+                                        onClick={handleExport}
+                                        sx={{
+                                            height: 34,
+                                            typography: 'subtitle2',
+                                            px: 1.5,
+                                            borderRadius: 1,
+                                        }}
+                                    >
                                         Export CSV
                                     </Button>
                                 }
