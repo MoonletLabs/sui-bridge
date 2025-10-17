@@ -11,6 +11,7 @@ const TokenVolumePieChart = lazy(() => import('src/components/chart/pie-charts')
 const GasUsageChart = lazy(() => import('src/components/chart/gas-usage-chart'))
 import BridgePerformanceChart from 'src/components/chart/bridge-performance-chart'
 import CumulativeNetInflow from 'src/components/chart/cumulative-net-inflow'
+import TopTokens from 'src/components/widgets/top-tokens'
 
 // ----------------------------------------------------------------------
 
@@ -22,6 +23,7 @@ export default function Page() {
 
                 <CumulativeNetInflow />
                 <BridgePerformanceChart />
+                <TopTokens />
 
                 {/* Latest Transactions - also use visibility system */}
                 <VisibilityChart fallback={<ChartSkeleton title="Latest Transactions" />}>
