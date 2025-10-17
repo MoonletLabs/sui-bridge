@@ -123,8 +123,7 @@ export function TransactionsTable({
             amount_usd: tx.amount_usd,
             timestamp_ms: tx.timestamp_ms,
         }))
-        const dateSuffix = dayjs().format('DD-MM-YYYY')
-        downloadCsv(`latest-transactions-${network}-${dateSuffix}.csv`, rows)
+        downloadCsv(`latest-transactions-${network}`, rows)
     }
 
     return (

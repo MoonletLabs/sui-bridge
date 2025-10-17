@@ -88,7 +88,7 @@ export default function InflowOutflowCharts() {
             })
         }
         if (!rows.length) return
-        downloadCsv(`inflow-outflow-${getDateSuffix()}.csv`, rows)
+        downloadCsv('inflow-outflow', rows)
     }
 
     const handleExportTotalVolume = () => {
@@ -101,7 +101,7 @@ export default function InflowOutflowCharts() {
             rows = rows.filter((r: Row) => visible.has(r.token))
         }
         if (!rows.length) return
-        downloadCsv(`total-volume-${getDateSuffix()}.csv`, rows)
+        downloadCsv('total-volume', rows)
     }
 
     useEffect(() => {

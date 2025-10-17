@@ -54,8 +54,7 @@ export default function GasUsageChart() {
             if (!hidden.includes(1)) row.sui_gas_usage = d.sui_gas_usage
             return row
         })
-        const dateSuffix = dayjs().format('DD-MM-YYYY')
-        downloadCsv(`average-gas-usage-${dateSuffix}.csv`, rows)
+        downloadCsv('average-gas-usage', rows)
     }
 
     const chartOptions = useMemo(

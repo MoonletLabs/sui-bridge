@@ -169,8 +169,7 @@ export default function BridgePerformanceChart() {
             sui_count: it.sui_count,
             eth_count: it.eth_count,
         }))
-        const dateSuffix = dayjs().format('DD-MM-YYYY')
-        downloadCsv(`bridge-transactions-${network}-${timePeriod}-${dateSuffix}.csv`, rows)
+        downloadCsv('bridge-transactions', rows)
     }
 
     return (

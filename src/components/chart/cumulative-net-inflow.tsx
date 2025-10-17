@@ -76,8 +76,7 @@ export default function CumulativeNetInflow() {
                 total_volume_usd: it?.total_volume_usd,
                 total_volume: it?.total_volume,
             }))
-        const dateSuffix = dayjs().format('DD-MM-YYYY')
-        downloadCsv(`cumulative-net-inflow-${dateSuffix}.csv`, rows)
+        downloadCsv('cumulative-net-inflow', rows)
     }
 
     useEffect(() => {

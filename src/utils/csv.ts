@@ -25,13 +25,15 @@ export const toCsv = (rows: Row[]): string => {
     return lines.join('\n')
 }
 
-export const downloadCsv = (filename: string, rows: Row[]) => {
+export const downloadCsv = (baseName: string, rows: Row[]) => {
     const csv = toCsv(rows)
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
+    const ts = new Date().getTime()
+    const filename = `${baseName}-${ts}.csv`
     link.href = url
-    link.setAttribute('download', filename.endsWith('.csv') ? filename : `${filename}.csv`)
+    link.setAttribute('download', filename)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
