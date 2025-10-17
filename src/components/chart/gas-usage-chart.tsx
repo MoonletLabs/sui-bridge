@@ -45,19 +45,15 @@ export default function GasUsageChart() {
 
     const handleExport = () => {
         if (!data?.length) return
-        let rows = data.map(d => ({
-            transfer_date: d.transfer_date,
-            eth_gas_usage: d.eth_gas_usage,
-            sui_gas_usage: d.sui_gas_usage,
-        }))
         const hidden = hiddenSeriesRef.current
-        if (hidden.length) {
-            rows = rows.map(r => ({
-                ...r,
-                eth_gas_usage: hidden.includes(0) ? undefined : r.eth_gas_usage,
-                sui_gas_usage: hidden.includes(1) ? undefined : r.sui_gas_usage,
-            }))
-        }
+        const rows = data.map(d => {
+            const row: any = {
+                transfer_date: d.transfer_date,
+            }
+            if (!hidden.includes(0)) row.eth_gas_usage = d.eth_gas_usage
+            if (!hidden.includes(1)) row.sui_gas_usage = d.sui_gas_usage
+            return row
+        })
         const dateSuffix = dayjs().format('DD-MM-YYYY')
         downloadCsv(`average-gas-usage-${dateSuffix}.csv`, rows)
     }
