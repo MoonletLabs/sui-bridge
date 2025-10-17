@@ -195,24 +195,7 @@ export default function TokenVolumePieChart() {
         <Grid container spacing={4} marginTop={2}>
             <Grid item xs={12} md={6}>
                 <Card>
-                    <CardHeader
-                        title="Token Inflow Distribution"
-                        subheader=""
-                        action={
-                            <Button
-                                variant="outlined"
-                                onClick={() => handleExport('inflow')}
-                                sx={{
-                                    height: 34,
-                                    typography: 'subtitle2',
-                                    px: 1.5,
-                                    borderRadius: 1,
-                                }}
-                            >
-                                Export CSV
-                            </Button>
-                        }
-                    />
+                    <CardHeader title="Token Inflow Distribution" subheader="" />
 
                     {isLoading ? (
                         <Box
@@ -241,24 +224,7 @@ export default function TokenVolumePieChart() {
             </Grid>
             <Grid item xs={12} md={6}>
                 <Card>
-                    <CardHeader
-                        title="Token Outflow Distribution"
-                        subheader=""
-                        action={
-                            <Button
-                                variant="outlined"
-                                onClick={() => handleExport('outflow')}
-                                sx={{
-                                    height: 34,
-                                    typography: 'subtitle2',
-                                    px: 1.5,
-                                    borderRadius: 1,
-                                }}
-                            >
-                                Export CSV
-                            </Button>
-                        }
-                    />
+                    <CardHeader title="Token Outflow Distribution" subheader="" />
                     {isLoading ? (
                         <Box
                             display="flex"
@@ -286,24 +252,7 @@ export default function TokenVolumePieChart() {
             </Grid>
             <Grid item xs={12} md={6}>
                 <Card>
-                    <CardHeader
-                        title="Token Volume Distribution"
-                        subheader=""
-                        action={
-                            <Button
-                                variant="outlined"
-                                onClick={() => handleExport('total')}
-                                sx={{
-                                    height: 34,
-                                    typography: 'subtitle2',
-                                    px: 1.5,
-                                    borderRadius: 1,
-                                }}
-                            >
-                                Export CSV
-                            </Button>
-                        }
-                    />
+                    <CardHeader title="Token Volume Distribution" subheader="" />
 
                     {isLoading ? (
                         <Box
