@@ -31,7 +31,7 @@ export function ChartSelect({ options, value, onChange, slotProps, ...other }: P
                 onClick={popover.onOpen}
                 sx={{
                     pr: 1,
-                    mr: 1,
+                    mr: { xs: 0, sm: 1 },
                     pl: 1.5,
                     gap: 1.5,
                     height: 34,

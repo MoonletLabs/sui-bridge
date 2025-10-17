@@ -434,8 +434,17 @@ export default function InflowOutflowCharts() {
                     <CardHeader
                         title="Total Volume (inflow + outflow)"
                         subheader=""
+                        sx={{
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                        }}
                         action={
-                            <Grid container alignItems="center" spacing={1} wrap="nowrap">
+                            <Grid
+                                container
+                                alignItems={{ xs: 'flex-end', sm: 'center' }}
+                                spacing={1}
+                                wrap="nowrap"
+                                flexDirection={{ xs: 'column', sm: 'row' }}
+                            >
                                 <Grid item>
                                     <ChartActionButtons
                                         showTotal={showMergedValues}
