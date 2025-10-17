@@ -81,7 +81,14 @@ export function CustomTable<T>({
                             }}
                         >
                             {titleContent ?? title}
-                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    gap: 1,
+                                    alignItems: 'center',
+                                    flexDirection: { xs: 'column', sm: 'row' },
+                                }}
+                            >
                                 <Button
                                     style={{ display: 'flex', gap: 4, fontSize: 14 }}
                                     onClick={() => setShowFilters(!showFilters)}

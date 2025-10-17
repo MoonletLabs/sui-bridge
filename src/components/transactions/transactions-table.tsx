@@ -148,12 +148,15 @@ export function TransactionsTable({
                             underline="hover"
                             color="inherit"
                             fontWeight="bold"
-                            sx={{ display: 'flex', alignItems: 'center' }}
+                            sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}
                         >
                             <Typography variant="h6" fontWeight="bold" sx={{ mr: 1 }}>
                                 Latest Bridge Transactions
                             </Typography>
-                            <Iconify icon="solar:arrow-right-up-outline" />
+                            <Iconify
+                                icon="solar:arrow-right-up-outline"
+                                sx={{ position: 'absolute', right: -15 }}
+                            />
                         </Link>
                     ) : (
                         <Typography variant="h6" fontWeight="bold">
