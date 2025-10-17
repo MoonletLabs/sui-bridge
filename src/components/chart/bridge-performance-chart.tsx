@@ -1,5 +1,5 @@
 'use client'
-import { Box, Card, CardHeader, CircularProgress, Grid, Typography } from '@mui/material'
+import { Box, Card, CardHeader, CircularProgress, Grid, Typography, Button } from '@mui/material'
 import dayjs from 'dayjs'
 import { useMemo } from 'react'
 import { Chart, useChart } from 'src/components/chart'
@@ -10,6 +10,7 @@ import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
 import { BridgeMetricsResponse } from 'src/utils/types'
 import useSWR from 'swr'
+import { downloadCsv } from 'src/utils/csv'
 
 export default function BridgePerformanceChart() {
     const network = getNetwork()
@@ -33,7 +34,7 @@ export default function BridgePerformanceChart() {
             fontFamily: 'inherit',
             animations: { enabled: false }, // Disable animations for better performance
         },
-        colors: ['#3780FF'],
+        colors: ['#00A76F', '#FF5630'], // Inflow (green), Outflow (red)
         plotOptions: {
             area: {
                 fillTo: 'end',
@@ -79,12 +80,29 @@ export default function BridgePerformanceChart() {
             followCursor: true,
             intersect: false,
             enabled: true,
-            custom: ({ series, seriesIndex, dataPointIndex, w }: any) => {
-                const timestamp = w.globals.seriesX[seriesIndex][dataPointIndex]
-                const value = series[seriesIndex][dataPointIndex]
+            custom: ({ series, dataPointIndex, w }: any) => {
+                const timestamp = w.globals.seriesX[0][dataPointIndex]
                 const date = dayjs(timestamp)
                 const formattedDate = date.format('D MMM YYYY')
-                const formattedValue = `${fNumber(value)}`
+
+                const suiVal = series?.[0]?.[dataPointIndex] ?? 0
+                const ethVal = series?.[1]?.[dataPointIndex] ?? 0
+                const total = (suiVal || 0) + (ethVal || 0)
+
+                const row = (label: string, color: string, value: number) => `
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        padding: 6px;
+                        background-color: rgba(255, 255, 255, 0.85);
+                        color: #333;
+                        border-radius: 4px;
+                        text-align: left;
+                        font-size: 12px;
+                        border-left: 4px solid ${color};
+                        margin-bottom: 4px;">
+                        <span style="margin-left: 8px;"><strong>${label}:</strong> ${fNumber(value)}</span>
+                    </div>`
 
                 return `
                     <div style="
@@ -92,22 +110,20 @@ export default function BridgePerformanceChart() {
                         background-color: #e0e0e0;
                         border-radius: 6px;
                         box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-                        min-width: 120px;
+                        min-width: 160px;
                         text-align: left;
                         color: white;">
                         <strong style="color: black">${formattedDate}</strong>
+                        ${row('Inflow (to SUI)', '#00A76F', suiVal)}
+                        ${row('Outflow (to ETH)', '#FF5630', ethVal)}
                         <div style="
-                            display: flex;
-                            align-items: center;
+                            margin-top: 6px;
                             padding: 6px;
-                            background-color: rgba(255, 255, 255, 0.8);
-                            color: #333;
+                            background-color: rgba(0, 0, 0, 0.75);
+                            color: #fff;
                             border-radius: 4px;
-                            text-align: left;
-                            font-size: 12px;
-                            border-left: 4px solid #3780FF;
-                            margin-bottom: 4px;">
-                            <span style="margin-left: 8px;"><strong>Bridges:</strong> ${formattedValue}</span>
+                            font-size: 12px;">
+                            <strong>Total:</strong> ${fNumber(total)}
                         </div>
                     </div>
                 `
@@ -115,7 +131,8 @@ export default function BridgePerformanceChart() {
         },
         markers: { size: 0 },
         legend: {
-            show: false,
+            show: true,
+            position: 'top',
         },
     })
 
@@ -128,14 +145,32 @@ export default function BridgePerformanceChart() {
 
         return [
             {
-                name: 'Transactions',
-                data: performanceData.transactionCount.chart.map(item => ({
+                name: 'Inflow (to SUI)',
+                data: performanceData.transactionCount.chart.map((item: any) => ({
                     x: new Date(item.transfer_date).getTime(),
-                    y: item.total_count,
+                    y: Number(item.sui_count || 0),
+                })),
+            },
+            {
+                name: 'Outflow (to ETH)',
+                data: performanceData.transactionCount.chart.map((item: any) => ({
+                    x: new Date(item.transfer_date).getTime(),
+                    y: Number(item.eth_count || 0),
                 })),
             },
         ]
     }, [performanceData?.transactionCount?.chart])
+
+    const handleExport = () => {
+        if (!performanceData?.transactionCount?.chart) return
+        const rows = performanceData.transactionCount.chart.map(it => ({
+            transfer_date: it.transfer_date,
+            total_count: it.total_count,
+            sui_count: it.sui_count,
+            eth_count: it.eth_count,
+        }))
+        downloadCsv(`bridge-transactions-${network}-${timePeriod}.csv`, rows)
+    }
 
     return (
         <Grid container spacing={4} marginTop={2}>
@@ -145,7 +180,14 @@ export default function BridgePerformanceChart() {
                         <BridgePerformanceChartLoading />
                     ) : (
                         <>
-                            <CardHeader title="Bridge Transactions" />
+                            <CardHeader
+                                title="Bridge Transactions"
+                                action={
+                                    <Button size="small" onClick={handleExport} variant="outlined">
+                                        Export CSV
+                                    </Button>
+                                }
+                            />
 
                             <Box sx={{ p: 1 }}>
                                 <Grid
