@@ -23,6 +23,7 @@ type RowComponentProps<T> = {
 
 type Props<T> = CardProps & {
     title?: ReactNode | any
+    titleContent?: ReactNode
     subheader?: string
     headLabel: {
         id: string
@@ -45,10 +46,12 @@ type Props<T> = CardProps & {
         rowsPerPage: number
         onPageChange: (newPage: number) => void
     }
+    handleExport?: () => void
 }
 
 export function CustomTable<T>({
     title,
+    titleContent,
     subheader,
     tableData,
     headLabel,
@@ -61,6 +64,7 @@ export function CustomTable<T>({
     showFilters,
     setShowFilters,
     minHeight,
+    handleExport,
     ...other
 }: Props<T>) {
     return (
@@ -76,26 +80,49 @@ export function CustomTable<T>({
                                 justifyContent: 'space-between',
                             }}
                         >
-                            {title}
-                            <Button
-                                style={{ display: 'flex', gap: 4, fontSize: 14 }}
-                                onClick={() => setShowFilters(!showFilters)}
+                            {titleContent ?? title}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    gap: 1,
+                                    alignItems: 'center',
+                                    flexDirection: { xs: 'column', sm: 'row' },
+                                }}
                             >
-                                {showFilters ? (
-                                    <>
-                                        <Iconify icon="mdi:eye-off" />
-                                        {'Hide filters'}
-                                    </>
-                                ) : (
-                                    <>
-                                        <Iconify icon="mdi:eye" />
-                                        {'Show filters'}
-                                    </>
+                                <Button
+                                    style={{ display: 'flex', gap: 4, fontSize: 14 }}
+                                    onClick={() => setShowFilters(!showFilters)}
+                                >
+                                    {showFilters ? (
+                                        <>
+                                            <Iconify icon="mdi:eye-off" />
+                                            {'Hide filters'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Iconify icon="mdi:eye" />
+                                            {'Show filters'}
+                                        </>
+                                    )}
+                                </Button>
+                                {handleExport && (
+                                    <Button
+                                        variant="outlined"
+                                        onClick={handleExport}
+                                        sx={{
+                                            height: 34,
+                                            typography: 'subtitle2',
+                                            px: 1.5,
+                                            borderRadius: 1,
+                                        }}
+                                    >
+                                        Export CSV
+                                    </Button>
                                 )}
-                            </Button>
+                            </Box>
                         </Box>
                     ) : (
-                        title
+                        (titleContent ?? title)
                     )
                 }
                 subheader={subheader}

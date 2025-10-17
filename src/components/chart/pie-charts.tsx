@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
-import { Grid, Card, CardHeader, Box, Skeleton } from '@mui/material'
+import { Grid, Card, CardHeader, Box, Skeleton, Button } from '@mui/material'
 import { useChart, ChartSelect, Chart } from 'src/components/chart'
 import { endpoints, fetcher } from 'src/utils/axios'
 import useSWR from 'swr'
@@ -9,6 +9,7 @@ import { getNetwork } from 'src/hooks/get-network-storage'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { calculateStartDate } from 'src/utils/format-chart-data'
 import { getTokensList } from 'src/utils/types'
+import { downloadCsv } from 'src/utils/csv'
 
 export default function TokenVolumePieChart() {
     const network = getNetwork()
@@ -32,6 +33,31 @@ export default function TokenVolumePieChart() {
 
     const volumeEndpoint = `${endpoints.volume.daily}?network=${network}`
     const { data, isLoading } = useSWR<any>(volumeEndpoint, fetcher, { revalidateOnFocus: false })
+
+    const handleExport = (kind: 'inflow' | 'outflow' | 'total') => {
+        if (!data?.length) return
+        const startDate = calculateStartDate(timePeriod)
+        const dateFilteredData = data.filter((item: any) =>
+            dayjs(item.transfer_date).isAfter(startDate),
+        )
+        const filteredData = selectedTokens.includes('All')
+            ? dateFilteredData
+            : dateFilteredData.filter((item: any) => selectedTokens.includes(item.token_info.name))
+        const rows = filteredData.map((it: any) => ({
+            transfer_date: it.transfer_date,
+            token: it?.token_info?.name,
+            direction: it?.direction,
+            total_volume_usd: it?.total_volume_usd,
+            total_volume: it?.total_volume,
+        }))
+        const suffix =
+            kind === 'inflow'
+                ? 'token-inflow'
+                : kind === 'outflow'
+                  ? 'token-outflow'
+                  : 'token-volume'
+        downloadCsv(`${suffix}.csv`, rows)
+    }
 
     // Move useChart calls to the top level and memoize them
     const inflowChartOptions = useChart({
@@ -169,7 +195,24 @@ export default function TokenVolumePieChart() {
         <Grid container spacing={4} marginTop={2}>
             <Grid item xs={12} md={6}>
                 <Card>
-                    <CardHeader title="Token Inflow Distribution" subheader="" />
+                    <CardHeader
+                        title="Token Inflow Distribution"
+                        subheader=""
+                        action={
+                            <Button
+                                variant="outlined"
+                                onClick={() => handleExport('inflow')}
+                                sx={{
+                                    height: 34,
+                                    typography: 'subtitle2',
+                                    px: 1.5,
+                                    borderRadius: 1,
+                                }}
+                            >
+                                Export CSV
+                            </Button>
+                        }
+                    />
 
                     {isLoading ? (
                         <Box
@@ -198,7 +241,24 @@ export default function TokenVolumePieChart() {
             </Grid>
             <Grid item xs={12} md={6}>
                 <Card>
-                    <CardHeader title="Token Outflow Distribution" subheader="" />
+                    <CardHeader
+                        title="Token Outflow Distribution"
+                        subheader=""
+                        action={
+                            <Button
+                                variant="outlined"
+                                onClick={() => handleExport('outflow')}
+                                sx={{
+                                    height: 34,
+                                    typography: 'subtitle2',
+                                    px: 1.5,
+                                    borderRadius: 1,
+                                }}
+                            >
+                                Export CSV
+                            </Button>
+                        }
+                    />
                     {isLoading ? (
                         <Box
                             display="flex"
@@ -226,7 +286,24 @@ export default function TokenVolumePieChart() {
             </Grid>
             <Grid item xs={12} md={6}>
                 <Card>
-                    <CardHeader title="Token Volume Distribution" subheader="" />
+                    <CardHeader
+                        title="Token Volume Distribution"
+                        subheader=""
+                        action={
+                            <Button
+                                variant="outlined"
+                                onClick={() => handleExport('total')}
+                                sx={{
+                                    height: 34,
+                                    typography: 'subtitle2',
+                                    px: 1.5,
+                                    borderRadius: 1,
+                                }}
+                            >
+                                Export CSV
+                            </Button>
+                        }
+                    />
 
                     {isLoading ? (
                         <Box
