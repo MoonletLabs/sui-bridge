@@ -139,7 +139,7 @@ export function TransactionsTable({
                 ]}
                 tableData={data?.transactions || []}
                 loading={isLoading}
-                handleExport={handleExport}
+                handleExport={showTitleLink ? undefined : handleExport}
                 title={
                     (showTitleLink ? (
                         <Link

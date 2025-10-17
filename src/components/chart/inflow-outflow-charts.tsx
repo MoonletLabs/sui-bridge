@@ -49,21 +49,34 @@ export default function InflowOutflowCharts() {
         },
     )
 
-    const handleExportTotal = () => {
-        if (!data?.length) return
+    const getDateSuffix = () => dayjs().format('DD-MM-YYYY')
+
+    const buildRows = () => {
+        if (!data?.length) return []
         const startDate = calculateStartDate(timePeriod)
         const dateFilter = data.filter((item: any) => dayjs(item.transfer_date).isAfter(startDate))
         const filtered = selectedTokens.includes('All')
             ? dateFilter
             : dateFilter.filter((item: any) => selectedTokens.includes(item?.token_info?.name))
-        const rows = filtered.map((it: any) => ({
+        return filtered.map((it: any) => ({
             transfer_date: it.transfer_date,
             token: it?.token_info?.name,
             direction: it?.direction,
             total_volume_usd: it?.total_volume_usd,
             total_volume: it?.total_volume,
         }))
-        downloadCsv('inflow-outflow.csv', rows)
+    }
+
+    const handleExportInflowOutflow = () => {
+        const rows = buildRows()
+        if (!rows.length) return
+        downloadCsv(`inflow-outflow-${getDateSuffix()}.csv`, rows)
+    }
+
+    const handleExportTotalVolume = () => {
+        const rows = buildRows()
+        if (!rows.length) return
+        downloadCsv(`total-volume-${getDateSuffix()}.csv`, rows)
     }
 
     useEffect(() => {
@@ -278,7 +291,7 @@ export default function InflowOutflowCharts() {
                                 <Grid item>
                                     <Button
                                         variant="outlined"
-                                        onClick={handleExportTotal}
+                                        onClick={handleExportInflowOutflow}
                                         sx={{
                                             height: 34,
                                             typography: 'subtitle2',
@@ -389,7 +402,7 @@ export default function InflowOutflowCharts() {
                                 <Grid item>
                                     <Button
                                         variant="outlined"
-                                        onClick={handleExportTotal}
+                                        onClick={handleExportTotalVolume}
                                         sx={{
                                             height: 34,
                                             typography: 'subtitle2',
