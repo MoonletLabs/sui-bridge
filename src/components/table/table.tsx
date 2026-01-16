@@ -24,7 +24,7 @@ type RowComponentProps<T> = {
 type Props<T> = CardProps & {
     title?: ReactNode | any
     titleContent?: ReactNode
-    subheader?: string
+    subheader?: ReactNode
     headLabel: {
         id: string
         label: string

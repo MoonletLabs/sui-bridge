@@ -1,11 +1,13 @@
 import {
     Box,
+    Chip,
     FormControl,
     IconButton,
     InputLabel,
     Link,
     MenuItem,
     Select,
+    Switch,
     TableCell,
     TableRow,
     TextField,
@@ -36,24 +38,28 @@ export function TransactionsTable({
     ethAddress,
     suiAddress,
     limit = 48,
-    autoRefresh,
     hidePagination = false,
     showTitleLink = false,
     minHeight = 800,
+    autoRefreshIntervalMs = 30000,
+    autoRefreshEnabledDefault = true,
 }: {
     ethAddress?: string
     suiAddress?: string
     limit?: number
-    autoRefresh?: number | (() => void)
     hidePagination?: boolean
     showTitleLink?: boolean
     minHeight?: number
+    autoRefreshIntervalMs?: number
+    autoRefreshEnabledDefault?: boolean
 }) {
     const network = getNetwork()
     const router = useRouter()
     const [page, setPage] = useState(0)
     const [totalItems, setTotalItems] = useState(0)
     const [showFilters, setShowFilters] = useState(false)
+    const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(autoRefreshEnabledDefault)
+    const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null)
     const [filters, setFilters] = useState<{
         flow: 'all' | 'inflow' | 'outflow'
         senders: string[]
@@ -67,6 +73,7 @@ export function TransactionsTable({
         amountFrom: '',
         amountTo: '',
     })
+    const [amountPreset, setAmountPreset] = useState<'any' | 'low' | 'medium' | 'large'>('any')
     const pageSize = limit
 
     const [debouncedFilters] = useDebounce(filters, 500)
@@ -81,23 +88,35 @@ export function TransactionsTable({
         amount_to: debouncedFilters.amountTo,
     }).toString()
 
-    const { data, isLoading, mutate } = useSWR<AllTxsResponse>(
+    const { data, isLoading, mutate, isValidating } = useSWR<AllTxsResponse>(
         `${endpoints.transactions}?network=${network}&${debouncedQuery}&ethAddress=${ethAddress || ''}&suiAddress=${suiAddress || ''}`,
         fetcher,
     )
 
-    // Force refresh when autoRefresh changes
+    // Auto refresh at the configured interval (toggleable)
     useEffect(() => {
-        if (autoRefresh) {
-            mutate()
+        if (!autoRefreshEnabled) {
+            return
         }
-    }, [autoRefresh, mutate])
+
+        const interval = setInterval(() => {
+            mutate()
+        }, autoRefreshIntervalMs)
+
+        return () => clearInterval(interval)
+    }, [autoRefreshEnabled, autoRefreshIntervalMs, mutate])
 
     useEffect(() => {
         if (data?.total && totalItems !== data?.total) {
             setTotalItems(data?.total)
         }
     }, [data?.total])
+
+    useEffect(() => {
+        if (!isValidating && data) {
+            setLastUpdatedAt(new Date())
+        }
+    }, [isValidating, data])
 
     const onNavigateTx = (tx: string) => {
         router.push(`${paths.transactions.root}/${tx}`)
@@ -108,6 +127,23 @@ export function TransactionsTable({
         value: (typeof filters)[K],
     ) => {
         setFilters(prev => ({ ...prev, [key]: value }))
+    }
+
+    const applyAmountPreset = (preset: 'any' | 'low' | 'medium' | 'large') => {
+        setAmountPreset(preset)
+        if (preset === 'any') {
+            setFilters(prev => ({ ...prev, amountFrom: '', amountTo: '' }))
+            return
+        }
+        if (preset === 'low') {
+            setFilters(prev => ({ ...prev, amountFrom: '', amountTo: '10000' }))
+            return
+        }
+        if (preset === 'medium') {
+            setFilters(prev => ({ ...prev, amountFrom: '10000', amountTo: '100000' }))
+            return
+        }
+        setFilters(prev => ({ ...prev, amountFrom: '100000', amountTo: '' }))
     }
 
     const handleExport = () => {
@@ -140,29 +176,58 @@ export function TransactionsTable({
                 tableData={data?.transactions || []}
                 loading={isLoading}
                 handleExport={showTitleLink ? undefined : handleExport}
-                title={
-                    (showTitleLink ? (
-                        <Link
-                            href={paths.transactions.root}
-                            rel="noopener noreferrer"
-                            underline="hover"
-                            color="inherit"
-                            fontWeight="bold"
-                            sx={{ display: 'flex', alignItems: 'center', position: 'relative' }}
-                        >
-                            <Typography variant="h6" fontWeight="bold" sx={{ mr: 1 }}>
+                titleContent={
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                        {showTitleLink ? (
+                            <Link
+                                href={paths.transactions.root}
+                                rel="noopener noreferrer"
+                                underline="hover"
+                                color="inherit"
+                                fontWeight="bold"
+                                sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+                            >
+                                <Typography variant="h6" fontWeight="bold" sx={{ mr: 1 }}>
+                                    Latest Bridge Transactions
+                                </Typography>
+                                <Iconify icon="solar:arrow-right-up-outline" />
+                            </Link>
+                        ) : (
+                            <Typography variant="h6" fontWeight="bold">
                                 Latest Bridge Transactions
                             </Typography>
-                            <Iconify
-                                icon="solar:arrow-right-up-outline"
-                                sx={{ position: 'absolute', right: -15 }}
-                            />
-                        </Link>
-                    ) : (
-                        <Typography variant="h6" fontWeight="bold">
-                            Latest Bridge Transactions
-                        </Typography>
-                    )) as any
+                        )}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 2,
+                                flexWrap: 'wrap',
+                            }}
+                        >
+                            <Typography variant="caption" color="text.secondary">
+                                Last updated:{' '}
+                                {lastUpdatedAt
+                                    ? formatDistanceToNow(lastUpdatedAt, { addSuffix: true })
+                                    : '—'}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Auto-refresh
+                                </Typography>
+                                <Switch
+                                    size="small"
+                                    checked={autoRefreshEnabled}
+                                    onChange={event => setAutoRefreshEnabled(event.target.checked)}
+                                />
+                                <Typography variant="caption" color="text.secondary">
+                                    {autoRefreshEnabled
+                                        ? `Every ${Math.round(autoRefreshIntervalMs / 1000)}s`
+                                        : 'Paused'}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Box>
                 }
                 filters={
                     <Box
@@ -207,6 +272,24 @@ export function TransactionsTable({
                                 setFilters(f => ({ ...f, recipients: newRecipients }))
                             }
                         />
+                        <FormControl size="medium" sx={{ minWidth: 180 }}>
+                            <InputLabel id="amount-preset-label">Amount range</InputLabel>
+                            <Select
+                                labelId="amount-preset-label"
+                                label="Amount range"
+                                value={amountPreset}
+                                onChange={e =>
+                                    applyAmountPreset(
+                                        e.target.value as 'any' | 'low' | 'medium' | 'large',
+                                    )
+                                }
+                            >
+                                <MenuItem value="any">Any</MenuItem>
+                                <MenuItem value="low">Low (&lt; $10k)</MenuItem>
+                                <MenuItem value="medium">Medium ($10k–$100k)</MenuItem>
+                                <MenuItem value="large">Large (&gt; $100k)</MenuItem>
+                            </Select>
+                        </FormControl>
                         <FormControl component="fieldset" sx={{ minWidth: 240 }}>
                             <Box sx={{ display: 'flex', gap: 1 }}>
                                 <TextField
@@ -214,7 +297,10 @@ export function TransactionsTable({
                                     size="medium"
                                     type="number"
                                     value={filters.amountFrom}
-                                    onChange={e => handleFilterChange('amountFrom', e.target.value)}
+                                    onChange={e => {
+                                        setAmountPreset('any')
+                                        handleFilterChange('amountFrom', e.target.value)
+                                    }}
                                     placeholder="min"
                                     fullWidth
                                     InputProps={{
@@ -245,7 +331,10 @@ export function TransactionsTable({
                                     size="medium"
                                     type="number"
                                     value={filters.amountTo}
-                                    onChange={e => handleFilterChange('amountTo', e.target.value)}
+                                    onChange={e => {
+                                        setAmountPreset('any')
+                                        handleFilterChange('amountTo', e.target.value)
+                                    }}
                                     placeholder="max"
                                     fullWidth
                                     InputProps={{
@@ -304,6 +393,17 @@ const ActivitiesRow: React.FC<{
 }> = ({ row, network, onNavigateTx }) => {
     const relativeTime = formatDistanceToNow(Number(row.timestamp_ms), { addSuffix: true })
     const isInflow = row.destination_chain === 'SUI'
+    const amountUsd = Number(row.amount_usd) || 0
+    const amountTier = amountUsd < 10000 ? 'low' : amountUsd <= 100000 ? 'medium' : 'large'
+    const amountTierConfig: Record<
+        typeof amountTier,
+        { label: string; color: 'success' | 'info' | 'warning'; bg: string }
+    > = {
+        low: { label: 'Low', color: 'success', bg: 'rgba(56, 177, 55, 0.08)' },
+        medium: { label: 'Medium', color: 'info', bg: 'rgba(0, 184, 217, 0.08)' },
+        large: { label: 'Large', color: 'warning', bg: 'rgba(250, 57, 19, 0.08)' },
+    }
+    const tierConfig = amountTierConfig[amountTier]
 
     return (
         <TableRow
@@ -431,6 +531,8 @@ const ActivitiesRow: React.FC<{
                         flexDirection: 'column',
                         alignItems: 'start',
                         padding: '4px 8px',
+                        borderRadius: 1,
+                        backgroundColor: tierConfig.bg,
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -448,6 +550,12 @@ const ActivitiesRow: React.FC<{
                         <Typography variant="h6" fontWeight="bold">
                             {fNumber(row.amount)}
                         </Typography>
+                        <Chip
+                            label={tierConfig.label}
+                            size="small"
+                            color={tierConfig.color}
+                            sx={{ ml: 1, height: 20 }}
+                        />
                     </Box>
                     <Typography variant="caption" color="text.secondary">
                         ≈ ${fNumber(row.amount_usd)}
@@ -457,21 +565,31 @@ const ActivitiesRow: React.FC<{
 
             {/* Transaction Link */}
             <TableCell>
-                <Link
-                    href={formatExplorerUrl({
-                        network,
-                        address: row.tx_hash,
-                        isAccount: false,
-                        chain: row.from_chain,
-                    })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    underline="hover"
-                    color="primary"
-                    fontWeight="bold"
-                >
-                    {truncateAddress(row.tx_hash)}
-                </Link>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title="Copy transaction hash">
+                        <IconButton
+                            size="small"
+                            onClick={() => navigator.clipboard.writeText(row.tx_hash)}
+                        >
+                            <ContentCopyOutlinedIcon fontSize="small" sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Tooltip>
+                    <Link
+                        href={formatExplorerUrl({
+                            network,
+                            address: row.tx_hash,
+                            isAccount: false,
+                            chain: row.from_chain,
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        underline="hover"
+                        color="primary"
+                        fontWeight="bold"
+                    >
+                        {truncateAddress(row.tx_hash)}
+                    </Link>
+                </Box>
             </TableCell>
 
             {/* Timestamp */}
