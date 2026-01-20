@@ -7,13 +7,8 @@ import { useTheme } from '@mui/material/styles'
 import { Box, AppBar, Toolbar, Container, useMediaQuery } from '@mui/material'
 
 import { Logo } from 'src/components/logo'
-import { ChartSelect } from 'src/components/chart'
-import { MultiSelect } from 'src/components/selectors/multi-select'
-import { getTokensList } from 'src/utils/types'
-import { useGlobalContext } from 'src/provider/global-provider'
-import { getNetwork } from 'src/hooks/get-network-storage'
-import { TIME_PERIODS, TimePeriod } from 'src/config/helper'
 import { NetworkPopover } from '../components/network-popover'
+import { FilterPopover } from '../components/filter-popover'
 import { NavTabs, MobileNavToggle, MobileNavMenu } from '../components/nav-tabs'
 import { layoutClasses } from '../classes'
 import { varAlpha } from 'src/theme/styles'
@@ -27,9 +22,7 @@ export type DashboardLayoutProps = {
 }
 
 export function DashboardLayout({ sx, children, disableTimelines }: DashboardLayoutProps) {
-    const network = getNetwork()
     const theme = useTheme()
-    const { timePeriod, setTimePeriod, selectedTokens, setSelectedTokens } = useGlobalContext()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -65,12 +58,18 @@ export function DashboardLayout({ sx, children, disableTimelines }: DashboardLay
                             minHeight: { xs: 56, md: 64 },
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
                             gap: { xs: 1, md: 2 },
                         }}
                     >
-                        {/* Left: Toggle (mobile) + Logo */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {/* Left section - fixed width */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                minWidth: { xs: 'auto', md: 160 },
+                            }}
+                        >
                             {isMobile && (
                                 <MobileNavToggle
                                     open={mobileMenuOpen}
@@ -80,38 +79,27 @@ export function DashboardLayout({ sx, children, disableTimelines }: DashboardLay
                             <Logo single={isMobile} />
                         </Box>
 
-                        {/* Center: Navigation Tabs (desktop only) */}
-                        {!isMobile && <NavTabs />}
+                        {/* Center section - Navigation Tabs (desktop only) */}
+                        {!isMobile && (
+                            <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                                <NavTabs />
+                            </Box>
+                        )}
 
-                        {/* Right: Filters & Network */}
+                        {/* Spacer for mobile */}
+                        {isMobile && <Box sx={{ flex: 1 }} />}
+
+                        {/* Right section - fixed width */}
                         <Box
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: { xs: 0.5, md: 1.5 },
+                                gap: 1,
+                                minWidth: { xs: 'auto', md: 160 },
+                                justifyContent: 'flex-end',
                             }}
                         >
-                            {!disableTimelines && (
-                                <>
-                                    <ChartSelect
-                                        options={TIME_PERIODS}
-                                        value={timePeriod}
-                                        onChange={newVal => setTimePeriod(newVal as TimePeriod)}
-                                    />
-                                    <MultiSelect
-                                        options={[
-                                            { name: 'All' },
-                                            ...getTokensList(network).map(i => ({
-                                                name: i.ticker,
-                                                icon: i.icon,
-                                            })),
-                                        ]}
-                                        allOption="All"
-                                        value={selectedTokens}
-                                        onChange={setSelectedTokens}
-                                    />
-                                </>
-                            )}
+                            {!disableTimelines && <FilterPopover />}
                             <NetworkPopover />
                         </Box>
                     </Toolbar>
@@ -127,12 +115,22 @@ export function DashboardLayout({ sx, children, disableTimelines }: DashboardLay
             <Box
                 component="main"
                 sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     flexGrow: 1,
                     py: { xs: 2, md: 3 },
                     px: { xs: 1.5, sm: 2, lg: 5 },
                 }}
             >
-                <Container maxWidth="xl" disableGutters>
+                <Container
+                    maxWidth="xl"
+                    disableGutters
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flex: '1 1 auto',
+                    }}
+                >
                     {children}
                 </Container>
             </Box>
