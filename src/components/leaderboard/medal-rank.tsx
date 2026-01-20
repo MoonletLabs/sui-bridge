@@ -6,9 +6,9 @@ interface MedalRankProps {
 }
 
 const MEDAL_COLORS = {
-    1: { primary: '#FFD700', secondary: '#FFA500', label: '1st' }, // Gold
-    2: { primary: '#C0C0C0', secondary: '#A8A8A8', label: '2nd' }, // Silver
-    3: { primary: '#CD7F32', secondary: '#B87333', label: '3rd' }, // Bronze
+    1: { primary: '#FFD700', secondary: '#FFA500' }, // Gold
+    2: { primary: '#C0C0C0', secondary: '#A8A8A8' }, // Silver
+    3: { primary: '#CD7F32', secondary: '#B87333' }, // Bronze
 }
 
 export function MedalRank({ rank }: MedalRankProps) {

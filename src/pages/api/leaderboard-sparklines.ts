@@ -3,7 +3,6 @@ import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { sendError, sendReply } from './utils'
 import db from './database'
 import { computerIntervals } from './cards'
-import dayjs from 'dayjs'
 
 export type SparklineData = {
     address: string
@@ -101,6 +100,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendReply(res, { sparklines })
     } catch (error) {
         console.error('Sparklines API error:', error)
-        sendError(res, error)
+        sendError(res, {
+            code: 500,
+            message: error instanceof Error ? error.message : 'Internal server error',
+        })
     }
 }

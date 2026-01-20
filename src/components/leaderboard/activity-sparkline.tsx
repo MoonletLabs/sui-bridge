@@ -9,6 +9,11 @@ interface ActivitySparklineProps {
     color?: string
 }
 
+interface Point {
+    x: number
+    y: number
+}
+
 export function ActivitySparkline({
     data,
     width = 80,
@@ -18,9 +23,9 @@ export function ActivitySparkline({
     const theme = useTheme()
     const strokeColor = color || theme.palette.primary.main
 
-    const { path, maxValue, hasActivity } = useMemo(() => {
+    const { path, points, hasActivity } = useMemo(() => {
         if (!data || data.length === 0) {
-            return { path: '', maxValue: 0, hasActivity: false }
+            return { path: '', points: [] as Point[], hasActivity: false }
         }
 
         const max = Math.max(...data, 1) // Ensure at least 1 to avoid division by zero
@@ -30,44 +35,35 @@ export function ActivitySparkline({
         const chartWidth = width - padding * 2
         const chartHeight = height - padding * 2
 
-        const points = data.map((value, index) => {
+        const pts = data.map((value, index) => {
             const x = padding + (index / (data.length - 1 || 1)) * chartWidth
             const y = padding + chartHeight - (value / max) * chartHeight
             return { x, y }
         })
 
         // Create SVG path
-        const pathData = points
+        const pathData = pts
             .map((point, index) => {
                 if (index === 0) return `M ${point.x} ${point.y}`
                 return `L ${point.x} ${point.y}`
             })
             .join(' ')
 
-        return { path: pathData, maxValue: max, hasActivity: hasAct }
+        return { path: pathData, points: pts, hasActivity: hasAct }
     }, [data, width, height])
 
-    // Create area path (for fill) - must be called before any conditional returns
+    // Create area path (for fill) - reuse points from above
     const areaPath = useMemo(() => {
-        if (!data || data.length === 0 || !path) return ''
+        if (points.length === 0 || !path) return ''
 
         const padding = 2
-        const chartWidth = width - padding * 2
         const chartHeight = height - padding * 2
-        const max = Math.max(...data, 1)
-
-        const points = data.map((value, index) => {
-            const x = padding + (index / (data.length - 1 || 1)) * chartWidth
-            const y = padding + chartHeight - (value / max) * chartHeight
-            return { x, y }
-        })
-
         const bottomY = padding + chartHeight
         const firstX = points[0]?.x || padding
         const lastX = points[points.length - 1]?.x || width - padding
 
         return `${path} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`
-    }, [data, width, height, path])
+    }, [points, path, width, height])
 
     // No activity - show placeholder (after all hooks)
     if (!hasActivity) {

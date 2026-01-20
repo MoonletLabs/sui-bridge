@@ -16,8 +16,6 @@ import {
     Typography,
     Skeleton,
     Chip,
-    Tooltip,
-    IconButton,
     ToggleButtonGroup,
     ToggleButton,
 } from '@mui/material'
@@ -27,7 +25,7 @@ import useSWR from 'swr'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import { useGlobalContext } from 'src/provider/global-provider'
-import { fCurrency, fNumber, fShortenNumber } from 'src/utils/format-number'
+import { fCurrency, fNumber } from 'src/utils/format-number'
 import { fDate } from 'src/utils/format-time'
 import { Iconify } from 'src/components/iconify'
 import { paths } from 'src/routes/paths'
@@ -74,7 +72,7 @@ export function LeaderboardTable() {
     }, [network, timePeriod, addressType, sortBy, page])
 
     // Fetch leaderboard data
-    const { data, isLoading, error } = useSWR<LeaderboardResponse>(
+    const { data, isLoading } = useSWR<LeaderboardResponse>(
         `${endpoints.leaderboard}?${queryString}`,
         fetcher,
         {
@@ -132,7 +130,6 @@ export function LeaderboardTable() {
                 totalUsers={stats?.total_users || 0}
                 totalVolumeUsd={stats?.total_volume_usd || 0}
                 avgVolumePerUser={stats?.avg_volume_per_user || 0}
-                topUserAddress={stats?.top_user_address || ''}
                 topUserVolume={stats?.top_user_volume || 0}
                 isLoading={isLoading}
             />

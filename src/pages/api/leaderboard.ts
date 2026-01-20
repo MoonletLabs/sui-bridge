@@ -69,105 +69,107 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 ? db[networkConfig.network]`total_volume_usd DESC NULLS LAST`
                 : db[networkConfig.network]`transaction_count DESC`
 
-        // Main leaderboard query - simplified to avoid GROUP BY issues
-        const leaderboardQuery = await db[networkConfig.network]`
-            WITH base_transactions AS (
+        // Run both queries in parallel for better performance
+        const [leaderboardQuery, globalStatsQuery] = await Promise.all([
+            // Main leaderboard query
+            db[networkConfig.network]`
+                WITH base_transactions AS (
+                    SELECT 
+                        encode(t.sender_address, 'hex') as address,
+                        t.destination_chain,
+                        t.token_id,
+                        t.amount,
+                        t.timestamp_ms,
+                        p.price,
+                        p.denominator,
+                        (t.amount::NUMERIC / p.denominator) * p.price::NUMERIC as amount_usd
+                    FROM public.token_transfer_data t
+                    JOIN public.prices p ON t.token_id = p.token_id
+                    WHERE 
+                        t.is_finalized = true
+                        AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                        AND t.sender_address IS NOT NULL
+                        ${addressTypeFilter}
+                ),
+                user_stats AS (
+                    SELECT 
+                        address,
+                        COUNT(*) as transaction_count,
+                        array_agg(DISTINCT token_id) as tokens_used,
+                        MIN(timestamp_ms) as first_tx_date,
+                        MAX(timestamp_ms) as last_tx_date,
+                        SUM(amount_usd) as total_volume_usd,
+                        -- Determine address type based on majority of transactions
+                        CASE 
+                            WHEN SUM(CASE WHEN destination_chain = ${networkConfig.config.networkId.SUI} THEN 1 ELSE 0 END) > 
+                                 SUM(CASE WHEN destination_chain = ${networkConfig.config.networkId.ETH} THEN 1 ELSE 0 END)
+                            THEN 'eth'
+                            ELSE 'sui'
+                        END as address_type
+                    FROM base_transactions
+                    GROUP BY address
+                ),
+                ranked_tokens AS (
+                    SELECT 
+                        address,
+                        token_id,
+                        COUNT(*) as token_count,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY address 
+                            ORDER BY COUNT(*) DESC
+                        ) as rn
+                    FROM base_transactions
+                    GROUP BY address, token_id
+                )
                 SELECT 
-                    encode(t.sender_address, 'hex') as address,
-                    t.destination_chain,
-                    t.token_id,
-                    t.amount,
-                    t.timestamp_ms,
-                    p.price,
-                    p.denominator,
-                    (t.amount::NUMERIC / p.denominator) * p.price::NUMERIC as amount_usd
-                FROM public.token_transfer_data t
-                JOIN public.prices p ON t.token_id = p.token_id
-                WHERE 
-                    t.is_finalized = true
-                    AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                    AND t.sender_address IS NOT NULL
-                    ${addressTypeFilter}
-            ),
-            user_stats AS (
+                    us.address,
+                    us.address_type,
+                    us.transaction_count,
+                    us.tokens_used,
+                    us.first_tx_date,
+                    us.last_tx_date,
+                    COALESCE(us.total_volume_usd, 0) as total_volume_usd,
+                    rt.token_id as most_used_token_id,
+                    rt.token_count as most_used_token_count
+                FROM user_stats us
+                LEFT JOIN ranked_tokens rt ON us.address = rt.address AND rt.rn = 1
+                ORDER BY ${orderByClause}
+                LIMIT ${limit} OFFSET ${offset}
+            `,
+            // Global stats query - always calculates across ALL users (not affected by sort/pagination)
+            db[networkConfig.network]`
+                WITH base_transactions AS (
+                    SELECT 
+                        encode(t.sender_address, 'hex') as address,
+                        t.token_id,
+                        t.amount,
+                        p.price,
+                        p.denominator,
+                        (t.amount::NUMERIC / p.denominator) * p.price::NUMERIC as amount_usd
+                    FROM public.token_transfer_data t
+                    JOIN public.prices p ON t.token_id = p.token_id
+                    WHERE 
+                        t.is_finalized = true
+                        AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                        AND t.sender_address IS NOT NULL
+                        ${addressTypeFilter}
+                ),
+                user_volumes AS (
+                    SELECT 
+                        address,
+                        SUM(amount_usd) as total_volume_usd
+                    FROM base_transactions
+                    GROUP BY address
+                )
                 SELECT 
-                    address,
-                    COUNT(*) as transaction_count,
-                    array_agg(DISTINCT token_id) as tokens_used,
-                    MIN(timestamp_ms) as first_tx_date,
-                    MAX(timestamp_ms) as last_tx_date,
-                    SUM(amount_usd) as total_volume_usd,
-                    -- Determine address type based on majority of transactions
-                    CASE 
-                        WHEN SUM(CASE WHEN destination_chain = ${networkConfig.config.networkId.SUI} THEN 1 ELSE 0 END) > 
-                             SUM(CASE WHEN destination_chain = ${networkConfig.config.networkId.ETH} THEN 1 ELSE 0 END)
-                        THEN 'eth'
-                        ELSE 'sui'
-                    END as address_type
-                FROM base_transactions
-                GROUP BY address
-            ),
-            ranked_tokens AS (
-                SELECT 
-                    address,
-                    token_id,
-                    COUNT(*) as token_count,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY address 
-                        ORDER BY COUNT(*) DESC
-                    ) as rn
-                FROM base_transactions
-                GROUP BY address, token_id
-            )
-            SELECT 
-                us.address,
-                us.address_type,
-                us.transaction_count,
-                us.tokens_used,
-                us.first_tx_date,
-                us.last_tx_date,
-                COALESCE(us.total_volume_usd, 0) as total_volume_usd,
-                rt.token_id as most_used_token_id,
-                rt.token_count as most_used_token_count
-            FROM user_stats us
-            LEFT JOIN ranked_tokens rt ON us.address = rt.address AND rt.rn = 1
-            ORDER BY ${orderByClause}
-            LIMIT ${limit} OFFSET ${offset}
-        `
-
-        // Global stats query - always calculates across ALL users (not affected by sort/pagination)
-        const globalStatsQuery = await db[networkConfig.network]`
-            WITH base_transactions AS (
-                SELECT 
-                    encode(t.sender_address, 'hex') as address,
-                    t.token_id,
-                    t.amount,
-                    p.price,
-                    p.denominator,
-                    (t.amount::NUMERIC / p.denominator) * p.price::NUMERIC as amount_usd
-                FROM public.token_transfer_data t
-                JOIN public.prices p ON t.token_id = p.token_id
-                WHERE 
-                    t.is_finalized = true
-                    AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                    AND t.sender_address IS NOT NULL
-                    ${addressTypeFilter}
-            ),
-            user_volumes AS (
-                SELECT 
-                    address,
-                    SUM(amount_usd) as total_volume_usd
-                FROM base_transactions
-                GROUP BY address
-            )
-            SELECT 
-                COUNT(*) as total_users,
-                COALESCE(SUM(total_volume_usd), 0) as total_volume_usd,
-                COALESCE(AVG(total_volume_usd), 0) as avg_volume_per_user,
-                (SELECT address FROM user_volumes ORDER BY total_volume_usd DESC NULLS LAST LIMIT 1) as top_user_address,
-                (SELECT total_volume_usd FROM user_volumes ORDER BY total_volume_usd DESC NULLS LAST LIMIT 1) as top_user_volume
-            FROM user_volumes
-        `
+                    COUNT(*) as total_users,
+                    COALESCE(SUM(total_volume_usd), 0) as total_volume_usd,
+                    COALESCE(AVG(total_volume_usd), 0) as avg_volume_per_user,
+                    (SELECT address FROM user_volumes ORDER BY total_volume_usd DESC NULLS LAST LIMIT 1) as top_user_address,
+                    (SELECT total_volume_usd FROM user_volumes ORDER BY total_volume_usd DESC NULLS LAST LIMIT 1) as top_user_volume
+                FROM user_volumes
+            `,
+        ])
 
         // Transform results
         const users: LeaderboardUser[] = leaderboardQuery.map((row: any, index: number) => ({

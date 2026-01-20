@@ -17,8 +17,7 @@ export function AddressCell({ address, addressType, onClick }: AddressCellProps)
     const handleCopy = async (e: React.MouseEvent) => {
         e.stopPropagation()
         try {
-            // Format address with proper prefix
-            const fullAddress = addressType === 'eth' ? `0x${address}` : `0x${address}`
+            const fullAddress = `0x${address}`
             await navigator.clipboard.writeText(fullAddress)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)

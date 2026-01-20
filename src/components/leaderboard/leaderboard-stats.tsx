@@ -1,14 +1,12 @@
 import { Grid, Card, Box, Typography, Skeleton } from '@mui/material'
-import { useTheme, alpha } from '@mui/material/styles'
+import { useTheme } from '@mui/material/styles'
 import { Iconify } from 'src/components/iconify'
-import { fCurrency, fNumber } from 'src/utils/format-number'
 import AnimatedNumbers from 'react-animated-numbers'
 
 interface LeaderboardStatsProps {
     totalUsers: number
     totalVolumeUsd: number
     avgVolumePerUser: number
-    topUserAddress: string
     topUserVolume: number
     isLoading?: boolean
 }
@@ -23,8 +21,6 @@ interface StatCardProps {
 }
 
 function StatCard({ title, value, icon, color, isDollar, isLoading }: StatCardProps) {
-    const theme = useTheme()
-
     const textStyle = {
         fontSize: '1.5rem',
         fontWeight: 'bold',
@@ -74,7 +70,6 @@ export function LeaderboardStats({
     totalUsers,
     totalVolumeUsd,
     avgVolumePerUser,
-    topUserAddress,
     topUserVolume,
     isLoading,
 }: LeaderboardStatsProps) {

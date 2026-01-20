@@ -54,7 +54,7 @@ export const navData = [
     },
 
     {
-        items: [{ title: 'Leaderboard', path: paths.leaderboard.root, icon: ICONS.job }],
+        items: [{ title: 'Leaderboard', path: paths.leaderboard.root, icon: ICONS.order }],
     },
 
     {
