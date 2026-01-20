@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import {
     Card,
@@ -170,16 +170,22 @@ export default function BridgeRouteMap() {
     }
 
     // Check if a node should be highlighted based on legend hover
-    const isNodeHighlighted = (nodeId: string): boolean => {
-        if (!highlightedItem) return true
-        return isNodeHighlightMatch(nodeId, highlightedItem)
-    }
+    const isNodeHighlighted = useCallback(
+        (nodeId: string): boolean => {
+            if (!highlightedItem) return true
+            return isNodeHighlightMatch(nodeId, highlightedItem)
+        },
+        [highlightedItem],
+    )
 
     // Check if a link should be highlighted based on legend hover
-    const isLinkHighlighted = (source: string, target: string): boolean => {
-        if (!highlightedItem) return true
-        return isLinkHighlightMatch(source, target, highlightedItem)
-    }
+    const isLinkHighlighted = useCallback(
+        (source: string, target: string): boolean => {
+            if (!highlightedItem) return true
+            return isLinkHighlightMatch(source, target, highlightedItem)
+        },
+        [highlightedItem],
+    )
 
     // Get dynamic opacity for nodes
     const getNodeOpacity = (nodeId: string): number => {
@@ -209,8 +215,7 @@ export default function BridgeRouteMap() {
             })),
             links: sankeyData.links,
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sankeyData, highlightedItem])
+    }, [sankeyData, highlightedItem, hasData, isNodeHighlighted])
 
     return (
         <Card sx={{ mt: 3 }}>
