@@ -1,6 +1,6 @@
 import { Box } from '@mui/material'
 import { useTheme, alpha } from '@mui/material/styles'
-import { useMemo } from 'react'
+import { useMemo, useId } from 'react'
 
 interface ActivitySparklineProps {
     data: number[]
@@ -22,6 +22,7 @@ export function ActivitySparkline({
 }: ActivitySparklineProps) {
     const theme = useTheme()
     const strokeColor = color || theme.palette.primary.main
+    const gradientId = useId()
 
     const { path, points, hasActivity } = useMemo(() => {
         if (!data || data.length === 0) {
@@ -104,23 +105,14 @@ export function ActivitySparkline({
             <svg width={width} height={height}>
                 {/* Gradient definition */}
                 <defs>
-                    <linearGradient
-                        id={`sparkline-gradient-${strokeColor.replace('#', '')}`}
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                    >
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={strokeColor} stopOpacity={0.3} />
                         <stop offset="100%" stopColor={strokeColor} stopOpacity={0.05} />
                     </linearGradient>
                 </defs>
 
                 {/* Area fill */}
-                <path
-                    d={areaPath}
-                    fill={`url(#sparkline-gradient-${strokeColor.replace('#', '')})`}
-                />
+                <path d={areaPath} fill={`url(#${gradientId})`} />
 
                 {/* Line */}
                 <path
