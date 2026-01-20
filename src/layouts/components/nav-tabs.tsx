@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import {
     Tab,
@@ -126,6 +125,7 @@ export function MobileNavToggle({ open, onToggle }: MobileNavToggleProps) {
     return (
         <IconButton
             onClick={onToggle}
+            aria-label="Toggle navigation menu"
             sx={{
                 width: 36,
                 height: 36,

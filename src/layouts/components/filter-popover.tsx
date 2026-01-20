@@ -27,13 +27,16 @@ export function FilterPopover() {
         setAnchorEl(null)
     }
 
-    // Check if any non-default filters are applied
-    const hasActiveFilters = timePeriod !== 'Last Week' || selectedTokens.length > 0
+    // Check if any non-default filters are applied (defaults: 'Last Month' and ['All'])
+    const hasActiveFilters =
+        timePeriod !== 'Last Month' ||
+        (selectedTokens.length > 0 && !(selectedTokens.length === 1 && selectedTokens[0] === 'All'))
 
     return (
         <>
             <IconButton
                 onClick={handleOpen}
+                aria-label="Open filters"
                 sx={{
                     width: 40,
                     height: 40,

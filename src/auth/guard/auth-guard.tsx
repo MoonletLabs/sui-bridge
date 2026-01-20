@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 
 import { paths } from 'src/routes/paths'
 import { useRouter, usePathname, useSearchParams } from 'src/routes/hooks'
@@ -17,7 +17,7 @@ type Props = {
     children: React.ReactNode
 }
 
-export function AuthGuard({ children }: Props) {
+function AuthGuardContent({ children }: Props) {
     const router = useRouter()
 
     const pathname = usePathname()
@@ -73,4 +73,12 @@ export function AuthGuard({ children }: Props) {
     }
 
     return <>{children}</>
+}
+
+export function AuthGuard({ children }: Props) {
+    return (
+        <Suspense fallback={<SplashScreen />}>
+            <AuthGuardContent>{children}</AuthGuardContent>
+        </Suspense>
+    )
 }
