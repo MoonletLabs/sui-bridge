@@ -54,6 +54,10 @@ export const navData = [
     },
 
     {
+        items: [{ title: 'Leaderboard', path: paths.leaderboard.root, icon: ICONS.job }],
+    },
+
+    {
         items: [{ title: 'Profile', path: paths.profile.root, icon: ICONS.course }],
     },
 ]
