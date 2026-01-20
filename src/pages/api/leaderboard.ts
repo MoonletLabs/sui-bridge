@@ -135,15 +135,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             LIMIT ${limit} OFFSET ${offset}
         `
 
-        // Count total users (simplified)
-        const totalCountQuery = await db[networkConfig.network]`
-            SELECT COUNT(DISTINCT encode(sender_address, 'hex')) as total
-            FROM public.token_transfer_data t
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND sender_address IS NOT NULL
-                ${addressTypeFilter}
+        // Global stats query - always calculates across ALL users (not affected by sort/pagination)
+        const globalStatsQuery = await db[networkConfig.network]`
+            WITH base_transactions AS (
+                SELECT 
+                    encode(t.sender_address, 'hex') as address,
+                    t.token_id,
+                    t.amount,
+                    p.price,
+                    p.denominator,
+                    (t.amount::NUMERIC / p.denominator) * p.price::NUMERIC as amount_usd
+                FROM public.token_transfer_data t
+                JOIN public.prices p ON t.token_id = p.token_id
+                WHERE 
+                    t.is_finalized = true
+                    AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                    AND t.sender_address IS NOT NULL
+                    ${addressTypeFilter}
+            ),
+            user_volumes AS (
+                SELECT 
+                    address,
+                    SUM(amount_usd) as total_volume_usd
+                FROM base_transactions
+                GROUP BY address
+            )
+            SELECT 
+                COUNT(*) as total_users,
+                COALESCE(SUM(total_volume_usd), 0) as total_volume_usd,
+                COALESCE(AVG(total_volume_usd), 0) as avg_volume_per_user,
+                (SELECT address FROM user_volumes ORDER BY total_volume_usd DESC NULLS LAST LIMIT 1) as top_user_address,
+                (SELECT total_volume_usd FROM user_volumes ORDER BY total_volume_usd DESC NULLS LAST LIMIT 1) as top_user_volume
+            FROM user_volumes
         `
 
         // Transform results
@@ -160,20 +183,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             last_tx_date: Number(row.last_tx_date),
         }))
 
-        // Calculate summary stats
-        const totalUsers = Number(totalCountQuery[0]?.total) || 0
-        const totalVolumeUsd = users.reduce((sum, u) => sum + u.total_volume_usd, 0)
-        const topUser = users[0]
+        // Use global stats from the dedicated query
+        const globalStats = globalStatsQuery[0]
 
         const response: LeaderboardResponse = {
             users,
-            total: totalUsers,
+            total: Number(globalStats?.total_users) || 0,
             stats: {
-                total_users: totalUsers,
-                total_volume_usd: totalVolumeUsd,
-                avg_volume_per_user: users.length > 0 ? totalVolumeUsd / users.length : 0,
-                top_user_address: topUser?.address || '',
-                top_user_volume: topUser?.total_volume_usd || 0,
+                total_users: Number(globalStats?.total_users) || 0,
+                total_volume_usd: Number(globalStats?.total_volume_usd) || 0,
+                avg_volume_per_user: Number(globalStats?.avg_volume_per_user) || 0,
+                top_user_address: globalStats?.top_user_address || '',
+                top_user_volume: Number(globalStats?.top_user_volume) || 0,
             },
         }
 
