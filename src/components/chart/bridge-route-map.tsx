@@ -41,25 +41,6 @@ const getDisplayLabel = (id: string): string => {
     return id
 }
 
-// Helper to check if a node matches the highlighted item
-const isNodeHighlightMatch = (nodeId: string, highlighted: string): boolean => {
-    if (highlighted.startsWith('chain:')) {
-        // Highlighting a chain - match both from: and to: nodes for that chain
-        const chainName = highlighted.slice(6)
-        return nodeId === `from:${chainName}` || nodeId === `to:${chainName}`
-    }
-    if (highlighted.startsWith('token:')) {
-        // Highlighting a token - match the token node
-        return nodeId === highlighted
-    }
-    return false
-}
-
-// Helper to check if a link matches the highlighted item
-const isLinkHighlightMatch = (source: string, target: string, highlighted: string): boolean => {
-    return isNodeHighlightMatch(source, highlighted) || isNodeHighlightMatch(target, highlighted)
-}
-
 interface SankeyNode {
     id: string
     nodeColor: string
@@ -69,6 +50,7 @@ interface SankeyLink {
     source: string
     target: string
     value: number
+    color?: string
 }
 
 interface SankeyData {
@@ -169,53 +151,120 @@ export default function BridgeRouteMap() {
         }
     }
 
+    // Compute which nodes and links should be highlighted based on legend hover
+    // For chains: highlight routes ORIGINATING FROM that chain (outgoing flows)
+    // For tokens: highlight only the token and its direct connections
+    const highlightedElements = useMemo(() => {
+        if (!highlightedItem || !sankeyData.links.length) {
+            return { nodes: new Set<string>(), links: new Set<string>() }
+        }
+
+        const highlightedNodes = new Set<string>()
+        const highlightedLinks = new Set<string>()
+
+        if (highlightedItem.startsWith('chain:')) {
+            // Highlighting a chain - show all routes ORIGINATING FROM this chain
+            const chainName = highlightedItem.slice(6)
+            const fromNode = `from:${chainName}`
+
+            // Find first leg: from:CHAIN -> token:TOKEN
+            sankeyData.links.forEach(link => {
+                if (link.source === fromNode) {
+                    highlightedLinks.add(`${link.source}|${link.target}`)
+                    highlightedNodes.add(link.source)
+                    highlightedNodes.add(link.target)
+
+                    // Find second leg: token:TOKEN -> to:OTHER_CHAIN
+                    const tokenNode = link.target
+                    sankeyData.links.forEach(link2 => {
+                        if (link2.source === tokenNode && link2.target.startsWith('to:')) {
+                            highlightedLinks.add(`${link2.source}|${link2.target}`)
+                            highlightedNodes.add(link2.target)
+                        }
+                    })
+                }
+            })
+        } else if (highlightedItem.startsWith('token:')) {
+            // Highlighting a token - show only connections to/from this token
+            const tokenNode = highlightedItem
+
+            sankeyData.links.forEach(link => {
+                if (link.source === tokenNode || link.target === tokenNode) {
+                    highlightedLinks.add(`${link.source}|${link.target}`)
+                    highlightedNodes.add(link.source)
+                    highlightedNodes.add(link.target)
+                }
+            })
+        }
+
+        return { nodes: highlightedNodes, links: highlightedLinks }
+    }, [highlightedItem, sankeyData.links])
+
     // Check if a node should be highlighted based on legend hover
     const isNodeHighlighted = useCallback(
         (nodeId: string): boolean => {
             if (!highlightedItem) return true
-            return isNodeHighlightMatch(nodeId, highlightedItem)
+            return highlightedElements.nodes.has(nodeId)
         },
-        [highlightedItem],
+        [highlightedItem, highlightedElements.nodes],
     )
 
     // Check if a link should be highlighted based on legend hover
     const isLinkHighlighted = useCallback(
         (source: string, target: string): boolean => {
             if (!highlightedItem) return true
-            return isLinkHighlightMatch(source, target, highlightedItem)
+            return highlightedElements.links.has(`${source}|${target}`)
         },
-        [highlightedItem],
+        [highlightedItem, highlightedElements.links],
     )
 
-    // Get dynamic opacity for nodes
-    const getNodeOpacity = (nodeId: string): number => {
-        if (!highlightedItem) return 1
-        return isNodeHighlighted(nodeId) ? 1 : 0.15
-    }
-
-    // Get dynamic opacity for links
-    const getLinkOpacity = (source: string, target: string): number => {
-        if (!highlightedItem) return 0.7
-        return isLinkHighlighted(source, target) ? 0.85 : 0.08
-    }
-
     const hasData = sankeyData.nodes.length > 0 && sankeyData.links.length > 0
+
+    // Create a map of node colors for link styling
+    const nodeColorMap = useMemo(() => {
+        const map = new Map<string, string>()
+        sankeyData.nodes.forEach(node => {
+            map.set(node.id, node.nodeColor)
+        })
+        return map
+    }, [sankeyData.nodes])
 
     // Modify sankey data to include opacity based on highlight
     const styledSankeyData = useMemo((): SankeyData => {
         if (!hasData) return sankeyData
 
-        return {
-            nodes: sankeyData.nodes.map(node => ({
-                ...node,
-                nodeColor:
-                    highlightedItem && !isNodeHighlighted(node.id)
-                        ? alpha(node.nodeColor, 0.15)
-                        : node.nodeColor,
-            })),
-            links: sankeyData.links,
-        }
-    }, [sankeyData, highlightedItem, hasData, isNodeHighlighted])
+        // When highlighting, we fade non-related nodes
+        const styledNodes = sankeyData.nodes.map(node => ({
+            ...node,
+            nodeColor:
+                highlightedItem && !isNodeHighlighted(node.id)
+                    ? alpha(node.nodeColor, 0.2)
+                    : node.nodeColor,
+        }))
+
+        // For links - we need to set colors that will be picked up
+        // Nivo will use these for the gradient
+        const styledLinks = sankeyData.links.map(link => {
+            const linkIsHighlighted = isLinkHighlighted(link.source, link.target)
+
+            if (highlightedItem && !linkIsHighlighted) {
+                // Non-highlighted links get faded
+                const sourceColor = nodeColorMap.get(link.source) || '#888888'
+                return {
+                    ...link,
+                    // Store a marker that this link should be faded
+                    _faded: true,
+                    color: alpha(sourceColor, 0.08),
+                }
+            }
+            return {
+                ...link,
+                _faded: false,
+            }
+        })
+
+        return { nodes: styledNodes, links: styledLinks }
+    }, [sankeyData, highlightedItem, hasData, isNodeHighlighted, isLinkHighlighted, nodeColorMap])
 
     return (
         <Card sx={{ mt: 3 }}>
@@ -289,9 +338,9 @@ export default function BridgeRouteMap() {
                         nodeSpacing={28}
                         nodeBorderWidth={0}
                         nodeBorderRadius={4}
-                        linkOpacity={highlightedItem ? 0.08 : 0.7}
-                        linkHoverOpacity={0.9}
-                        linkHoverOthersOpacity={0.1}
+                        linkOpacity={0.75}
+                        linkHoverOpacity={1}
+                        linkHoverOthersOpacity={0.12}
                         linkContract={3}
                         linkBlendMode="normal"
                         enableLinkGradient

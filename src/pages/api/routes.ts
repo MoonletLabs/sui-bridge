@@ -3,27 +3,7 @@ import { sendError, sendReply } from './utils'
 import db from './database'
 import { getNetworkConfig } from 'src/config/helper'
 import { getPrices } from './prices'
-import dayjs from 'dayjs'
-
-// Helper to calculate start date based on time period
-const calculateStartDate = (timePeriod: string) => {
-    switch (timePeriod) {
-        case 'Last 24h':
-            return dayjs().subtract(1, 'day')
-        case 'Last Week':
-            return dayjs().subtract(7, 'day')
-        case 'Last Month':
-            return dayjs().subtract(30, 'day')
-        case 'Last 6 months':
-            return dayjs().subtract(6, 'month')
-        case 'Last year':
-            return dayjs().subtract(365, 'day')
-        case 'All time':
-            return dayjs().subtract(1000, 'day')
-        default:
-            return dayjs().subtract(30, 'day')
-    }
-}
+import { calculateStartDate } from 'src/utils/format-chart-data'
 
 // Helper to get network name from ID
 const getNetworkName = (id: number, networkId: { SUI: number; ETH: number }): string | null => {
