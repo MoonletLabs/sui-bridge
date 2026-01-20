@@ -11,8 +11,9 @@ import { getPrices } from './prices'
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
 
-export const calculateStartDate = (timePeriod: string, currentDate?: dayjs.Dayjs) => {
-    let day = currentDate || dayjs()
+// Returns timestamp in ms - used for interval calculations with optional base date
+const calculateStartTimestamp = (timePeriod: string, currentDate?: dayjs.Dayjs): number => {
+    const day = currentDate || dayjs()
     switch (timePeriod) {
         case 'Last 24h':
             return day.subtract(1, 'day').valueOf()
@@ -32,10 +33,10 @@ export const calculateStartDate = (timePeriod: string, currentDate?: dayjs.Dayjs
 }
 
 export const computerIntervals = (timePeriod: TimePeriod, computePrevious?: boolean) => {
-    const startDate = calculateStartDate(timePeriod)
+    const startDate = calculateStartTimestamp(timePeriod)
 
     const fromInterval = computePrevious
-        ? calculateStartDate(timePeriod, dayjs(startDate))
+        ? calculateStartTimestamp(timePeriod, dayjs(startDate))
         : startDate
     const toInterval = computePrevious ? startDate : new Date().getTime()
 

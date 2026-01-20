@@ -226,3 +226,18 @@ export type BridgeMetricsResponse = {
     }
     // Keep number for backward compatibility
 }
+
+// Route map data for Sankey chart
+export type RouteMapRow = {
+    from_chain: string
+    destination_chain: string
+    token_id: number
+    token_info: {
+        id: number
+        name: string
+        deno: number
+    }
+    total_count: number
+    total_volume: number
+    total_volume_usd: number
+}
