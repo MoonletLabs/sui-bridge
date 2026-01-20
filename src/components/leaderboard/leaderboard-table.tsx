@@ -91,7 +91,7 @@ export function LeaderboardTable() {
     // Fetch sparklines data
     const { data: sparklineData } = useSWR<SparklineResponse>(
         addresses.length > 0
-            ? `${endpoints.leaderboardSparklines}?network=${network}&addresses=${addresses.join(',')}`
+            ? `${endpoints.leaderboardSparklines}?network=${network}&period=${encodeURIComponent(timePeriod)}&addresses=${addresses.join(',')}`
             : null,
         fetcher,
         {
@@ -236,19 +236,7 @@ export function LeaderboardTable() {
                                 <TableCell align="right">Transactions</TableCell>
                                 <TableCell align="center">Top Token</TableCell>
                                 <TableCell align="center" width={100}>
-                                    <Tooltip title="Activity over the last 7 days">
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 0.5,
-                                            }}
-                                        >
-                                            Activity
-                                            <Iconify icon="solar:info-circle-linear" width={16} />
-                                        </Box>
-                                    </Tooltip>
+                                    Activity
                                 </TableCell>
                                 <TableCell align="right">First Active</TableCell>
                                 <TableCell align="right">Last Active</TableCell>

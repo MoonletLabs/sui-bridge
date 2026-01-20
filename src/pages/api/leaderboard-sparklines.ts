@@ -1,21 +1,26 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getNetworkConfig } from 'src/config/helper'
+import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { sendError, sendReply } from './utils'
 import db from './database'
+import { computerIntervals } from './cards'
 import dayjs from 'dayjs'
 
 export type SparklineData = {
     address: string
-    data: number[] // Last 7 days of transaction counts
+    data: number[] // Transaction counts per segment
 }
 
 export type SparklineResponse = {
     sparklines: Record<string, number[]>
 }
 
+// Number of segments for the sparkline based on time period
+const SPARKLINE_SEGMENTS = 7
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
+        const timePeriod = (req.query.period as TimePeriod) || 'Last Week'
 
         // Get addresses from query (comma-separated)
         const addressesParam = req.query.addresses?.toString() || ''
@@ -32,52 +37,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Limit to max 50 addresses per request
         const limitedAddresses = addresses.slice(0, 50)
 
-        // Calculate date range (last 7 days)
-        const endDate = dayjs()
-        const startDate = endDate.subtract(7, 'day')
-        const fromTimestamp = startDate.valueOf()
-        const toTimestamp = endDate.valueOf()
+        // Use same time intervals as leaderboard
+        const { fromInterval, toInterval } = computerIntervals(timePeriod, false)
 
-        // Query to get daily transaction counts for each address over the last 7 days
+        // Calculate segment duration based on time period
+        const totalDuration = toInterval - fromInterval
+        const segmentDuration = Math.floor(totalDuration / SPARKLINE_SEGMENTS)
+
+        // Generate segment boundaries
+        const segments: { start: number; end: number }[] = []
+        for (let i = 0; i < SPARKLINE_SEGMENTS; i++) {
+            segments.push({
+                start: fromInterval + i * segmentDuration,
+                end: fromInterval + (i + 1) * segmentDuration,
+            })
+        }
+
+        // Query to get transaction counts per segment for each address
         const sparklineQuery = await db[networkConfig.network]`
-            WITH date_series AS (
-                SELECT generate_series(
-                    ${startDate.format('YYYY-MM-DD')}::date,
-                    ${endDate.format('YYYY-MM-DD')}::date,
-                    '1 day'::interval
-                )::date AS day
-            ),
-            user_daily_counts AS (
+            WITH user_transactions AS (
                 SELECT 
                     encode(sender_address, 'hex') as address,
-                    DATE(TO_TIMESTAMP(timestamp_ms / 1000)) as tx_date,
-                    COUNT(*) as daily_count
+                    timestamp_ms
                 FROM public.token_transfer_data
                 WHERE 
                     is_finalized = true
-                    AND timestamp_ms BETWEEN ${fromTimestamp} AND ${toTimestamp}
+                    AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
                     AND sender_address IS NOT NULL
                     AND encode(sender_address, 'hex') = ANY(${limitedAddresses})
-                GROUP BY encode(sender_address, 'hex'), DATE(TO_TIMESTAMP(timestamp_ms / 1000))
-            ),
-            addresses_list AS (
-                SELECT unnest(${limitedAddresses}::text[]) as address
-            ),
-            full_data AS (
-                SELECT 
-                    al.address,
-                    ds.day,
-                    COALESCE(udc.daily_count, 0) as daily_count
-                FROM addresses_list al
-                CROSS JOIN date_series ds
-                LEFT JOIN user_daily_counts udc 
-                    ON al.address = udc.address 
-                    AND ds.day = udc.tx_date
             )
             SELECT 
                 address,
-                array_agg(daily_count ORDER BY day) as counts
-            FROM full_data
+                ${db[networkConfig.network].unsafe(
+                    segments
+                        .map(
+                            (seg, i) =>
+                                `COUNT(*) FILTER (WHERE timestamp_ms >= ${seg.start} AND timestamp_ms < ${seg.end}) as seg_${i}`,
+                        )
+                        .join(', '),
+                )}
+            FROM user_transactions
             GROUP BY address
         `
 
@@ -85,13 +84,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const sparklines: Record<string, number[]> = {}
 
         sparklineQuery.forEach((row: any) => {
-            sparklines[row.address] = row.counts.map((c: any) => Number(c))
+            const counts: number[] = []
+            for (let i = 0; i < SPARKLINE_SEGMENTS; i++) {
+                counts.push(Number(row[`seg_${i}`]) || 0)
+            }
+            sparklines[row.address] = counts
         })
 
         // Fill in empty arrays for addresses with no data
         limitedAddresses.forEach(addr => {
             if (!sparklines[addr]) {
-                sparklines[addr] = [0, 0, 0, 0, 0, 0, 0, 0]
+                sparklines[addr] = Array(SPARKLINE_SEGMENTS).fill(0)
             }
         })
 
