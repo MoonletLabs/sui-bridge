@@ -40,6 +40,7 @@ export const endpoints = {
     outflows: '/api/outflows',
     bridgeMetrics: '/api/bridge-metrics', // Add this line
     fees: '/api/fees',
+    routes: '/api/routes',
     volume: {
         daily: '/api/volume/daily',
         hourly: '/api/volume/hourly',
