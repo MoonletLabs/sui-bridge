@@ -9,6 +9,7 @@ import { DashboardContent, DashboardLayout } from 'src/layouts/dashboard'
 const InflowOutflowCharts = lazy(() => import('src/components/chart/inflow-outflow-charts'))
 const TokenVolumePieChart = lazy(() => import('src/components/chart/pie-charts'))
 const GasUsageChart = lazy(() => import('src/components/chart/gas-usage-chart'))
+const ActivityHeatmap = lazy(() => import('src/components/chart/activity-heatmap'))
 import BridgePerformanceChart from 'src/components/chart/bridge-performance-chart'
 import CumulativeNetInflow from 'src/components/chart/cumulative-net-inflow'
 import TopTokens from 'src/components/widgets/top-tokens'
@@ -33,6 +34,11 @@ export default function Page() {
                 {/* Bottom charts - render only when visible */}
                 <VisibilityChart fallback={<ChartSkeleton title="Inflow/Outflow Charts" />}>
                     <InflowOutflowCharts />
+                </VisibilityChart>
+
+                {/* Activity Heatmap - shows peak activity times */}
+                <VisibilityChart fallback={<ChartSkeleton title="Activity Heatmap" />}>
+                    <ActivityHeatmap />
                 </VisibilityChart>
 
                 <VisibilityChart fallback={<ChartSkeleton title="Gas Usage" />}>
