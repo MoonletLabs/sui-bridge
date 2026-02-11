@@ -40,6 +40,8 @@ export const endpoints = {
     outflows: '/api/outflows',
     bridgeMetrics: '/api/bridge-metrics', // Add this line
     fees: '/api/fees',
+    leaderboard: '/api/leaderboard',
+    leaderboardSparklines: '/api/leaderboard-sparklines',
     volume: {
         daily: '/api/volume/daily',
         hourly: '/api/volume/hourly',
