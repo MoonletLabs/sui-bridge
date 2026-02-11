@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 
 import { useRouter, useSearchParams } from 'src/routes/hooks'
 
@@ -16,7 +16,7 @@ type Props = {
     children: React.ReactNode
 }
 
-export function GuestGuard({ children }: Props) {
+function GuestGuardContent({ children }: Props) {
     const router = useRouter()
 
     const searchParams = useSearchParams()
@@ -50,4 +50,12 @@ export function GuestGuard({ children }: Props) {
     }
 
     return <>{children}</>
+}
+
+export function GuestGuard({ children }: Props) {
+    return (
+        <Suspense fallback={<SplashScreen />}>
+            <GuestGuardContent>{children}</GuestGuardContent>
+        </Suspense>
+    )
 }
