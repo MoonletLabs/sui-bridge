@@ -15,4 +15,4 @@ permissions:
 
 jobs:
   security-scan:
-    uses: Moonlet/organization-workflows/.github/workflows/trivy-scan.yml@trivy/v1
+    uses: MoonletLabs/organization-workflows/.github/workflows/trivy-scan.yml@trivy/v1
