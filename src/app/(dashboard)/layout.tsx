@@ -7,5 +7,5 @@ type Props = {
 }
 
 export default function Layout({ children }: Props) {
-    return <DashboardLayout disableTimelines>{children}</DashboardLayout>
+    return <DashboardLayout>{children}</DashboardLayout>
 }

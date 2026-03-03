@@ -1,4 +1,6 @@
 'use client'
+
+import { Suspense } from 'react'
 import {
     Box,
     Button,
@@ -28,6 +30,7 @@ import {
 import '@mysten/dapp-kit/dist/index.css'
 import '@rainbow-me/rainbowkit/styles.css'
 import { useState as useReactState } from 'react'
+import { SplashScreen } from 'src/components/loading-screen'
 
 type WalletActionButtonProps = {
     label: string
@@ -93,7 +96,7 @@ function WalletActionButton({
 const SUI_LOGO_PATH = '/assets/icons/brands/sui.svg'
 const ETH_LOGO_PATH = '/assets/icons/brands/eth.svg'
 
-export default function Page() {
+function ProfileContent() {
     const searchParams = useSearchParams()
 
     const [suiAddress, setSuiAddress] = useState(searchParams?.get('suiAddress') || '')
@@ -333,5 +336,13 @@ export default function Page() {
                 </Box>
             )}
         </DashboardContent>
+    )
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={<SplashScreen />}>
+            <ProfileContent />
+        </Suspense>
     )
 }

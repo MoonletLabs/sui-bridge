@@ -8,7 +8,7 @@ import {
 } from '@mui/lab'
 import { Box, Card, CardHeader, Divider, Grid, Link, Stack, Typography } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
-import Loading from 'src/app/loading'
+import { TransactionDetailSkeleton } from 'src/components/skeletons'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
 import { useRouter } from 'src/routes/hooks'
@@ -30,7 +30,7 @@ export function TransactionView({ tx }: { tx: string }) {
     }>(`${endpoints.transaction}/${tx}?network=${network}`, fetcher)
 
     if (isLoading) {
-        return <Loading />
+        return <TransactionDetailSkeleton />
     }
 
     if (!isLoading && !data) {
