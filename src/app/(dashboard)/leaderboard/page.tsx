@@ -4,10 +4,12 @@ import { Box, Typography } from '@mui/material'
 import { LeaderboardTable } from 'src/components/leaderboard'
 import { DashboardContent } from 'src/layouts/dashboard'
 import { Iconify } from 'src/components/iconify'
+import { PageTitle } from 'src/components/page-title'
 
 export default function LeaderboardPage() {
     return (
         <DashboardContent maxWidth="xl">
+            <PageTitle title="Leaderboard" />
             {/* Page Header */}
             <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>

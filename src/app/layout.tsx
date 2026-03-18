@@ -26,6 +26,12 @@ export const viewport: Viewport = {
 }
 
 export const metadata = {
+    title: {
+        default: 'Sui Analytics',
+        template: '%s | Sui Analytics',
+    },
+    description:
+        'SUI Bridge Analytics Dashboard - Track bridge transactions, volume, and performance metrics',
     icons: [
         {
             rel: 'icon',
