@@ -2,6 +2,7 @@
 import { TransactionView } from 'src/components/transactions/transaction-view'
 import { DashboardContent } from 'src/layouts/dashboard'
 import { NotFoundView } from 'src/sections/error'
+import { PageTitle } from 'src/components/page-title'
 
 interface PageProps {
     params: {
@@ -16,6 +17,7 @@ export default function Page({ params: { tx } }: PageProps) {
 
     return (
         <DashboardContent maxWidth="xl">
+            <PageTitle title="Transaction Details" />
             <TransactionView tx={tx} />
         </DashboardContent>
     )

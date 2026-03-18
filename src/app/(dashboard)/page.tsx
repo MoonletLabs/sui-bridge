@@ -4,6 +4,7 @@ import { ChartSkeleton, VisibilityChart } from 'src/components/skeletons'
 import { LatestTransactions } from 'src/components/transactions/latest-transactions'
 import CustomWidgets from 'src/components/widgets/custom-widgets'
 import { DashboardContent } from 'src/layouts/dashboard'
+import { PageTitle } from 'src/components/page-title'
 
 // Lazy load chart components for better performance
 const InflowOutflowCharts = lazy(() => import('src/components/chart/inflow-outflow-charts'))
@@ -18,6 +19,7 @@ import TopTokens from 'src/components/widgets/top-tokens'
 export default function Page() {
     return (
         <DashboardContent maxWidth="xl">
+            <PageTitle title="Bridge Dashboard" />
             <CustomWidgets />
 
             <CumulativeNetInflow />

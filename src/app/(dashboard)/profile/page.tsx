@@ -17,6 +17,7 @@ import { Iconify } from 'src/components/iconify'
 import { TransactionsTable } from 'src/components/transactions/transactions-table'
 import UserStatsWidgets from 'src/components/widgets/user-stats-widgets'
 import { DashboardContent } from 'src/layouts/dashboard'
+import { PageTitle } from 'src/components/page-title'
 // Ethereum
 import { useConnectModal } from '@rainbow-me/rainbowkit'
 import { useAccount as useEthAccount, useDisconnect as useEthDisconnect } from 'wagmi'
@@ -146,6 +147,7 @@ function ProfileContent() {
 
     return (
         <DashboardContent maxWidth="xl">
+            <PageTitle title="Profile" />
             <Grid container spacing={3} sx={{ marginBottom: 5 }}>
                 {/* Sui Address Field and Connect Button */}
                 <Grid item xs={12} md={6}>
