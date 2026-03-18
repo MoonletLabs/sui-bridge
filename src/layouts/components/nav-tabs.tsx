@@ -36,6 +36,11 @@ const NAV_ITEMS = [
         icon: icon('ic-parameter'),
     },
     {
+        label: 'Leaderboard',
+        path: paths.leaderboard.root,
+        icon: icon('ic-tour'),
+    },
+    {
         label: 'Profile',
         path: paths.profile.root,
         icon: icon('ic-course'),
