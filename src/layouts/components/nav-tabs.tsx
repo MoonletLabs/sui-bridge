@@ -36,6 +36,11 @@ const NAV_ITEMS = [
         icon: icon('ic-parameter'),
     },
     {
+        label: 'Bridge Flows',
+        path: paths.flows.root,
+        icon: icon('ic-ecommerce'),
+    },
+    {
         label: 'Leaderboard',
         path: paths.leaderboard.root,
         icon: icon('ic-tour'),
