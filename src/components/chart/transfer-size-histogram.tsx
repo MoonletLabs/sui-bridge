@@ -7,7 +7,6 @@ import { Chart, useChart } from 'src/components/chart'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { endpoints, fetcher } from 'src/utils/axios'
-import { downloadCsv } from 'src/utils/csv'
 import { SizeHistogramRow } from 'src/utils/types'
 
 const BUCKET_ORDER = ['< $100', '$100 – $1k', '$1k – $10k', '$10k – $100k', '$100k – $1M', '$1M+']
@@ -84,11 +83,6 @@ export default function TransferSizeHistogram() {
         },
     })
 
-    const handleExport = () => {
-        if (!data?.length) return
-        downloadCsv('transfer-size-histogram', data as any)
-    }
-
     return (
         <Card sx={{ height: '100%' }}>
             <CardHeader
@@ -109,9 +103,6 @@ export default function TransferSizeHistogram() {
                             onClick={() => setMetric('usd')}
                         >
                             USD
-                        </Button>
-                        <Button size="small" variant="outlined" onClick={handleExport}>
-                            CSV
                         </Button>
                     </Box>
                 }

@@ -212,13 +212,6 @@ export type SizeHistogramRow = {
     usd: number
 }
 
-export type ActivityHeatmapRow = {
-    dow: number // 1 (Monday) .. 7 (Sunday) — ISO
-    hour: number // 0..23 (UTC)
-    count: number
-    usd: number
-}
-
 // Add uniqueAddressesCount to the BridgeMetricsResponse type
 export type BridgeMetricsResponse = {
     transactionCount: {

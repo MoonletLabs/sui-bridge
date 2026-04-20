@@ -54,5 +54,4 @@ export const endpoints = {
     },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',
-    activityHeatmap: '/api/activity-heatmap',
 }

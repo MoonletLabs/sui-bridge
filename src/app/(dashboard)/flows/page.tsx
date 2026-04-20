@@ -2,10 +2,8 @@
 
 import {
     Box,
-    Button,
     Card,
     CardHeader,
-    Grid,
     Stack,
     Table,
     TableBody,
@@ -20,9 +18,7 @@ import {
 import { useMemo } from 'react'
 import useSWR from 'swr'
 import FlowSankey from 'src/components/chart/flow-sankey'
-import TokenDominanceChart from 'src/components/chart/token-dominance-chart'
 import TransferSizeHistogram from 'src/components/chart/transfer-size-histogram'
-import ActivityHeatmap from 'src/components/chart/activity-heatmap'
 import { Iconify } from 'src/components/iconify'
 import { PageTitle } from 'src/components/page-title'
 import { getNetworkConfig } from 'src/config/helper'
@@ -30,7 +26,6 @@ import { getNetwork } from 'src/hooks/get-network-storage'
 import { DashboardContent } from 'src/layouts/dashboard'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { endpoints, fetcher } from 'src/utils/axios'
-import { downloadCsv } from 'src/utils/csv'
 import { FlowRow, getTokensList } from 'src/utils/types'
 import { useState } from 'react'
 
@@ -162,18 +157,6 @@ export default function FlowsPage() {
         return { totalUsd, totalCount, routeCount }
     }, [filteredRows])
 
-    const handleExport = () => {
-        if (!filteredRows.length) return
-        const rows = filteredRows.map(r => ({
-            src_chain: chainLabel(r.src_chain),
-            dst_chain: chainLabel(r.dst_chain),
-            token: tokenLabel(r.token_id),
-            usd: r.usd,
-            count: r.count,
-        }))
-        downloadCsv('bridge-flows', rows)
-    }
-
     return (
         <DashboardContent maxWidth="xl">
             <PageTitle title="Bridge Flows" />
@@ -232,9 +215,6 @@ export default function FlowsPage() {
                                 <ToggleButton value="gross">Gross</ToggleButton>
                                 <ToggleButton value="net">Net</ToggleButton>
                             </ToggleButtonGroup>
-                            <Button size="small" variant="outlined" onClick={handleExport}>
-                                CSV
-                            </Button>
                         </Stack>
                     }
                 />
@@ -361,18 +341,7 @@ export default function FlowsPage() {
                 </Typography>
             </Box>
 
-            <Box sx={{ mb: 3 }}>
-                <TokenDominanceChart />
-            </Box>
-
-            <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                    <TransferSizeHistogram />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                    <ActivityHeatmap />
-                </Grid>
-            </Grid>
+            <TransferSizeHistogram />
         </DashboardContent>
     )
 }
