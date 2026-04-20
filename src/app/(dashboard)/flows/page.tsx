@@ -171,8 +171,8 @@ export default function FlowsPage() {
                     <Typography variant="h4">Bridge Flows</Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                    Directional bridge activity visualized as a Sankey — band width represents
-                    volume or transfer count between chains and tokens over the selected period.
+                    Directional bridge activity between chains and tokens over the selected period.
+                    Band width on the Sankey represents volume or transfer count.
                 </Typography>
             </Box>
 
