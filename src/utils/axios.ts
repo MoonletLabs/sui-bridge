@@ -52,4 +52,5 @@ export const endpoints = {
         daily: '/api/cumulative_inflow/daily',
         hourly: '/api/cumulative_inflow/hourly',
     },
+    stock: '/api/stock',
 }

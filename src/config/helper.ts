@@ -158,6 +158,11 @@ export const getVolumeEndpointForPeriod = (period: TimePeriod, network: NETWORK)
     }
 }
 
+export const getStockEndpointForPeriod = (period: TimePeriod, network: NETWORK): string => {
+    // v1: always daily buckets. Different periods only adjust client-side filtering.
+    return `${endpoints.stock}?network=${network}`
+}
+
 export const getCumulativeInflowEndpointForPeriod = (
     period: TimePeriod,
     network: NETWORK,
