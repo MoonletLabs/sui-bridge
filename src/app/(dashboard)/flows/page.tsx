@@ -334,13 +334,6 @@ export default function FlowsPage() {
                 </Box>
             </Card>
 
-            {/* Insights strip */}
-            <Box sx={{ mb: 1 }}>
-                <Typography variant="h5" sx={{ mb: 2 }}>
-                    Insights
-                </Typography>
-            </Box>
-
             <TransferSizeHistogram />
         </DashboardContent>
     )
