@@ -194,6 +194,24 @@ export type CumulativeInflowType = {
     total_volume_usd: number
 }
 
+// ----------------------------------------------------------------------
+// Bridge Flows (Sankey) + Insights types
+
+export type FlowRow = {
+    src_chain: number
+    dst_chain: number
+    token_id: number
+    usd: number
+    count: number
+}
+
+export type SizeHistogramRow = {
+    bucket: string
+    bucket_order: number
+    count: number
+    usd: number
+}
+
 // Add uniqueAddressesCount to the BridgeMetricsResponse type
 export type BridgeMetricsResponse = {
     transactionCount: {

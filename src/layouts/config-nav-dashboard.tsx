@@ -54,6 +54,10 @@ export const navData = [
     },
 
     {
+        items: [{ title: 'Bridge Flows', path: paths.flows.root, icon: ICONS.ecommerce }],
+    },
+
+    {
         items: [{ title: 'Leaderboard', path: paths.leaderboard.root, icon: ICONS.order }],
     },
 
