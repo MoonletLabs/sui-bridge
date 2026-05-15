@@ -41,6 +41,11 @@ const NAV_ITEMS = [
         icon: icon('ic-ecommerce'),
     },
     {
+        label: 'Tokens',
+        path: paths.tokens.root,
+        icon: icon('ic-label'),
+    },
+    {
         label: 'Leaderboard',
         path: paths.leaderboard.root,
         icon: icon('ic-tour'),
@@ -80,8 +85,8 @@ export function NavTabs() {
                 },
                 '& .MuiTab-root': {
                     minHeight: 48,
-                    minWidth: 120,
-                    px: 2.5,
+                    minWidth: 'auto',
+                    px: 2,
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     textTransform: 'none',
