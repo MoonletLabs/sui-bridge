@@ -7,6 +7,7 @@ const ROOTS = {
     PROFILE: '/profile',
     LEADERBOARD: '/leaderboard',
     FLOWS: '/flows',
+    TOKENS: '/tokens',
 }
 
 // ----------------------------------------------------------------------
@@ -74,5 +75,11 @@ export const paths = {
     // FLOWS
     flows: {
         root: ROOTS.FLOWS,
+    },
+
+    // TOKENS
+    tokens: {
+        root: ROOTS.TOKENS,
+        details: (id: number | string) => `${ROOTS.TOKENS}/${id}`,
     },
 }

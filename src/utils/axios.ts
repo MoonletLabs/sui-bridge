@@ -54,4 +54,11 @@ export const endpoints = {
     },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',
+    token: {
+        summary: '/api/token/summary',
+        overview: (id: number) => `/api/token/${id}/overview`,
+        volume: (id: number) => `/api/token/${id}/volume`,
+        holders: (id: number) => `/api/token/${id}/holders`,
+        sizeHistogram: (id: number) => `/api/token/${id}/size-histogram`,
+    },
 }

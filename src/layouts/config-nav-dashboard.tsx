@@ -58,6 +58,10 @@ export const navData = [
     },
 
     {
+        items: [{ title: 'Tokens', path: paths.tokens.root, icon: ICONS.label }],
+    },
+
+    {
         items: [{ title: 'Leaderboard', path: paths.leaderboard.root, icon: ICONS.order }],
     },
 

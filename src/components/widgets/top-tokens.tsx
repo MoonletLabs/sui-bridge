@@ -1,6 +1,15 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { Box, ButtonGroup, Button, Typography, TableRow, TableCell } from '@mui/material'
+import {
+    Box,
+    ButtonGroup,
+    Button,
+    Typography,
+    TableRow,
+    TableCell,
+    Link as MuiLink,
+} from '@mui/material'
+import NextLink from 'next/link'
 import useSWR from 'swr'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { getNetwork } from 'src/hooks/get-network-storage'
@@ -9,6 +18,8 @@ import { fNumber } from 'src/utils/format-number'
 import { getTokensList } from 'src/utils/types'
 import { CustomTable } from 'src/components/table/table'
 import { downloadCsv } from 'src/utils/csv'
+import { paths } from 'src/routes/paths'
+import { getTokenMetaList } from 'src/utils/token-meta'
 
 type SortMode = 'usd' | 'count'
 
@@ -213,27 +224,61 @@ export default function TopTokens() {
                     { id: 'uniqueAddresses', label: 'Unique addresses', align: 'right' },
                 ]}
                 tableData={rows}
-                RowComponent={({ row }) => (
-                    <TableRow hover>
-                        <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                {row.icon ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={row.icon} alt={row.token} width={18} height={18} />
-                                ) : null}
-                                {row.token}
-                            </Box>
-                        </TableCell>
-                        <TableCell align="right">${fNumber(row.inflowUsd)}</TableCell>
-                        <TableCell align="right">${fNumber(row.outflowUsd)}</TableCell>
-                        <TableCell align="right">${fNumber(row.netUsd)}</TableCell>
-                        <TableCell align="right">{fNumber(row.sharePct)}%</TableCell>
-                        <TableCell align="right">
-                            {fNumber(row.inflowCount)}/{fNumber(row.outflowCount)}
-                        </TableCell>
-                        <TableCell align="right">{fNumber(row.uniqueAddresses || 0)}</TableCell>
-                    </TableRow>
-                )}
+                RowComponent={({ row }) => {
+                    const tokenMeta = getTokenMetaList(network).find(t => t.ticker === row.token)
+                    return (
+                        <TableRow hover>
+                            <TableCell>
+                                {tokenMeta ? (
+                                    <MuiLink
+                                        component={NextLink}
+                                        href={paths.tokens.details(tokenMeta.id)}
+                                        underline="hover"
+                                        color="inherit"
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            fontWeight: 500,
+                                        }}
+                                    >
+                                        {row.icon ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={row.icon}
+                                                alt={row.token}
+                                                width={18}
+                                                height={18}
+                                            />
+                                        ) : null}
+                                        {row.token}
+                                    </MuiLink>
+                                ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {row.icon ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img
+                                                src={row.icon}
+                                                alt={row.token}
+                                                width={18}
+                                                height={18}
+                                            />
+                                        ) : null}
+                                        {row.token}
+                                    </Box>
+                                )}
+                            </TableCell>
+                            <TableCell align="right">${fNumber(row.inflowUsd)}</TableCell>
+                            <TableCell align="right">${fNumber(row.outflowUsd)}</TableCell>
+                            <TableCell align="right">${fNumber(row.netUsd)}</TableCell>
+                            <TableCell align="right">{fNumber(row.sharePct)}%</TableCell>
+                            <TableCell align="right">
+                                {fNumber(row.inflowCount)}/{fNumber(row.outflowCount)}
+                            </TableCell>
+                            <TableCell align="right">{fNumber(row.uniqueAddresses || 0)}</TableCell>
+                        </TableRow>
+                    )
+                }}
                 loading={isLoading}
                 hidePagination
                 rowHeight={60}
