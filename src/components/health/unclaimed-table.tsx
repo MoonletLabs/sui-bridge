@@ -20,7 +20,7 @@ import {
     Typography,
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import { CopyButton } from 'src/components/copy-button'
 import { Iconify } from 'src/components/iconify'
@@ -109,6 +109,21 @@ export function UnclaimedTable() {
     )
 
     const rows = data?.transfers || []
+    const total = data?.total
+
+    // A page valid on one network can be out of range on another (testnet has
+    // far more unclaimed transfers than mainnet), which would otherwise leave
+    // an empty table claiming everything had been claimed. Clamp once the new
+    // total is known. Shared in-range pages are untouched.
+    useEffect(() => {
+        if (total === undefined) {
+            return
+        }
+        const lastPage = total > 0 ? Math.ceil(total / ROWS_PER_PAGE) - 1 : 0
+        if (page > lastPage) {
+            setPage(lastPage)
+        }
+    }, [total, page, setPage])
 
     const handleExport = () => {
         downloadCsv(
@@ -227,7 +242,9 @@ export function UnclaimedTable() {
                             </TableRow>
                         )}
 
-                        {!isLoading && !error && rows.length === 0 && (
+                        {/* Only claim "all clear" when the dataset is genuinely
+                            empty, never when the current page is out of range */}
+                        {!isLoading && !error && rows.length === 0 && total === 0 && (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                                     <Iconify
@@ -303,10 +320,10 @@ export function UnclaimedTable() {
                                                     fontFamily="monospace"
                                                     fontSize="0.8rem"
                                                 >
-                                                    {truncateAddress(`0x${r.recipient_address}`, 6)}
+                                                    {truncateAddress(r.recipient_address, 6)}
                                                 </Typography>
                                                 <CopyButton
-                                                    value={`0x${r.recipient_address}`}
+                                                    value={r.recipient_address}
                                                     title="Copy recipient address"
                                                     size={14}
                                                 />
@@ -325,7 +342,7 @@ export function UnclaimedTable() {
                                                         network,
                                                         address: r.tx_hash,
                                                         isAccount: false,
-                                                        chain: isInflow ? 'ETH' : 'SUI',
+                                                        chain: r.source_chain,
                                                     })}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
@@ -334,7 +351,7 @@ export function UnclaimedTable() {
                                                     fontSize="0.8rem"
                                                     fontFamily="monospace"
                                                 >
-                                                    {truncateAddress(`0x${r.tx_hash}`, 6)}
+                                                    {truncateAddress(r.tx_hash, 6)}
                                                 </Link>
                                                 <CopyButton
                                                     value={r.tx_hash}

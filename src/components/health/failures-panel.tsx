@@ -19,7 +19,7 @@ import {
     Typography,
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import { CopyButton } from 'src/components/copy-button'
 import { Iconify } from 'src/components/iconify'
@@ -92,6 +92,18 @@ export function FailuresPanel() {
 
     const breakdown = (data?.breakdown || []).slice(0, 6)
     const rows = data?.transactions || []
+    const total = data?.total
+
+    // Clamp an out of range page once the new network's total is known
+    useEffect(() => {
+        if (total === undefined) {
+            return
+        }
+        const lastPage = total > 0 ? Math.ceil(total / ROWS_PER_PAGE) - 1 : 0
+        if (page > lastPage) {
+            setPage(lastPage)
+        }
+    }, [total, page, setPage])
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -253,7 +265,7 @@ export function FailuresPanel() {
                                     </TableRow>
                                 ))}
 
-                            {!isLoading && !error && rows.length === 0 && (
+                            {!isLoading && !error && rows.length === 0 && total === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={4} align="center" sx={{ py: 5 }}>
                                         <Typography variant="body2" color="text.secondary">
@@ -317,13 +329,10 @@ export function FailuresPanel() {
                                                         fontSize="0.8rem"
                                                         fontFamily="monospace"
                                                     >
-                                                        {truncateAddress(
-                                                            `0x${r.sender_address}`,
-                                                            6,
-                                                        )}
+                                                        {truncateAddress(r.sender_address, 6)}
                                                     </Link>
                                                     <CopyButton
-                                                        value={`0x${r.sender_address}`}
+                                                        value={r.sender_address}
                                                         title="Copy sender address"
                                                         size={14}
                                                     />
@@ -351,7 +360,7 @@ export function FailuresPanel() {
                                                         fontSize="0.8rem"
                                                         fontFamily="monospace"
                                                     >
-                                                        {truncateAddress(`0x${r.tx_digest}`, 6)}
+                                                        {truncateAddress(r.tx_digest, 6)}
                                                     </Link>
                                                     <CopyButton
                                                         value={r.tx_digest}

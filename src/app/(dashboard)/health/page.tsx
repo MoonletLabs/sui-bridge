@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Divider, Typography } from '@mui/material'
+import { Alert, Box, Divider, Typography } from '@mui/material'
 import useSWR from 'swr'
 import { FailuresPanel, HealthStats, UnclaimedTable } from 'src/components/health'
 import { Iconify } from 'src/components/iconify'
@@ -13,7 +13,7 @@ import type { HealthSummaryResponse } from 'src/pages/api/health/summary'
 export default function HealthPage() {
     const network = getNetwork()
 
-    const { data, isLoading } = useSWR<HealthSummaryResponse>(
+    const { data, isLoading, error } = useSWR<HealthSummaryResponse>(
         `${endpoints.health.summary}?network=${network}`,
         fetcher,
         { revalidateOnFocus: false, dedupingInterval: 30000 },
@@ -39,7 +39,16 @@ export default function HealthPage() {
                 </Typography>
             </Box>
 
-            <HealthStats data={data} isLoading={isLoading} />
+            {/* Without this the cards would sit on em dashes forever, with no
+                indication that the summary query failed */}
+            {error ? (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    Could not load the bridge health summary. The figures below may be incomplete -
+                    please refresh to try again.
+                </Alert>
+            ) : (
+                <HealthStats data={data} isLoading={isLoading} />
+            )}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <UnclaimedTable />

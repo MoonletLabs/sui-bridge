@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
+import { base58Encode } from 'src/utils/helper'
+import { ChainType } from 'src/utils/types'
 import db from '../database'
 import { sendError, sendReply } from '../utils'
 
@@ -14,8 +16,13 @@ export type UnclaimedTransfer = {
     amount_usd: number
     destination_chain: number
     direction: 'ETH → SUI' | 'SUI → ETH'
+    /** Chain the deposit was made on - drives explorer links for `tx_hash` */
+    source_chain: ChainType
+    /** 0x prefixed hex on both chains */
     sender_address: string
+    /** 0x prefixed hex on both chains */
     recipient_address: string
+    /** Canonical for its source chain: base58 for Sui, 0x hex for Ethereum */
     tx_hash: string
 }
 
@@ -95,12 +102,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const now = Date.now()
         const suiId = networkConfig.config.networkId.SUI
+        const ethId = networkConfig.config.networkId.ETH
 
         const transfers: UnclaimedTransfer[] = rows.map((row: any) => {
             const timestamp = Number(row.timestamp_ms)
             const coin = networkConfig.config.coins[row.token_id]
             const denominator = Number(row.denominator) || coin?.deno || 1
             const isInflow = Number(row.destination_chain) === suiId
+
+            // The deposit tx lives on the source chain, and each chain has its
+            // own canonical digest format (see transformTransfers in helper.ts)
+            const isEthOrigin = Number(row.chain_id) === ethId
+            const txHash = isEthOrigin ? `0x${row.tx_hash}` : base58Encode(row.tx_hash)
 
             return {
                 chain_id: Number(row.chain_id),
@@ -113,9 +126,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 amount_usd: Number(row.amount_usd) || 0,
                 destination_chain: Number(row.destination_chain),
                 direction: isInflow ? 'ETH → SUI' : 'SUI → ETH',
-                sender_address: row.sender_address,
-                recipient_address: row.recipient_address,
-                tx_hash: row.tx_hash,
+                source_chain: isEthOrigin ? 'ETH' : 'SUI',
+                sender_address: `0x${row.sender_address}`,
+                recipient_address: `0x${row.recipient_address}`,
+                tx_hash: txHash,
             }
         })
 

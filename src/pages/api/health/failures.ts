@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import { decodeBridgeFailure, failureGroupKey, FailureSeverity } from 'src/utils/bridge-errors'
+import { base58Encode } from 'src/utils/helper'
 import db from '../database'
 import { sendError, sendReply } from '../utils'
 
@@ -17,7 +18,9 @@ export type FailureBreakdownItem = {
 }
 
 export type FailedTransaction = {
+    /** Base58 - these are always Sui transactions */
     tx_digest: string
+    /** 0x prefixed hex Sui address */
     sender_address: string
     timestamp_ms: number
     label: string
@@ -110,8 +113,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const transactions: FailedTransaction[] = (txRows as any[]).map(row => {
             const decoded = decodeBridgeFailure(row.failure_status)
             return {
-                tx_digest: row.tx_digest,
-                sender_address: row.sender_address,
+                // sui_error_transactions only ever holds Sui transactions, whose
+                // canonical digest form is base58 rather than hex
+                tx_digest: base58Encode(row.tx_digest),
+                sender_address: `0x${row.sender_address}`,
                 timestamp_ms: Number(row.timestamp_ms),
                 label: decoded.label,
                 description: decoded.description,

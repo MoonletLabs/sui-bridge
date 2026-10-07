@@ -302,9 +302,22 @@ export function decodeBridgeFailure(raw: string | null | undefined): DecodedFail
         severity: 'unknown',
     }
 }
-
-/** Stable grouping key so identical failures aggregate together */
+/**
+ * Stable grouping key so identical failures aggregate together.
+ *
+ * Unknown statuses must key on the *full* raw text: their display label is
+ * truncated, so keying on it would merge distinct failures that happen to
+ * share a long prefix, combining their counts under one explanation.
+ */
 export function failureGroupKey(raw: string | null | undefined): string {
     const d = decodeBridgeFailure(raw)
-    return d.location && d.abortCode !== undefined ? `${d.location}#${d.abortCode}` : d.label
+
+    if (d.location && d.abortCode !== undefined) {
+        return `${d.location}#${d.abortCode}`
+    }
+    // Recognised runtime patterns have a stable, non truncated label
+    if (d.severity !== 'unknown') {
+        return d.label
+    }
+    return raw ?? 'unknown'
 }
