@@ -33,20 +33,31 @@ import type { FailuresResponse } from 'src/pages/api/health/failures'
 
 const ROWS_PER_PAGE = 25
 
-const SEVERITY: Record<FailureSeverity, { label: string; color: string; hint: string }> = {
+/**
+ * `color` is the solid chip fill, paired with white text so chips stay legible
+ * on the dark theme. `bar` is a brighter tone used for the share bars, which
+ * sit on the card background and need more contrast.
+ */
+const SEVERITY: Record<
+    FailureSeverity,
+    { label: string; color: string; bar: string; hint: string }
+> = {
     user: {
         label: 'User',
-        color: '#FBBF24',
+        color: '#D97706',
+        bar: '#FBBF24',
         hint: 'Caused by how the transaction was submitted. Usually retryable.',
     },
     protocol: {
         label: 'Protocol',
-        color: '#F87171',
+        color: '#DC2626',
+        bar: '#F87171',
         hint: 'Raised by bridge invariants or committee validation.',
     },
     unknown: {
         label: 'Other',
-        color: '#B6BECD',
+        color: '#64748B',
+        bar: '#B6BECD',
         hint: 'Not mapped to a known bridge abort code.',
     },
 }
@@ -148,11 +159,13 @@ export function FailuresPanel() {
                                                 label={sev.label}
                                                 size="small"
                                                 sx={{
-                                                    bgcolor: alpha(sev.color, 0.28),
-                                                    color: sev.color,
-                                                    border: `1px solid ${alpha(sev.color, 0.5)}`,
+                                                    bgcolor: sev.color,
                                                     fontWeight: 700,
+                                                    fontSize: '0.7rem',
                                                     height: 20,
+                                                    // The dark theme forces grey[800] on filled
+                                                    // default chips, so set the label explicitly
+                                                    '& .MuiChip-label': { color: '#fff' },
                                                 }}
                                             />
                                         </Tooltip>
@@ -188,7 +201,7 @@ export function FailuresPanel() {
                                             borderRadius: 1,
                                             bgcolor: alpha(theme.palette.grey[500], 0.16),
                                             '& .MuiLinearProgress-bar': {
-                                                bgcolor: sev.color,
+                                                bgcolor: sev.bar,
                                                 borderRadius: 1,
                                             },
                                         }}
@@ -268,11 +281,15 @@ export function FailuresPanel() {
                                                             label={r.label}
                                                             size="small"
                                                             sx={{
-                                                                bgcolor: alpha(sev.color, 0.28),
-                                                                color: sev.color,
-                                                                border: `1px solid ${alpha(sev.color, 0.5)}`,
+                                                                bgcolor: sev.color,
                                                                 fontWeight: 700,
+                                                                fontSize: '0.75rem',
                                                                 maxWidth: '100%',
+                                                                // The dark theme forces grey[800]
+                                                                // on filled default chips
+                                                                '& .MuiChip-label': {
+                                                                    color: '#fff',
+                                                                },
                                                             }}
                                                         />
                                                     </Tooltip>

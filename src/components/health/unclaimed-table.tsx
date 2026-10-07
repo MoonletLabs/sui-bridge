@@ -19,7 +19,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material'
-import { alpha, useTheme } from '@mui/material/styles'
+import { useTheme } from '@mui/material/styles'
 import { useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { CopyButton } from 'src/components/copy-button'
@@ -61,13 +61,19 @@ const fTokenAmount = (n: number) => {
     return n.toExponential(2)
 }
 
-/** Older + larger transfers are the ones worth chasing */
-const ageTone = (hours: number) => {
-    if (hours >= 8760) return { label: 'Over 1 year', color: '#F87171' }
-    if (hours >= 720) return { label: 'Over 30 days', color: '#FBBF24' }
-    if (hours >= 24) return { label: 'Over 24 hours', color: '#60A5FA' }
-    return { label: 'Recent', color: '#4ADE80' }
+/** Plain language bucket, surfaced as a tooltip on the age value */
+const ageLabel = (hours: number) => {
+    if (hours >= 8760) return 'Over 1 year old'
+    if (hours >= 720) return 'Over 30 days old'
+    if (hours >= 24) return 'Over 24 hours old'
+    return 'Less than a day old'
 }
+
+/**
+ * Direction uses the destination chain's identity rather than red/green:
+ * an outflow is not an error, so it should not look like one.
+ */
+const directionTone = (isInflow: boolean) => (isInflow ? '#16A34A' : '#627EEA')
 
 export function UnclaimedTable() {
     const theme = useTheme()
@@ -241,23 +247,14 @@ export function UnclaimedTable() {
 
                         {!isLoading &&
                             rows.map(r => {
-                                const tone = ageTone(r.age_hours)
                                 const isInflow = r.direction === 'ETH → SUI'
                                 return (
                                     <TableRow key={`${r.chain_id}-${r.nonce}`} hover>
                                         <TableCell>
-                                            <Tooltip title={tone.label}>
-                                                <Chip
-                                                    label={fAge(r.age_hours)}
-                                                    size="small"
-                                                    sx={{
-                                                        bgcolor: alpha(tone.color, 0.28),
-                                                        color: tone.color,
-                                                        border: `1px solid ${alpha(tone.color, 0.5)}`,
-                                                        fontWeight: 700,
-                                                        minWidth: 52,
-                                                    }}
-                                                />
+                                            <Tooltip title={ageLabel(r.age_hours)}>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {fAge(r.age_hours)}
+                                                </Typography>
                                             </Tooltip>
                                         </TableCell>
                                         <TableCell>
@@ -265,10 +262,12 @@ export function UnclaimedTable() {
                                                 label={r.direction}
                                                 size="small"
                                                 sx={{
-                                                    bgcolor: isInflow ? '#22C55E' : '#EF4444',
-                                                    color: '#fff',
+                                                    bgcolor: directionTone(isInflow),
                                                     fontWeight: 700,
                                                     fontSize: '0.7rem',
+                                                    // The dark theme forces grey[800] on filled
+                                                    // default chips, so set the label explicitly
+                                                    '& .MuiChip-label': { color: '#fff' },
                                                 }}
                                             />
                                         </TableCell>
