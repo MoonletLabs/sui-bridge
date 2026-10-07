@@ -8,6 +8,7 @@ const ROOTS = {
     LEADERBOARD: '/leaderboard',
     FLOWS: '/flows',
     TOKENS: '/tokens',
+    HEALTH: '/health',
 }
 
 // ----------------------------------------------------------------------
@@ -81,5 +82,10 @@ export const paths = {
     tokens: {
         root: ROOTS.TOKENS,
         details: (id: number | string) => `${ROOTS.TOKENS}/${id}`,
+    },
+
+    // BRIDGE HEALTH
+    health: {
+        root: ROOTS.HEALTH,
     },
 }

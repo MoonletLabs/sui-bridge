@@ -51,6 +51,11 @@ const NAV_ITEMS = [
         icon: icon('ic-tour'),
     },
     {
+        label: 'Bridge Health',
+        path: paths.health.root,
+        icon: icon('ic-analytics'),
+    },
+    {
         label: 'Profile',
         path: paths.profile.root,
         icon: icon('ic-course'),

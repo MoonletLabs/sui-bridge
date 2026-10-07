@@ -54,6 +54,11 @@ export const endpoints = {
     },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',
+    health: {
+        summary: '/api/health/summary',
+        unclaimed: '/api/health/unclaimed',
+        failures: '/api/health/failures',
+    },
     token: {
         summary: '/api/token/summary',
         overview: (id: number) => `/api/token/${id}/overview`,
