@@ -769,7 +769,7 @@ export const sumQueryField = (data: any[], field: string): number => {
 }
 
 // Base58 encoding function for SUI transaction hashes
-const base58Encode = (hexString: string): string => {
+export const base58Encode = (hexString: string): string => {
     const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
     const base = alphabet.length
 

@@ -26,17 +26,17 @@ const icon = (name: string) => (
 
 const NAV_ITEMS = [
     {
-        label: 'Bridge Dashboard',
+        label: 'Dashboard',
         path: '/',
         icon: icon('ic-analytics'),
     },
     {
-        label: 'Bridge Transactions',
+        label: 'Transactions',
         path: paths.transactions.root,
         icon: icon('ic-parameter'),
     },
     {
-        label: 'Bridge Flows',
+        label: 'Flows',
         path: paths.flows.root,
         icon: icon('ic-ecommerce'),
     },
@@ -49,6 +49,11 @@ const NAV_ITEMS = [
         label: 'Leaderboard',
         path: paths.leaderboard.root,
         icon: icon('ic-tour'),
+    },
+    {
+        label: 'Health',
+        path: paths.health.root,
+        icon: icon('ic-banking'),
     },
     {
         label: 'Profile',
