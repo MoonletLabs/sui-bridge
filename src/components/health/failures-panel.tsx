@@ -36,17 +36,17 @@ const ROWS_PER_PAGE = 25
 const SEVERITY: Record<FailureSeverity, { label: string; color: string; hint: string }> = {
     user: {
         label: 'User',
-        color: '#F59E0B',
+        color: '#FBBF24',
         hint: 'Caused by how the transaction was submitted. Usually retryable.',
     },
     protocol: {
         label: 'Protocol',
-        color: '#EF4444',
+        color: '#F87171',
         hint: 'Raised by bridge invariants or committee validation.',
     },
     unknown: {
         label: 'Other',
-        color: '#8B93A7',
+        color: '#B6BECD',
         hint: 'Not mapped to a known bridge abort code.',
     },
 }
@@ -148,8 +148,9 @@ export function FailuresPanel() {
                                                 label={sev.label}
                                                 size="small"
                                                 sx={{
-                                                    bgcolor: alpha(sev.color, 0.16),
+                                                    bgcolor: alpha(sev.color, 0.28),
                                                     color: sev.color,
+                                                    border: `1px solid ${alpha(sev.color, 0.5)}`,
                                                     fontWeight: 700,
                                                     height: 20,
                                                 }}
@@ -162,7 +163,8 @@ export function FailuresPanel() {
                                             <Typography
                                                 variant="caption"
                                                 fontFamily="monospace"
-                                                color="text.disabled"
+                                                color="text.secondary"
+                                                sx={{ wordBreak: 'break-word' }}
                                             >
                                                 {item.location}
                                                 {item.abort_code !== undefined
@@ -266,9 +268,11 @@ export function FailuresPanel() {
                                                             label={r.label}
                                                             size="small"
                                                             sx={{
-                                                                bgcolor: alpha(sev.color, 0.16),
+                                                                bgcolor: alpha(sev.color, 0.28),
                                                                 color: sev.color,
-                                                                fontWeight: 600,
+                                                                border: `1px solid ${alpha(sev.color, 0.5)}`,
+                                                                fontWeight: 700,
+                                                                maxWidth: '100%',
                                                             }}
                                                         />
                                                     </Tooltip>

@@ -34,7 +34,7 @@ import { fDateTime } from 'src/utils/format-time'
 import type { UnclaimedResponse } from 'src/pages/api/health/unclaimed'
 
 const ROWS_PER_PAGE = 25
-type SortBy = 'age' | 'value'
+type SortBy = 'newest' | 'age' | 'value'
 
 const fUsd = (n: number) => {
     if (!Number.isFinite(n)) return '$0'
@@ -63,10 +63,10 @@ const fTokenAmount = (n: number) => {
 
 /** Older + larger transfers are the ones worth chasing */
 const ageTone = (hours: number) => {
-    if (hours >= 8760) return { label: 'Over 1 year', color: '#EF4444' }
-    if (hours >= 720) return { label: 'Over 30 days', color: '#F59E0B' }
-    if (hours >= 24) return { label: 'Over 24 hours', color: '#4DA2FF' }
-    return { label: 'Recent', color: '#22C55E' }
+    if (hours >= 8760) return { label: 'Over 1 year', color: '#F87171' }
+    if (hours >= 720) return { label: 'Over 30 days', color: '#FBBF24' }
+    if (hours >= 24) return { label: 'Over 24 hours', color: '#60A5FA' }
+    return { label: 'Recent', color: '#4ADE80' }
 }
 
 export function UnclaimedTable() {
@@ -81,8 +81,8 @@ export function UnclaimedTable() {
         },
     })
     const [sortBy, setSortBy] = useQueryParamState<SortBy>('usort', {
-        defaultValue: 'age',
-        deserialize: raw => (raw === 'value' ? raw : null),
+        defaultValue: 'newest',
+        deserialize: raw => (raw === 'value' || raw === 'age' ? raw : null),
     })
 
     const query = useMemo(
@@ -153,6 +153,7 @@ export function UnclaimedTable() {
                             }}
                             aria-label="sort unclaimed"
                         >
+                            <ToggleButton value="newest">Newest</ToggleButton>
                             <ToggleButton value="age">Oldest</ToggleButton>
                             <ToggleButton value="value">Largest</ToggleButton>
                         </ToggleButtonGroup>
@@ -171,7 +172,18 @@ export function UnclaimedTable() {
                         </Tooltip>
                     </Box>
                 }
-                sx={{ pb: 1, flexWrap: 'wrap', gap: 1 }}
+                sx={{
+                    pb: 1,
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    // Stack the title and the sort/export controls on small screens
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    '& .MuiCardHeader-action': {
+                        m: { xs: 0, sm: undefined },
+                        alignSelf: { xs: 'flex-start', sm: 'center' },
+                    },
+                }}
             />
 
             <TableContainer sx={{ minHeight: 320 }}>
@@ -239,8 +251,9 @@ export function UnclaimedTable() {
                                                     label={fAge(r.age_hours)}
                                                     size="small"
                                                     sx={{
-                                                        bgcolor: alpha(tone.color, 0.16),
+                                                        bgcolor: alpha(tone.color, 0.28),
                                                         color: tone.color,
+                                                        border: `1px solid ${alpha(tone.color, 0.5)}`,
                                                         fontWeight: 700,
                                                         minWidth: 52,
                                                     }}

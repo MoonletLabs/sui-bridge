@@ -24,7 +24,7 @@ export type UnclaimedResponse = {
     total: number
 }
 
-const SORTS = ['age', 'value'] as const
+const SORTS = ['newest', 'age', 'value'] as const
 type SortBy = (typeof SORTS)[number]
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -36,10 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const rawOffset = Number(req.query.offset)
         const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0
         const sortByParam = req.query.sortBy as SortBy
-        const sortBy: SortBy = SORTS.includes(sortByParam) ? sortByParam : 'age'
+        const sortBy: SortBy = SORTS.includes(sortByParam) ? sortByParam : 'newest'
 
-        const orderBy = sortBy === 'value' ? sql`amount_usd DESC NULLS LAST` : sql`timestamp_ms ASC`
-
+        const orderBy =
+            sortBy === 'value'
+                ? sql`amount_usd DESC NULLS LAST`
+                : sortBy === 'age'
+                  ? sql`timestamp_ms ASC`
+                  : sql`timestamp_ms DESC`
         const [rows, countRows] = await Promise.all([
             sql`
                 WITH deposited AS (
