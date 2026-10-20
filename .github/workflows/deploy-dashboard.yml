@@ -20,16 +20,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup nodejs
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20.x"
           cache: "npm"
 
       - name: Cache node modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: cache
         with:
           path: "**/node_modules"
@@ -44,7 +44,7 @@ jobs:
           yarn build-dashboard-image --tag $GITHUB_IMAGE
 
       - name: Log in to the Github Container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -64,7 +64,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Update image name in env file
         run: |
@@ -92,7 +92,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Update image name in env file
         run: |
