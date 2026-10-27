@@ -23,7 +23,7 @@
         "start:out": "npx serve@latest out -p 8083"
     },
     "engines": {
-        "node": "20.x"
+        "node": "22.x"
     },
     "packageManager": "yarn@1.22.22",
     "dependencies": {
