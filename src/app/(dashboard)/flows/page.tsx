@@ -26,6 +26,7 @@ import { getNetwork } from 'src/hooks/get-network-storage'
 import { DashboardContent } from 'src/layouts/dashboard'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { endpoints, fetcher } from 'src/utils/axios'
+import { useTokenRegistry } from 'src/hooks/use-token-registry'
 import { FlowRow, getTokensList } from 'src/utils/types'
 import { useQueryParamState } from 'src/hooks/use-query-param-state'
 
@@ -70,6 +71,9 @@ export default function FlowsPage() {
         fetcher,
         { revalidateOnFocus: false },
     )
+
+    // Re-render when a newly listed token is registered
+    useTokenRegistry()
 
     // Helpers tied to current network config.
     const tokenList = getTokensList(network)

@@ -14,6 +14,7 @@ import { getNetwork } from 'src/hooks/get-network-storage'
 import { useGlobalContext } from 'src/provider/global-provider'
 import { NotFoundView } from 'src/sections/error'
 import { endpoints, fetcher } from 'src/utils/axios'
+import { useTokenRegistry } from 'src/hooks/use-token-registry'
 import { getTokenMeta } from 'src/utils/token-meta'
 import type { TokenOverviewResponse } from 'src/pages/api/token/[id]/overview'
 
@@ -24,6 +25,9 @@ interface PageProps {
 export default function TokenDetailPage({ params: { id } }: PageProps) {
     const network = getNetwork()
     const { timePeriod } = useGlobalContext()
+
+    // Pick up tokens listed after the bundled config was built
+    useTokenRegistry()
 
     const numericId = Number(id)
     const meta = getTokenMeta(network, numericId)

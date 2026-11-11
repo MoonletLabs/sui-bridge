@@ -62,6 +62,7 @@ export const endpoints = {
         latency: '/api/health/latency',
     },
     token: {
+        registry: '/api/token/registry',
         summary: '/api/token/summary',
         overview: (id: number) => `/api/token/${id}/overview`,
         volume: (id: number) => `/api/token/${id}/volume`,

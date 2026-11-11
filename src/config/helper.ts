@@ -1,51 +1,36 @@
-import { ChainType, CoinType, NetworkConfigType } from 'src/utils/types'
+import type { ChainType, CoinType, NetworkConfigType } from 'src/utils/types'
 import { NETWORK } from 'src/hooks/get-network-storage'
 import { NextApiRequest } from 'next'
 import { endpoints } from 'src/utils/axios'
 
-const TOKEN_LIST: Record<number, CoinType> = {
-    2: {
-        id: 2,
-        name: 'ETH',
-        deno: Math.pow(10, 8),
-        coingeckoId: 'ethereum',
-    },
-
-    4: {
-        id: 4,
-        name: 'USDT',
-        deno: Math.pow(10, 6),
-        coingeckoId: 'tether',
-    },
-
-    1: {
-        id: 1,
-        name: 'WBTC',
-        deno: Math.pow(10, 8),
-        coingeckoId: 'bitcoin',
-    },
-
-    6: {
-        id: 6,
-        name: 'WLBTC',
-        deno: Math.pow(10, 8),
-        coingeckoId: 'bitcoin',
-    },
-
-    3: {
-        id: 3,
-        name: 'USDC',
-        deno: Math.pow(10, 6),
-        coingeckoId: 'usd-coin',
-    },
-
-    5: {
-        id: 5,
-        name: 'Pepe',
-        deno: Math.pow(10, 8), // teoretic are 18 decimals dar aici se seteaza doar 8 ??
-        coingeckoId: 'pepe',
-    },
+/**
+ * Static metadata for tokens we know about. The bridge `prices` table is the
+ * source of truth for which token ids exist on each network, their ticker and
+ * their denominator; this table only adds what the DB does not hold
+ * (CoinGecko id). Tokens that appear in the DB but not here are registered
+ * dynamically with `registerCoins`, so a newly listed token shows up without
+ * a code change.
+ *
+ * Verified against both mainnet and testnet `prices` tables: the ids, tickers
+ * and denominators below are identical on the two networks. Amounts are
+ * normalised by the bridge to at most 8 decimals, which is why e.g. Pepe (18
+ * decimals on Ethereum) has a denominator of 10^8.
+ */
+const KNOWN_COINS: Record<number, CoinType> = {
+    1: { id: 1, name: 'WBTC', deno: Math.pow(10, 8), coingeckoId: 'bitcoin' },
+    2: { id: 2, name: 'ETH', deno: Math.pow(10, 8), coingeckoId: 'ethereum' },
+    3: { id: 3, name: 'USDC', deno: Math.pow(10, 6), coingeckoId: 'usd-coin' },
+    4: { id: 4, name: 'USDT', deno: Math.pow(10, 6), coingeckoId: 'tether' },
+    5: { id: 5, name: 'Pepe', deno: Math.pow(10, 8), coingeckoId: 'pepe' },
+    6: { id: 6, name: 'WLBTC', deno: Math.pow(10, 8), coingeckoId: 'bitcoin' },
 }
+
+/** True for tokens shipped in the bundled config (as opposed to ones registered at runtime) */
+export const isBundledToken = (id: number) => id in KNOWN_COINS
+
+/** Each network gets its own copy so registering a token on one never leaks into the other */
+const cloneCoins = (): Record<number, CoinType> =>
+    Object.fromEntries(Object.entries(KNOWN_COINS).map(([id, coin]) => [id, { ...coin }]))
 
 const NETWORK_CONFIG: {
     testnet: NetworkConfigType
@@ -56,15 +41,74 @@ const NETWORK_CONFIG: {
             SUI: 1,
             ETH: 11,
         },
-        coins: TOKEN_LIST, // todo: CHECK IF THE TOKENS HAVE SAME ID ON MAINNET & TESTNET !!
+        coins: cloneCoins(),
     },
     mainnet: {
         networkId: {
             SUI: 0,
             ETH: 10,
         },
-        coins: TOKEN_LIST, // todo: CHECK IF THE TOKENS HAVE SAME ID ON MAINNET & TESTNET !!
+        coins: cloneCoins(),
     },
+}
+
+// ----------------------------------------------------------------------
+// Dynamic token registry (shared by the API routes and, via /api/token/registry, the UI)
+
+let coinsVersion = 0
+const coinListeners = new Set<() => void>()
+
+export const subscribeCoins = (listener: () => void) => {
+    coinListeners.add(listener)
+    return () => {
+        coinListeners.delete(listener)
+    }
+}
+
+/** Bumped whenever the registry changes; used with useSyncExternalStore */
+export const getCoinsVersion = () => coinsVersion
+
+/**
+ * Merge tokens reported by the bridge `prices` table into the network config:
+ * unknown ids are added, and the DB denominator wins for known ids.
+ * Returns true when something changed.
+ */
+export const registerCoins = (
+    network: NETWORK,
+    rows: { token_id: number; name: string; denominator?: number | string | null }[],
+): boolean => {
+    const coins = NETWORK_CONFIG[network]?.coins
+    if (!coins) return false
+
+    let changed = false
+    for (const row of rows) {
+        const id = Number(row.token_id)
+        const denominator = Number(row.denominator)
+        const existing = coins[id]
+
+        if (!existing) {
+            coins[id] = {
+                id,
+                name: row.name || `Token ${id}`,
+                deno: Number.isFinite(denominator) && denominator > 0 ? denominator : 1,
+                coingeckoId: '',
+            }
+            changed = true
+        } else if (
+            Number.isFinite(denominator) &&
+            denominator > 0 &&
+            existing.deno !== denominator
+        ) {
+            existing.deno = denominator
+            changed = true
+        }
+    }
+
+    if (changed) {
+        coinsVersion += 1
+        coinListeners.forEach(listener => listener())
+    }
+    return changed
 }
 
 export interface INetworkConfig {
