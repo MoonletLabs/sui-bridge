@@ -71,7 +71,6 @@ export function TokenSizeHistogram({ tokenId, tokenColor }: Props) {
         },
         legend: { show: false },
         tooltip: {
-            theme: 'dark',
             y: {
                 formatter: (v: number) =>
                     metric === 'usd'

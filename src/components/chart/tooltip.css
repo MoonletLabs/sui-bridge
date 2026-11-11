@@ -1,0 +1,60 @@
+/**
+ * Unified tooltip frame.
+ *
+ * ApexCharts applies its own light/dark tooltip theme classes, which made
+ * tooltips look different from chart to chart. These rules give every
+ * tooltip - built-in or custom (see utils/chart-tooltip.ts) - the same frame,
+ * driven by the app's theme variables.
+ */
+.apexcharts-canvas .apexcharts-tooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark) {
+  min-width: 140px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  color: var(--palette-text-primary);
+  border: 1px solid rgba(var(--palette-grey-500Channel) / 0.24);
+  background-color: rgba(var(--palette-background-defaultChannel) / 0.96);
+  box-shadow: var(--customShadows-dropdown);
+  backdrop-filter: blur(6px);
+}
+.apexcharts-canvas
+  .apexcharts-tooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark)
+  .apexcharts-tooltip-title {
+  margin: 0 0 4px;
+  padding: 8px 12px;
+  font-weight: 700;
+  text-align: left;
+  color: var(--palette-text-secondary);
+  background-color: rgba(var(--palette-grey-500Channel) / 0.08);
+  border-bottom: 1px solid rgba(var(--palette-grey-500Channel) / 0.16);
+}
+.apexcharts-canvas
+  .apexcharts-tooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark)
+  .apexcharts-tooltip-text,
+.apexcharts-canvas
+  .apexcharts-tooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark)
+  .apexcharts-tooltip-text-y-label,
+.apexcharts-canvas
+  .apexcharts-tooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark)
+  .apexcharts-tooltip-text-y-value {
+  color: var(--palette-text-primary);
+}
+.apexcharts-canvas
+  .apexcharts-tooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark)
+  .apexcharts-tooltip-text-y-label {
+  color: var(--palette-text-secondary);
+}
+.apexcharts-canvas .apexcharts-xaxistooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark) {
+  border-radius: 8px;
+  color: var(--palette-text-primary);
+  border: 1px solid rgba(var(--palette-grey-500Channel) / 0.24);
+  background-color: rgba(var(--palette-background-defaultChannel) / 0.96);
+}
+.apexcharts-canvas
+  .apexcharts-xaxistooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark)::before {
+  border-bottom-color: rgba(var(--palette-grey-500Channel) / 0.24);
+}
+.apexcharts-canvas
+  .apexcharts-xaxistooltip:is(.apexcharts-theme-light, .apexcharts-theme-dark)::after {
+  border-bottom-color: rgba(var(--palette-background-defaultChannel) / 0.96);
+}

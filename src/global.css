@@ -21,6 +21,7 @@
 *************************************** */
 /* scrollbar */
 @import './components/scrollbar/styles.css';
+@import './components/chart/tooltip.css';
 
 /** **************************************
 * Baseline

@@ -2,6 +2,7 @@
 
 import { Box, Card, CardHeader, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import { useMemo, useState } from 'react'
+import { renderTooltip } from 'src/utils/chart-tooltip'
 import useSWR from 'swr'
 import { Chart, useChart } from 'src/components/chart'
 import { getNetwork } from 'src/hooks/get-network-storage'
@@ -104,34 +105,10 @@ export default function TransferSizeHistogram() {
                         : Number(value).toLocaleString()
                 void seriesIndex
                 const label = metric === 'usd' ? 'Volume (USD)' : 'Transfers'
-                return `
-                    <div style="
-                        background: rgba(22, 28, 36, 0.92);
-                        color: #fff;
-                        border-radius: 8px;
-                        padding: 8px 12px;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-                        font-size: 12px;
-                        min-width: 140px;
-                    ">
-                        <div style="
-                            font-weight: 600;
-                            color: rgba(255,255,255,0.75);
-                            margin-bottom: 4px;
-                        ">${category}</div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="
-                                width: 8px;
-                                height: 8px;
-                                border-radius: 50%;
-                                background: ${color};
-                                display: inline-block;
-                            "></span>
-                            <span style="color: rgba(255,255,255,0.75);">${label}:</span>
-                            <span style="margin-left: auto; font-weight: 600;">${formatted}</span>
-                        </div>
-                    </div>
-                `
+                return renderTooltip({
+                    title: category,
+                    rows: [{ label, color, value: formatted }],
+                })
             },
         },
     })
