@@ -26,7 +26,7 @@ import {
     Typography,
 } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PageTitle } from 'src/components/page-title'
 import { TransactionDetailSkeleton } from 'src/components/skeletons'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
@@ -191,6 +191,12 @@ export function TransactionView({ tx }: { tx: string }) {
     const network = getNetwork()
     const router = useRouter()
     const [linkCopied, setLinkCopied] = useState(false)
+    // Re-render periodically so the "delayed" banner appears even when polled data is unchanged
+    const [now, setNow] = useState(() => Date.now())
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 30000)
+        return () => clearInterval(id)
+    }, [])
 
     const { data, isLoading } = useSWR<TransactionResponse>(
         `${endpoints.transaction}/${tx}?network=${network}`,
@@ -198,7 +204,9 @@ export function TransactionView({ tx }: { tx: string }) {
         // A transfer in progress changes: keep refreshing until it is claimed
         {
             refreshInterval: current =>
-                current && current.history.some(h => h.status === 'Claimed') ? 0 : 20000,
+                current && current.history.some(h => h.status === 'Claimed' && h.is_finalized)
+                    ? 0
+                    : 20000,
         },
     )
 
@@ -247,7 +255,7 @@ export function TransactionView({ tx }: { tx: string }) {
     const { tx: transfer, history, typical, sender } = data
     const isSuiToEth = transfer.from_chain === 'SUI'
     const ticker = transfer.token_info.name
-    const banner = buildBanner(steps, isSuiToEth, typical, Date.now())
+    const banner = buildBanner(steps, isSuiToEth, typical, now)
 
     // Explorer links: the deposit, plus the approval/claim when it is a different transaction
     const depositItem = steps[0].item

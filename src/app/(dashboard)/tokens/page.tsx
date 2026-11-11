@@ -360,7 +360,13 @@ function TokenTable({
                                     <Stack direction="row" spacing={1.5} alignItems="center">
                                         <TokenIcon meta={r.meta} size={32} />
                                         <Box>
-                                            <Typography variant="subtitle2">
+                                            <Typography
+                                                variant="subtitle2"
+                                                component={Link}
+                                                href={paths.tokens.details(r.token_id)}
+                                                color="inherit"
+                                                sx={{ textDecoration: 'none', display: 'block' }}
+                                            >
                                                 {r.meta.ticker}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">

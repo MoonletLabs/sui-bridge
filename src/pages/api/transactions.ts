@@ -55,6 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .split(',')
             .map(t => t.trim())
             .filter(Boolean)
+        // Make sure the token registry is loaded (cold process) before resolving tickers
+        await getPrices(networkConfig.network)
         const tokenIds = Object.values(networkConfig.config.coins)
             .filter(coin => wantedTokens.includes(coin.name))
             .map(coin => coin.id)

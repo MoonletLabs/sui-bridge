@@ -325,20 +325,27 @@ export function TransactionsTable({
     // top of the live feed is held back behind a "N new" pill, so rows don't
     // jump under the cursor; any change the user makes applies immediately.
     const [shown, setShown] = useState<{ url: string; data: TxResponse } | null>(null)
-    const [pendingNew, setPendingNew] = useState<{ data: TxResponse; count: number } | null>(null)
+    const [pendingNew, setPendingNew] = useState<{
+        url: string
+        data: TxResponse
+        count: number
+    } | null>(null)
     const liveFeed = fullPage && page === 0 && sort.by === 'date' && sort.order === 'desc'
 
     useEffect(() => {
         if (!data) {
+            setPendingNew(null)
             return
         }
         if (shown && shown.url === requestUrl && liveFeed) {
-            const oldTop = shown.data.transactions[0]?.tx_hash
-            const newTop = data.transactions[0]?.tx_hash
-            if (oldTop && newTop && oldTop !== newTop) {
-                const idx = data.transactions.findIndex(t => t.tx_hash === oldTop)
-                const count = idx >= 0 ? idx : Math.max(1, data.total - shown.data.total)
-                setPendingNew({ data, count })
+            // New transfers are the rows above the first row we already show. A row
+            // that disappeared (e.g. got approved under the "awaiting" filter) or
+            // older rows entering at the bottom are not new: apply those at once.
+            const known = new Set(shown.data.transactions.map(t => t.tx_hash))
+            const firstKnown = data.transactions.findIndex(t => known.has(t.tx_hash))
+            const count = firstKnown === -1 ? data.transactions.length : firstKnown
+            if (shown.data.transactions.length > 0 && count > 0) {
+                setPendingNew({ url: requestUrl, data, count })
                 return
             }
         }
@@ -346,6 +353,9 @@ export function TransactionsTable({
         setPendingNew(null)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data, requestUrl])
+
+    // A pill that belongs to a previous filter/page/sort must never be shown or applied
+    const pendingForView = pendingNew && pendingNew.url === requestUrl ? pendingNew : null
 
     const view = shown && shown.url === requestUrl ? shown.data : data
 
@@ -573,10 +583,10 @@ export function TransactionsTable({
                             hasActiveFilters={hasActiveFilters}
                             total={view?.total}
                             totalUsd={view?.total_usd}
-                            pendingNew={pendingNew?.count}
+                            pendingNew={pendingForView?.count}
                             onShowNew={() => {
-                                if (pendingNew) {
-                                    setShown({ url: requestUrl, data: pendingNew.data })
+                                if (pendingForView) {
+                                    setShown({ url: requestUrl, data: pendingForView.data })
                                     setPendingNew(null)
                                 }
                             }}
@@ -1217,9 +1227,16 @@ const TransactionCard: React.FC<{
 
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                 {tokenIcon && <img src={tokenIcon} alt="" style={{ width: 22, height: 22 }} />}
-                <Typography variant="h6" fontWeight="bold">
-                    {fNumber(row.amount)} {row.token_info.name}
-                </Typography>
+                <Link
+                    href={`${paths.transactions.root}/${row.tx_hash}`}
+                    color="inherit"
+                    underline="none"
+                    aria-label={`View transfer details: ${fNumber(row.amount)} ${row.token_info.name}`}
+                >
+                    <Typography variant="h6" fontWeight="bold" component="span">
+                        {fNumber(row.amount)} {row.token_info.name}
+                    </Typography>
+                </Link>
                 <Typography variant="caption" color="text.secondary">
                     ≈ ${fNumber(row.amount_usd)}
                 </Typography>

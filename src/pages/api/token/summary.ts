@@ -91,16 +91,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             `,
         ])
 
-        // Align every token's series on the same buckets so the UI can draw them directly
-        const buckets = Array.from(
-            new Set((seriesRows as any[]).map(r => Number(r.bucket_ms))),
-        ).sort((a, b) => a - b)
+        // Full bucket grid for the period (same truncation as the series query), so quiet
+        // intervals show as zero instead of being skipped
+        const gridRows = await sql`
+            SELECT (EXTRACT(EPOCH FROM g) * 1000)::BIGINT AS bucket_ms
+            FROM generate_series(
+                DATE_TRUNC(${trunc}, TO_TIMESTAMP(${fromInterval}::BIGINT / 1000)),
+                DATE_TRUNC(${trunc}, TO_TIMESTAMP(${toInterval}::BIGINT / 1000)),
+                (${'1 ' + trunc})::INTERVAL
+            ) AS g
+            ORDER BY 1 ASC
+        `
+        const buckets = (gridRows as any[]).map(r => Number(r.bucket_ms))
         const bucketIndex = new Map(buckets.map((b, i) => [b, i]))
         const sparkByToken: Record<number, number[]> = {}
         for (const r of seriesRows as any[]) {
             const id = Number(r.token_id)
             if (!sparkByToken[id]) sparkByToken[id] = new Array(buckets.length).fill(0)
-            sparkByToken[id][bucketIndex.get(Number(r.bucket_ms))!] = Number(r.volume_usd) || 0
+            const idx = bucketIndex.get(Number(r.bucket_ms))
+            if (idx !== undefined) sparkByToken[id][idx] = Number(r.volume_usd) || 0
         }
 
         const prevByToken: Record<number, number> = {}
@@ -108,7 +117,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             prevByToken[Number(row.token_id)] = Number(row.total_volume_usd) || 0
         }
 
-        const rows: TokenSummaryRow[] = (current as any[]).map((row: any) => ({
+        // Tokens with volume only in the previous period still count towards the change
+        const currentIds = new Set((current as any[]).map(r => Number(r.token_id)))
+        const currentRows = [
+            ...(current as any[]),
+            ...(previous as any[])
+                .filter(r => !currentIds.has(Number(r.token_id)))
+                .map(r => ({ token_id: r.token_id })),
+        ]
+
+        const rows: TokenSummaryRow[] = currentRows.map((row: any) => ({
             spark: sparkByToken[Number(row.token_id)] ?? new Array(buckets.length).fill(0),
             token_id: Number(row.token_id),
             inflow_usd: Number(row.inflow_usd) || 0,

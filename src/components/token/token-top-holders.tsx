@@ -21,6 +21,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material'
+import NextLink from 'next/link'
 import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import dayjs from 'dayjs'
@@ -190,6 +191,14 @@ export function TokenTopHolders({ tokenId }: Props) {
                                                     <Typography
                                                         variant="body2"
                                                         fontFamily="monospace"
+                                                        {...(profileHref
+                                                            ? {
+                                                                  component: NextLink,
+                                                                  href: profileHref,
+                                                                  color: 'inherit',
+                                                                  sx: { textDecoration: 'none' },
+                                                              }
+                                                            : {})}
                                                     >
                                                         {truncateAddress(`0x${h.address}`, 6)}
                                                     </Typography>
