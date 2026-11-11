@@ -4,6 +4,7 @@ import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { sendError, sendReply } from '../../utils'
 import db from '../../database'
 import { computerIntervals } from '../../cards'
+import { getPrices } from '../../prices'
 
 export type TokenOverviewResponse = {
     token_id: number
@@ -47,6 +48,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             sendError(res, { code: 400, message: 'Invalid token id' })
             return
         }
+
+        // Make sure tokens listed in the DB after the bundled config are registered, even on a cold process
+        await getPrices(networkConfig.network)
 
         const tokenMeta = networkConfig.config.coins[tokenId]
         if (!tokenMeta) {

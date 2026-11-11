@@ -54,15 +54,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             sql`
                 WITH d AS (
                     SELECT chain_id, nonce, timestamp_ms FROM public.token_transfer
-                    WHERE status = 'Deposited' AND timestamp_ms >= ${startMs}
+                    WHERE status = 'Deposited' AND is_finalized = true AND timestamp_ms >= ${startMs}
                 ),
                 a AS (
                     SELECT chain_id, nonce, timestamp_ms FROM public.token_transfer
-                    WHERE status = 'Approved' AND timestamp_ms >= ${startMs}
+                    WHERE status = 'Approved' AND is_finalized = true AND timestamp_ms >= ${startMs}
                 ),
                 c AS (
                     SELECT chain_id, nonce, timestamp_ms FROM public.token_transfer
-                    WHERE status = 'Claimed' AND timestamp_ms >= ${startMs}
+                    WHERE status = 'Claimed' AND is_finalized = true AND timestamp_ms >= ${startMs}
                 )
                 SELECT
                     d.chain_id,
@@ -83,11 +83,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             sql`
                 WITH d AS (
                     SELECT chain_id, nonce, timestamp_ms FROM public.token_transfer
-                    WHERE status = 'Deposited' AND timestamp_ms >= ${startMs}
+                    WHERE status = 'Deposited' AND is_finalized = true AND timestamp_ms >= ${startMs}
                 ),
                 a AS (
                     SELECT chain_id, nonce, timestamp_ms FROM public.token_transfer
-                    WHERE status = 'Approved' AND timestamp_ms >= ${startMs}
+                    WHERE status = 'Approved' AND is_finalized = true AND timestamp_ms >= ${startMs}
                 )
                 SELECT
                     to_char(to_timestamp(d.timestamp_ms / 1000), 'YYYY-MM-DD') AS date,
