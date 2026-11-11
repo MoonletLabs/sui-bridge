@@ -6,10 +6,17 @@ export const SITE_TITLE = 'Sui Bridge Analytics'
 export const SITE_DESCRIPTION =
     'SUI Bridge Analytics Dashboard - Track bridge transactions, volume, and performance metrics'
 
-/** Link previews (Slack, X, ...) need an absolute image URL */
-export const OG_IMAGE = `${SITE_URL}/og.png`
+/**
+ * Link previews (Slack, X, ...) need an absolute image URL. They also cache the
+ * image by that URL, so bump OG_IMAGE_VERSION whenever public/og.jpg changes,
+ * otherwise they keep showing the old one.
+ * The file is a 2400x1260 JPEG (2x of the 1200x630 card, so text stays sharp when
+ * downscaled) kept under ~300 KB, which WhatsApp requires.
+ */
+const OG_IMAGE_VERSION = 3
+export const OG_IMAGE = `${SITE_URL}/og.jpg?v=${OG_IMAGE_VERSION}`
 
-const ogImages = [{ url: OG_IMAGE, width: 1200, height: 630, alt: SITE_TITLE }]
+const ogImages = [{ url: OG_IMAGE, width: 2400, height: 1260, alt: SITE_TITLE }]
 
 /**
  * Metadata for one route. Next.js replaces (not merges) `openGraph` and `twitter`
