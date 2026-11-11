@@ -18,13 +18,23 @@ type Props = {
     value: string[]
     onChange: (newValue: string[]) => void
     allOption: string
+    /** Custom text for the closed button (defaults to the comma-joined selection) */
+    renderValue?: (value: string[]) => string
     slotProps?: {
         button?: SxProps<Theme>
         popover?: SxProps<Theme>
     }
 }
 
-export function MultiSelect({ options, value, onChange, allOption, slotProps, ...other }: Props) {
+export function MultiSelect({
+    options,
+    value,
+    onChange,
+    allOption,
+    renderValue,
+    slotProps,
+    ...other
+}: Props) {
     const popover = usePopover()
 
     const handleSelect = (option: string) => {
@@ -83,7 +93,11 @@ export function MultiSelect({ options, value, onChange, allOption, slotProps, ..
                         maxWidth: { xs: '150px', md: 'auto' }, // Adjust width on mobile for ellipsis
                     }}
                 >
-                    {value.length > 0 ? value.join(', ') : 'Select options'}
+                    {renderValue
+                        ? renderValue(value)
+                        : value.length > 0
+                          ? value.join(', ')
+                          : 'Select options'}
                 </Typography>
 
                 <Iconify
