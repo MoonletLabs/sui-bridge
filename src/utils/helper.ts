@@ -126,6 +126,12 @@ export const removePrefix = (tx?: string) => {
     return finalTx?.startsWith('0x') || finalTx?.startsWith('0X') ? finalTx?.slice(2) : finalTx
 }
 
+/** `0x` + hex, or an empty string when there is no value (never a bare "0x") */
+export const withHexPrefix = (hex?: string | null) => {
+    const clean = removePrefix(hex ?? undefined)
+    return clean ? `0x${clean}` : ''
+}
+
 export function isHexadecimal(str: string): boolean {
     // This regex allows an optional "0x" prefix and then one or more hexadecimal digits.
     const hexRegex = /^(0x)?[0-9A-Fa-f]+$/
@@ -330,13 +336,16 @@ export const transformTransfers = (
                     let sender_address = it.sender_address
                     let recipient_address = it.recipient_address
 
+                    // Both addresses are 0x-prefixed hex on every chain (Suiscan and
+                    // Etherscan both expect that form); only the tx hash differs
+                    sender_address = withHexPrefix(it.sender_address)
+                    recipient_address = withHexPrefix(it.recipient_address)
+
                     if (it.chain_id === networkConfig.config.networkId.ETH) {
                         tx_hash = `0x${it.tx_hash}`
-                        sender_address = `0x${it.sender_address}`
                     } else {
                         // For SUI transactions, convert only tx_hash to base58 format
                         tx_hash = base58Encode(it.tx_hash)
-                        recipient_address = `0x${it.recipient_address}`
                     }
                     return {
                         ...it,
@@ -362,9 +371,10 @@ export const transformHistory = (data: TransactionHistoryType[]) => {
         ?.map(it => {
             let tx_hash = it.tx_hash
             let txn_sender = it.txn_sender
+            // Senders are 0x-prefixed hex on both chains
+            txn_sender = withHexPrefix(it.txn_sender)
             if (it.data_source === 'ETH') {
                 tx_hash = `0x${it.tx_hash}`
-                txn_sender = `0x${it.txn_sender}`
             } else {
                 // For SUI transactions, convert only tx_hash to base58 format
                 tx_hash = base58Encode(it.tx_hash)
