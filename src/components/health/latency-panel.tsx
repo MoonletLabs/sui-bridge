@@ -132,7 +132,11 @@ export function LatencyPanel() {
                 labels: { formatter: (v: number) => fDuration(v) },
                 title: { text: 'Median approval time (log)' },
             },
-            tooltip: { shared: true, y: { formatter: (v: number) => fDuration(v) } },
+            tooltip: {
+                theme: theme.palette.mode,
+                shared: true,
+                y: { formatter: (v: number) => fDuration(v) },
+            },
             legend: {
                 position: 'top' as const,
                 horizontalAlign: 'right' as const,
