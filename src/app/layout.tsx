@@ -1,7 +1,7 @@
 import 'src/global.css'
 
 // ----------------------------------------------------------------------
-import type { Viewport } from 'next'
+import type { Metadata, Viewport } from 'next'
 
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript'
 
@@ -25,13 +25,34 @@ export const viewport: Viewport = {
     themeColor: primary.main,
 }
 
-export const metadata = {
+const SITE_URL = 'https://suianalytics.io'
+const SITE_TITLE = 'Sui Bridge Analytics'
+// Link previews (Slack, X, ...) need an absolute image URL
+const OG_IMAGE = `${SITE_URL}/og.png`
+const SITE_DESCRIPTION =
+    'SUI Bridge Analytics Dashboard - Track bridge transactions, volume, and performance metrics'
+
+export const metadata: Metadata = {
+    metadataBase: new URL(SITE_URL),
     title: {
         default: 'Sui Analytics',
         template: '%s | Sui Analytics',
     },
-    description:
-        'SUI Bridge Analytics Dashboard - Track bridge transactions, volume, and performance metrics',
+    description: SITE_DESCRIPTION,
+    openGraph: {
+        type: 'website',
+        siteName: 'Sui Analytics',
+        title: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        url: SITE_URL,
+        images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: SITE_TITLE }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        images: [OG_IMAGE],
+    },
     icons: [
         {
             rel: 'icon',
