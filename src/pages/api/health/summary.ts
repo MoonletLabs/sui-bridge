@@ -14,6 +14,12 @@ export type HealthSummaryResponse = {
         pending_approval: number
         /** Approved, waiting for the recipient (or a relayer) to claim */
         awaiting_claim: number
+        /**
+         * Awaiting approval for longer than a normal approval takes (30 min) but
+         * deposited in the last 7 days - i.e. a live problem, not a legacy one.
+         * Drives the header status indicator.
+         */
+        delayed_recent: number
     }
     failures: {
         total: number
@@ -69,6 +75,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                     COUNT(*) FILTER (WHERE NOT is_approved) AS pending_approval,
                     COUNT(*) FILTER (WHERE is_approved) AS awaiting_claim,
                     COUNT(*) FILTER (
+                        WHERE NOT is_approved
+                        AND timestamp_ms < (EXTRACT(EPOCH FROM NOW()) * 1000 - 1800000)
+                        AND timestamp_ms > (EXTRACT(EPOCH FROM NOW()) * 1000 - 604800000)
+                    ) AS delayed_recent,
+                    COUNT(*) FILTER (
                         WHERE timestamp_ms > (EXTRACT(EPOCH FROM NOW()) * 1000 - 604800000)
                     ) AS last_7d
                 FROM stuck
@@ -105,6 +116,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 last_7d: Number(u.last_7d) || 0,
                 pending_approval: Number(u.pending_approval) || 0,
                 awaiting_claim: Number(u.awaiting_claim) || 0,
+                delayed_recent: Number(u.delayed_recent) || 0,
             },
             failures: {
                 total: Number(f.total) || 0,

@@ -1,16 +1,20 @@
 'use client'
 
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import {
-    Tab,
-    Tabs,
     Box,
+    Button,
     Collapse,
+    IconButton,
     List,
     ListItemButton,
     ListItemIcon,
     ListItemText,
-    IconButton,
+    ListSubheader,
+    Menu,
+    MenuItem,
+    Typography,
 } from '@mui/material'
 import { useTheme, alpha } from '@mui/material/styles'
 import { RouterLink } from 'src/routes/components'
@@ -24,117 +28,215 @@ const icon = (name: string) => (
     <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />
 )
 
-const NAV_ITEMS = [
+type NavItem = {
+    label: string
+    description: string
+    path: string
+    icon: React.ReactNode
+    /** Extra path prefixes that should keep this item highlighted */
+    alsoActiveFor?: string[]
+}
+
+type NavGroup = {
+    label: string
+    icon: React.ReactNode
+    items: NavItem[]
+}
+
+/**
+ * Pages are grouped so the header stays at three entries however many pages
+ * we add. Address profiles (/profile) are reached through the search (⌘K) and
+ * from address links, so they have no entry of their own: they highlight
+ * "Activity", the group they belong to.
+ */
+const NAV_GROUPS: NavGroup[] = [
     {
-        label: 'Dashboard',
-        path: '/',
+        label: 'Overview',
         icon: icon('ic-analytics'),
+        items: [
+            {
+                label: 'Dashboard',
+                description: 'Volume, inflows and outflows at a glance',
+                path: '/',
+                icon: icon('ic-analytics'),
+            },
+            {
+                label: 'Flows',
+                description: 'Where value moves between chains and tokens',
+                path: paths.flows.root,
+                icon: icon('ic-ecommerce'),
+            },
+            {
+                label: 'Tokens',
+                description: 'Per-token volume and transfer sizes',
+                path: paths.tokens.root,
+                icon: icon('ic-label'),
+            },
+        ],
     },
     {
-        label: 'Transactions',
-        path: paths.transactions.root,
+        label: 'Activity',
         icon: icon('ic-parameter'),
+        items: [
+            {
+                label: 'Transactions',
+                description: 'Every bridge transfer, searchable',
+                path: paths.transactions.root,
+                icon: icon('ic-parameter'),
+            },
+            {
+                label: 'Leaderboard',
+                description: 'Top bridge users by volume',
+                path: paths.leaderboard.root,
+                icon: icon('ic-tour'),
+                alsoActiveFor: [paths.profile.root],
+            },
+        ],
     },
     {
-        label: 'Flows',
-        path: paths.flows.root,
-        icon: icon('ic-ecommerce'),
-    },
-    {
-        label: 'Tokens',
-        path: paths.tokens.root,
-        icon: icon('ic-label'),
-    },
-    {
-        label: 'Leaderboard',
-        path: paths.leaderboard.root,
-        icon: icon('ic-tour'),
-    },
-    {
-        label: 'Health',
-        path: paths.health.root,
+        label: 'Bridge',
         icon: icon('ic-banking'),
-    },
-    {
-        label: 'Governance',
-        path: paths.governance.root,
-        icon: icon('ic-file'),
-    },
-    {
-        label: 'Profile',
-        path: paths.profile.root,
-        icon: icon('ic-course'),
+        items: [
+            {
+                label: 'Health',
+                description: 'Latency, unclaimed transfers and failures',
+                path: paths.health.root,
+                icon: icon('ic-banking'),
+            },
+            {
+                label: 'Governance',
+                description: 'Transfer limits and committee actions',
+                path: paths.governance.root,
+                icon: icon('ic-file'),
+            },
+        ],
     },
 ]
 
-// Desktop Navigation Tabs
-export function NavTabs() {
+const matches = (pathname: string | null, path: string) =>
+    path === '/' ? pathname === '/' : (pathname?.startsWith(path) ?? false)
+
+const isItemActive = (pathname: string | null, item: NavItem) =>
+    matches(pathname, item.path) || (item.alsoActiveFor ?? []).some(p => matches(pathname, p))
+
+const isGroupActive = (pathname: string | null, group: NavGroup) =>
+    group.items.some(item => isItemActive(pathname, item))
+
+// Desktop navigation: one dropdown button per group
+function NavGroupButton({ group }: { group: NavGroup }) {
     const theme = useTheme()
     const pathname = usePathname()
-
-    // Determine active tab based on pathname
-    const activeTab = NAV_ITEMS.findIndex(item => {
-        if (item.path === '/') {
-            return pathname === '/'
-        }
-        return pathname?.startsWith(item.path) ?? false
-    })
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+    const open = Boolean(anchorEl)
+    const active = isGroupActive(pathname, group)
 
     return (
-        <Tabs
-            value={activeTab === -1 ? 0 : activeTab}
-            sx={{
-                minHeight: 48,
-                '& .MuiTabs-indicator': {
-                    backgroundColor: theme.palette.primary.main,
-                    height: 3,
-                    borderRadius: '3px 3px 0 0',
-                },
-                '& .MuiTabs-flexContainer': {
-                    gap: 1,
-                },
-                '& .MuiTab-root': {
+        <>
+            <Button
+                color="inherit"
+                onClick={e => setAnchorEl(e.currentTarget)}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                startIcon={<Box sx={{ width: 22, height: 22, display: 'flex' }}>{group.icon}</Box>}
+                endIcon={
+                    <Iconify
+                        icon="eva:arrow-ios-downward-fill"
+                        width={16}
+                        sx={{
+                            transition: 'transform 150ms',
+                            transform: open ? 'rotate(180deg)' : 'none',
+                        }}
+                    />
+                }
+                sx={{
+                    position: 'relative',
                     minHeight: 48,
-                    minWidth: 'auto',
                     px: 2,
+                    borderRadius: 0,
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     textTransform: 'none',
-                    color: theme.palette.text.secondary,
-                    '&.Mui-selected': {
-                        color: theme.palette.primary.main,
-                    },
+                    color: active ? theme.palette.primary.main : theme.palette.text.secondary,
                     '&:hover': {
                         color: theme.palette.primary.main,
                         backgroundColor: alpha(theme.palette.primary.main, 0.08),
                     },
-                },
-            }}
-        >
-            {NAV_ITEMS.map(item => (
-                <Tab
-                    key={item.path}
-                    label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    // Same indicator the old tabs used, so the active group reads at a glance
+                    '&::after': active
+                        ? {
+                              content: '""',
+                              position: 'absolute',
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              height: 3,
+                              borderRadius: '3px 3px 0 0',
+                              backgroundColor: theme.palette.primary.main,
+                          }
+                        : undefined,
+                }}
+            >
+                {group.label}
+            </Button>
+
+            <Menu
+                anchorEl={anchorEl}
+                open={open}
+                onClose={() => setAnchorEl(null)}
+                slotProps={{ paper: { sx: { mt: 0.5, minWidth: 300, borderRadius: 1.5 } } }}
+            >
+                {group.items.map(item => {
+                    const itemActive = isItemActive(pathname, item)
+                    return (
+                        <MenuItem
+                            key={item.path}
+                            component={RouterLink}
+                            href={item.path}
+                            selected={itemActive}
+                            onClick={() => setAnchorEl(null)}
+                            sx={{ gap: 1.5, py: 1.25, borderRadius: 1, mx: 0.5 }}
+                        >
                             <Box
                                 sx={{
-                                    width: 22,
-                                    height: 22,
+                                    width: 24,
+                                    height: 24,
                                     display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
+                                    color: itemActive
+                                        ? theme.palette.primary.main
+                                        : theme.palette.text.secondary,
                                 }}
                             >
                                 {item.icon}
                             </Box>
-                            {item.label}
-                        </Box>
-                    }
-                    component={RouterLink}
-                    href={item.path}
-                />
+                            <Box>
+                                <Typography
+                                    variant="subtitle2"
+                                    sx={{
+                                        color: itemActive ? theme.palette.primary.main : undefined,
+                                    }}
+                                >
+                                    {item.label}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {item.description}
+                                </Typography>
+                            </Box>
+                        </MenuItem>
+                    )
+                })}
+            </Menu>
+        </>
+    )
+}
+
+// Desktop Navigation
+export function NavTabs() {
+    return (
+        <Box component="nav" aria-label="Main" sx={{ display: 'flex', gap: 1 }}>
+            {NAV_GROUPS.map(group => (
+                <NavGroupButton key={group.label} group={group} />
             ))}
-        </Tabs>
+        </Box>
     )
 }
 
@@ -151,6 +253,7 @@ export function MobileNavToggle({ open, onToggle }: MobileNavToggleProps) {
         <IconButton
             onClick={onToggle}
             aria-label="Toggle navigation menu"
+            aria-expanded={open}
             sx={{
                 width: 36,
                 height: 36,
@@ -165,7 +268,7 @@ export function MobileNavToggle({ open, onToggle }: MobileNavToggleProps) {
     )
 }
 
-// Mobile Navigation Menu (expandable content)
+// Mobile Navigation Menu (expandable content): the same groups, as sections
 interface MobileNavMenuProps {
     open: boolean
     onClose: () => void
@@ -175,93 +278,109 @@ export function MobileNavMenu({ open, onClose }: MobileNavMenuProps) {
     const theme = useTheme()
     const pathname = usePathname()
 
-    const isActive = (path: string) => {
-        if (path === '/') {
-            return pathname === '/'
-        }
-        return pathname?.startsWith(path) ?? false
-    }
-
     return (
         <Collapse in={open}>
-            <List
-                disablePadding
-                sx={{
-                    py: 1,
-                }}
+            <Box
+                component="nav"
+                aria-label="Main"
+                sx={{ maxHeight: 'calc(100vh - 56px)', overflowY: 'auto' }}
             >
-                {NAV_ITEMS.map(item => {
-                    const active = isActive(item.path)
-                    return (
-                        <ListItemButton
-                            key={item.path}
-                            component={RouterLink}
-                            href={item.path}
-                            onClick={onClose}
-                            sx={{
-                                py: 1.5,
-                                px: 2.5,
-                                borderRadius: 1,
-                                mx: 1,
-                                mb: 0.5,
-                                ...(active && {
-                                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                                    color: theme.palette.primary.main,
-                                }),
-                                '&:hover': {
-                                    backgroundColor: alpha(theme.palette.primary.main, 0.12),
-                                },
-                            }}
-                        >
-                            <ListItemIcon
+                {NAV_GROUPS.map(group => (
+                    <List
+                        key={group.label}
+                        disablePadding
+                        subheader={
+                            <ListSubheader
+                                disableSticky
                                 sx={{
-                                    minWidth: 40,
-                                    color: active
-                                        ? theme.palette.primary.main
-                                        : theme.palette.text.secondary,
+                                    bgcolor: 'transparent',
+                                    lineHeight: '32px',
+                                    px: 3,
+                                    pt: 1,
+                                    typography: 'overline',
+                                    color: 'text.disabled',
                                 }}
                             >
-                                <Box
+                                {group.label}
+                            </ListSubheader>
+                        }
+                    >
+                        {group.items.map(item => {
+                            const active = isItemActive(pathname, item)
+                            return (
+                                <ListItemButton
+                                    key={item.path}
+                                    component={RouterLink}
+                                    href={item.path}
+                                    onClick={onClose}
                                     sx={{
-                                        width: 24,
-                                        height: 24,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
+                                        py: 1.25,
+                                        px: 2.5,
+                                        borderRadius: 1,
+                                        mx: 1,
+                                        mb: 0.5,
+                                        ...(active && {
+                                            backgroundColor: alpha(
+                                                theme.palette.primary.main,
+                                                0.08,
+                                            ),
+                                            color: theme.palette.primary.main,
+                                        }),
+                                        '&:hover': {
+                                            backgroundColor: alpha(
+                                                theme.palette.primary.main,
+                                                0.12,
+                                            ),
+                                        },
                                     }}
                                 >
-                                    {item.icon}
-                                </Box>
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={item.label}
-                                primaryTypographyProps={{
-                                    fontWeight: active ? 700 : 600,
-                                    fontSize: '0.875rem',
-                                }}
-                            />
-                            {active && (
-                                <Box
-                                    sx={{
-                                        width: 6,
-                                        height: 6,
-                                        borderRadius: '50%',
-                                        backgroundColor: theme.palette.primary.main,
-                                    }}
-                                />
-                            )}
-                        </ListItemButton>
-                    )
-                })}
-            </List>
+                                    <ListItemIcon
+                                        sx={{
+                                            minWidth: 40,
+                                            color: active
+                                                ? theme.palette.primary.main
+                                                : theme.palette.text.secondary,
+                                        }}
+                                    >
+                                        <Box
+                                            sx={{
+                                                width: 24,
+                                                height: 24,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            {item.icon}
+                                        </Box>
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={item.label}
+                                        secondary={item.description}
+                                        primaryTypographyProps={{
+                                            fontWeight: active ? 700 : 600,
+                                            fontSize: '0.875rem',
+                                        }}
+                                        secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                    />
+                                    {active && (
+                                        <Box
+                                            sx={{
+                                                width: 6,
+                                                height: 6,
+                                                borderRadius: '50%',
+                                                backgroundColor: theme.palette.primary.main,
+                                            }}
+                                        />
+                                    )}
+                                </ListItemButton>
+                            )
+                        })}
+                    </List>
+                ))}
+            </Box>
             {/* Bottom divider */}
-            <Box
-                sx={{
-                    height: 2,
-                    backgroundColor: theme.palette.divider,
-                    mt: 1,
-                }}
-            />
+            <Box sx={{ height: 2, backgroundColor: theme.palette.divider, mt: 1 }} />
         </Collapse>
     )
 }
