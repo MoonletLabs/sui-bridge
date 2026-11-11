@@ -58,6 +58,7 @@ export const endpoints = {
         summary: '/api/health/summary',
         unclaimed: '/api/health/unclaimed',
         failures: '/api/health/failures',
+        latency: '/api/health/latency',
     },
     token: {
         summary: '/api/token/summary',

@@ -16,6 +16,8 @@ export type UnclaimedTransfer = {
     amount_usd: number
     destination_chain: number
     direction: 'ETH → SUI' | 'SUI → ETH'
+    /** Lifecycle stage: waiting on committee approval, or approved and waiting to be claimed */
+    stage: 'pending_approval' | 'awaiting_claim'
     /** Chain the deposit was made on - drives explorer links for `tx_hash` */
     source_chain: ChainType
     /** 0x prefixed hex on both chains */
@@ -34,6 +36,9 @@ export type UnclaimedResponse = {
 const SORTS = ['newest', 'age', 'value'] as const
 type SortBy = (typeof SORTS)[number]
 
+const STAGES = ['all', 'pending_approval', 'awaiting_claim'] as const
+type StageFilter = (typeof STAGES)[number]
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
@@ -44,6 +49,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0
         const sortByParam = req.query.sortBy as SortBy
         const sortBy: SortBy = SORTS.includes(sortByParam) ? sortByParam : 'newest'
+
+        const stageParam = req.query.stage as StageFilter
+        const stage: StageFilter = STAGES.includes(stageParam) ? stageParam : 'all'
+        const stageFilter =
+            stage === 'pending_approval'
+                ? sql`AND ap.nonce IS NULL`
+                : stage === 'awaiting_claim'
+                  ? sql`AND ap.nonce IS NOT NULL`
+                  : sql``
 
         const orderBy =
             sortBy === 'value'
@@ -62,8 +76,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     SELECT chain_id, nonce
                     FROM public.token_transfer
                     WHERE status = 'Claimed'
+                ),
+                approved AS (
+                    SELECT DISTINCT chain_id, nonce
+                    FROM public.token_transfer
+                    WHERE status = 'Approved'
                 )
                 SELECT
+                    (ap.nonce IS NOT NULL) AS is_approved,
                     d.chain_id,
                     d.nonce,
                     d.timestamp_ms,
@@ -77,10 +97,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     p.denominator
                 FROM deposited d
                 LEFT JOIN claimed c ON c.chain_id = d.chain_id AND c.nonce = d.nonce
+                LEFT JOIN approved ap ON ap.chain_id = d.chain_id AND ap.nonce = d.nonce
                 JOIN public.token_transfer_data td
                     ON td.chain_id = d.chain_id AND td.nonce = d.nonce
                 LEFT JOIN public.prices p ON p.token_id = td.token_id
-                WHERE c.nonce IS NULL
+                WHERE c.nonce IS NULL ${stageFilter}
                 ORDER BY ${orderBy}
                 LIMIT ${limit} OFFSET ${offset}
             `,
@@ -90,13 +111,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 ),
                 claimed AS (
                     SELECT chain_id, nonce FROM public.token_transfer WHERE status = 'Claimed'
+                ),
+                approved AS (
+                    SELECT DISTINCT chain_id, nonce
+                    FROM public.token_transfer
+                    WHERE status = 'Approved'
                 )
                 SELECT COUNT(*) AS total
                 FROM deposited d
                 LEFT JOIN claimed c ON c.chain_id = d.chain_id AND c.nonce = d.nonce
+                LEFT JOIN approved ap ON ap.chain_id = d.chain_id AND ap.nonce = d.nonce
                 JOIN public.token_transfer_data td
                     ON td.chain_id = d.chain_id AND td.nonce = d.nonce
-                WHERE c.nonce IS NULL
+                WHERE c.nonce IS NULL ${stageFilter}
             `,
         ])
 
@@ -126,6 +153,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 amount_usd: Number(row.amount_usd) || 0,
                 destination_chain: Number(row.destination_chain),
                 direction: isInflow ? 'ETH → SUI' : 'SUI → ETH',
+                stage: row.is_approved ? 'awaiting_claim' : 'pending_approval',
                 source_chain: isEthOrigin ? 'ETH' : 'SUI',
                 sender_address: `0x${row.sender_address}`,
                 recipient_address: `0x${row.recipient_address}`,

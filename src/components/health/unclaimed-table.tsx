@@ -35,6 +35,7 @@ import type { UnclaimedResponse } from 'src/pages/api/health/unclaimed'
 
 const ROWS_PER_PAGE = 25
 type SortBy = 'newest' | 'age' | 'value'
+type StageFilter = 'all' | 'pending_approval' | 'awaiting_claim'
 
 const fUsd = (n: number) => {
     if (!Number.isFinite(n)) return '$0'
@@ -91,15 +92,22 @@ export function UnclaimedTable() {
         deserialize: raw => (raw === 'value' || raw === 'age' ? raw : null),
     })
 
+    const [stage, setStage] = useQueryParamState<StageFilter>('ustage', {
+        defaultValue: 'all',
+        deserialize: raw =>
+            raw === 'pending_approval' || raw === 'awaiting_claim' ? (raw as StageFilter) : null,
+    })
+
     const query = useMemo(
         () =>
             new URLSearchParams({
                 network,
                 sortBy,
+                stage,
                 limit: String(ROWS_PER_PAGE),
                 offset: String(page * ROWS_PER_PAGE),
             }).toString(),
-        [network, sortBy, page],
+        [network, sortBy, stage, page],
     )
 
     const { data, isLoading, error } = useSWR<UnclaimedResponse>(
@@ -130,6 +138,7 @@ export function UnclaimedTable() {
             'unclaimed-bridge-transfers',
             rows.map(r => ({
                 tx_hash: r.tx_hash,
+                stage: r.stage,
                 direction: r.direction,
                 token: r.token_name,
                 amount: r.amount,
@@ -162,6 +171,22 @@ export function UnclaimedTable() {
                 subheaderTypographyProps={{ variant: 'body2' }}
                 action={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <ToggleButtonGroup
+                            size="small"
+                            exclusive
+                            value={stage}
+                            onChange={(_, v: StageFilter | null) => {
+                                if (v) {
+                                    setStage(v)
+                                    setPage(0)
+                                }
+                            }}
+                            aria-label="filter unclaimed by stage"
+                        >
+                            <ToggleButton value="all">All</ToggleButton>
+                            <ToggleButton value="pending_approval">Awaiting approval</ToggleButton>
+                            <ToggleButton value="awaiting_claim">Awaiting claim</ToggleButton>
+                        </ToggleButtonGroup>
                         <ToggleButtonGroup
                             size="small"
                             exclusive
@@ -212,6 +237,7 @@ export function UnclaimedTable() {
                     <TableHead>
                         <TableRow>
                             <TableCell>Age</TableCell>
+                            <TableCell>Stage</TableCell>
                             <TableCell>Direction</TableCell>
                             <TableCell>Token</TableCell>
                             <TableCell align="right">Amount</TableCell>
@@ -224,7 +250,7 @@ export function UnclaimedTable() {
                         {isLoading &&
                             Array.from({ length: 8 }).map((_, i) => (
                                 <TableRow key={`sk-${i}`}>
-                                    {Array.from({ length: 7 }).map((__, j) => (
+                                    {Array.from({ length: 8 }).map((__, j) => (
                                         <TableCell key={`sk-${i}-${j}`}>
                                             <Skeleton height={24} />
                                         </TableCell>
@@ -234,7 +260,7 @@ export function UnclaimedTable() {
 
                         {!isLoading && error && (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                                <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
                                     <Typography variant="body2" color="error.main">
                                         Could not load unclaimed transfers. Please try again.
                                     </Typography>
@@ -246,7 +272,7 @@ export function UnclaimedTable() {
                             empty, never when the current page is out of range */}
                         {!isLoading && !error && rows.length === 0 && total === 0 && (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                                <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
                                     <Iconify
                                         icon="solar:check-circle-bold-duotone"
                                         width={40}
@@ -272,6 +298,30 @@ export function UnclaimedTable() {
                                                 <Typography variant="body2" fontWeight={600}>
                                                     {fAge(r.age_hours)}
                                                 </Typography>
+                                            </Tooltip>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Tooltip
+                                                title={
+                                                    r.stage === 'pending_approval'
+                                                        ? 'The bridge committee has not approved this transfer yet'
+                                                        : 'Approved by the committee; waiting for the recipient to claim'
+                                                }
+                                            >
+                                                <Chip
+                                                    label={
+                                                        r.stage === 'pending_approval'
+                                                            ? 'Awaiting approval'
+                                                            : 'Awaiting claim'
+                                                    }
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color={
+                                                        r.stage === 'pending_approval'
+                                                            ? 'warning'
+                                                            : 'default'
+                                                    }
+                                                />
                                             </Tooltip>
                                         </TableCell>
                                         <TableCell>
