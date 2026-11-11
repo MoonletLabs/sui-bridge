@@ -6,6 +6,7 @@ import type { Metadata, Viewport } from 'next'
 import InitColorSchemeScript from '@mui/material/InitColorSchemeScript'
 
 import { CONFIG } from 'src/config-global'
+import { OG_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from 'src/utils/seo'
 import { primary } from 'src/theme/core/palette'
 import { schemeConfig } from 'src/theme/scheme-config'
 import { ThemeProvider } from 'src/theme/theme-provider'
@@ -25,13 +26,6 @@ export const viewport: Viewport = {
     themeColor: primary.main,
 }
 
-const SITE_URL = 'https://suianalytics.io'
-const SITE_TITLE = 'Sui Bridge Analytics'
-// Link previews (Slack, X, ...) need an absolute image URL
-const OG_IMAGE = `${SITE_URL}/og.png`
-const SITE_DESCRIPTION =
-    'SUI Bridge Analytics Dashboard - Track bridge transactions, volume, and performance metrics'
-
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
     title: {
@@ -39,9 +33,11 @@ export const metadata: Metadata = {
         template: '%s | Sui Analytics',
     },
     description: SITE_DESCRIPTION,
+    // Routes override this with their own canonical (see pageMetadata)
+    alternates: { canonical: '/' },
     openGraph: {
         type: 'website',
-        siteName: 'Sui Analytics',
+        siteName: SITE_NAME,
         title: SITE_TITLE,
         description: SITE_DESCRIPTION,
         url: SITE_URL,
@@ -61,6 +57,15 @@ export const metadata: Metadata = {
     ],
 }
 
+const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    alternateName: SITE_TITLE,
+    url: SITE_URL,
+    description: SITE_DESCRIPTION,
+}
+
 type Props = {
     children: React.ReactNode
 }
@@ -69,6 +74,11 @@ export default async function RootLayout({ children }: Props) {
     return (
         <html lang="en" suppressHydrationWarning>
             <body>
+                <script
+                    type="application/ld+json"
+                    // eslint-disable-next-line react/no-danger
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+                />
                 <InitColorSchemeScript
                     defaultMode={schemeConfig.defaultMode}
                     modeStorageKey={schemeConfig.modeStorageKey}
