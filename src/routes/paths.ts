@@ -9,6 +9,7 @@ const ROOTS = {
     FLOWS: '/flows',
     TOKENS: '/tokens',
     HEALTH: '/health',
+    GOVERNANCE: '/governance',
 }
 
 // ----------------------------------------------------------------------
@@ -87,5 +88,10 @@ export const paths = {
     // BRIDGE HEALTH
     health: {
         root: ROOTS.HEALTH,
+    },
+
+    // GOVERNANCE
+    governance: {
+        root: ROOTS.GOVERNANCE,
     },
 }

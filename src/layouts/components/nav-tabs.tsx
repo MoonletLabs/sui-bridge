@@ -56,6 +56,11 @@ const NAV_ITEMS = [
         icon: icon('ic-banking'),
     },
     {
+        label: 'Governance',
+        path: paths.governance.root,
+        icon: icon('ic-file'),
+    },
+    {
         label: 'Profile',
         path: paths.profile.root,
         icon: icon('ic-course'),

@@ -54,6 +54,7 @@ export const endpoints = {
     },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',
+    governance: '/api/governance',
     health: {
         summary: '/api/health/summary',
         unclaimed: '/api/health/unclaimed',
