@@ -1,8 +1,9 @@
 import { IPrice, registerCoins } from 'src/config/helper'
 import db from './database'
 import { NETWORK } from 'src/hooks/get-network-storage'
+import { memoizeAsync } from 'src/utils/api-cache'
 
-export const getPrices = async (network: NETWORK): Promise<IPrice[]> => {
+const fetchPrices = async (network: NETWORK): Promise<IPrice[]> => {
     return await db[network]`
             SELECT token_id, name, price, last_updated, denominator
             FROM public.prices;
@@ -19,3 +20,6 @@ export const getPrices = async (network: NETWORK): Promise<IPrice[]> => {
         )
     })
 }
+
+/** Nearly every route needs prices and they only change every few minutes */
+export const getPrices = memoizeAsync(fetchPrices, network => network, 30)

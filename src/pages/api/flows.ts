@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { calculateStartDate } from 'src/utils/format-chart-data'
@@ -13,7 +14,7 @@ import { sendError, sendReply } from './utils'
  * Returns one row per unique (src_chain, dst_chain, token_id) combo:
  *   { src_chain, dst_chain, token_id, usd, count }
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const timePeriod = (req.query.period as TimePeriod) || 'Last Month'
@@ -50,3 +51,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, error)
     }
 }
+
+export default withCache(handler, 60)

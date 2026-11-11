@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { sendError, sendReply } from '../../utils'
@@ -14,7 +15,7 @@ export type TokenSizeBucket = {
 /**
  * Per-token size histogram. Buckets transfers by their USD value.
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const timePeriod = (req.query.period as TimePeriod) || 'Last Month'
@@ -75,3 +76,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, error)
     }
 }
+
+export default withCache(handler, 60)

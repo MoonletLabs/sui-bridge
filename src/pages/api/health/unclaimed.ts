@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import { base58Encode } from 'src/utils/helper'
@@ -39,7 +40,7 @@ type SortBy = (typeof SORTS)[number]
 const STAGES = ['all', 'pending_approval', 'awaiting_claim'] as const
 type StageFilter = (typeof STAGES)[number]
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const sql = db[networkConfig.network]
@@ -172,3 +173,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, { code: 500, message: 'Failed to load unclaimed transfers' })
     }
 }
+
+export default withCache(handler, 60)

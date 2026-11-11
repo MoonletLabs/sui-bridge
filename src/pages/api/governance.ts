@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import {
@@ -32,7 +33,7 @@ export type GovernanceResponse = {
 /** The table is small (tens of rows) - cap defensively anyway */
 const MAX_ROWS = 1000
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const sql = db[networkConfig.network]
@@ -139,3 +140,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, { code: 500, message: 'Failed to load governance data' })
     }
 }
+
+export default withCache(handler, 60)

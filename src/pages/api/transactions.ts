@@ -67,7 +67,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             networkConfig,
         )
 
-        const query = await sql`
+        // The page, the total and the prices are independent: fetch them together
+        const [query, queryCount, prices] = await Promise.all([
+            sql`
             SELECT
                 encode(t.txn_hash, 'hex')           AS tx_hash,
                 encode(t.sender_address, 'hex')     AS sender_address,
@@ -87,16 +89,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             WHERE
                 is_finalized = true ${conditionalQuery}
             ORDER BY timestamp_ms DESC
-            OFFSET ${offset} LIMIT ${limit}`
-
-        const queryCount = await sql`
+            OFFSET ${offset} LIMIT ${limit}`,
+            sql`
             SELECT COUNT(*)
             FROM token_transfer_data AS t
             JOIN prices AS p
                 ON t.token_id = p.token_id
-            WHERE is_finalized = true ${conditionalQuery}`
+            WHERE is_finalized = true ${conditionalQuery}`,
+            getPrices(networkConfig.network),
+        ])
 
-        const prices = await getPrices(networkConfig.network)
         sendReply(res, {
             transactions: transformTransfers(networkConfig, query as any[], prices),
             total: Number(queryCount?.[0]?.count),

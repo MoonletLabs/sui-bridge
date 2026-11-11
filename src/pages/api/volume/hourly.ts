@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { sendError, sendReply } from '../utils'
 import db from '../database'
@@ -6,7 +7,7 @@ import { setFlowDirection, transformAmount } from 'src/utils/helper'
 import dayjs from 'dayjs'
 import { getPrices } from '../prices'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
 
@@ -44,3 +45,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, error)
     }
 }
+
+export default withCache(handler, 30)

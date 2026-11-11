@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { sendError, sendReply } from './utils'
 import db from './database'
@@ -5,7 +6,7 @@ import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { calculateStartDate } from 'src/utils/format-chart-data'
 import dayjs from 'dayjs'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const timePeriod = (req.query.period as TimePeriod) || 'Last Week'
@@ -47,3 +48,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, error)
     }
 }
+
+export default withCache(handler, 60)

@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { calculateStartDate } from 'src/utils/format-chart-data'
@@ -41,7 +42,7 @@ const num = (v: any): number | null => (v === null || v === undefined ? null : N
  * Transfer latency, derived from the three lifecycle records every transfer has
  * in `token_transfer`: Deposited -> Approved -> Claimed.
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const sql = db[networkConfig.network]
@@ -134,3 +135,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, { code: 500, message: 'Failed to load bridge latency' })
     }
 }
+
+export default withCache(handler, 60)

@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import { sendError, sendReply } from './utils'
@@ -7,7 +8,7 @@ import { getPrices } from './prices'
 import { TimePeriod } from 'src/config/helper'
 import { transformAmount, setFlowDirection, sumQueryField } from 'src/utils/helper'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const timePeriod = (req.query.period as TimePeriod) || 'Last Week'
@@ -30,53 +31,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 ORDER BY transfer_date DESC
             `,
 
-            // Unique addresses query - improved with better CTE naming and structure
+            // Unique addresses, from a single scan of the period. A transfer
+            // involves one address on each chain: on an ETH -> SUI transfer the
+            // sender is the Ethereum address and the recipient the Sui one, and
+            // the other way round for SUI -> ETH.
             db[networkConfig.network]`
-                WITH eth_chain_addresses AS (
-                    SELECT encode(sender_address, 'hex') AS address
+                WITH transfers AS (
+                    SELECT destination_chain, sender_address, recipient_address
                     FROM public.token_transfer_data
-                    WHERE 
+                    WHERE
                         is_finalized = true
                         AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                        AND sender_address IS NOT NULL
-                        AND destination_chain = ${networkConfig.config.networkId.SUI}
-
-                    UNION
-
-                    SELECT encode(recipient_address, 'hex') AS address
-                    FROM public.token_transfer_data
-                    WHERE 
-                        is_finalized = true
-                        AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                        AND recipient_address IS NOT NULL
-                        AND destination_chain = ${networkConfig.config.networkId.ETH}
+                        AND destination_chain IN (${networkConfig.config.networkId.SUI}, ${networkConfig.config.networkId.ETH})
                 ),
                 sui_chain_addresses AS (
-                    SELECT encode(recipient_address, 'hex') AS address
-                    FROM public.token_transfer_data
-                    WHERE 
-                        is_finalized = true
-                        AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                        AND recipient_address IS NOT NULL
-                        AND destination_chain = ${networkConfig.config.networkId.SUI}
-
-                    UNION
-
-                    SELECT encode(sender_address, 'hex') AS address
-                    FROM public.token_transfer_data
-                    WHERE 
-                        is_finalized = true
-                        AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                        AND sender_address IS NOT NULL
-                        AND destination_chain = ${networkConfig.config.networkId.ETH}
+                    SELECT CASE WHEN destination_chain = ${networkConfig.config.networkId.SUI}
+                                THEN recipient_address ELSE sender_address END AS address
+                    FROM transfers
+                ),
+                eth_chain_addresses AS (
+                    SELECT CASE WHEN destination_chain = ${networkConfig.config.networkId.SUI}
+                                THEN sender_address ELSE recipient_address END AS address
+                    FROM transfers
                 )
                 SELECT
-                    (SELECT COUNT(DISTINCT address) FROM sui_chain_addresses) AS unique_sui_addresses,
-                    (SELECT COUNT(DISTINCT address) FROM eth_chain_addresses) AS unique_eth_addresses,
+                    (SELECT COUNT(DISTINCT address) FROM sui_chain_addresses WHERE address IS NOT NULL) AS unique_sui_addresses,
+                    (SELECT COUNT(DISTINCT address) FROM eth_chain_addresses WHERE address IS NOT NULL) AS unique_eth_addresses,
                     (SELECT COUNT(DISTINCT address) FROM (
-                        SELECT address FROM sui_chain_addresses
+                        SELECT address FROM sui_chain_addresses WHERE address IS NOT NULL
                         UNION
-                        SELECT address FROM eth_chain_addresses
+                        SELECT address FROM eth_chain_addresses WHERE address IS NOT NULL
                     ) AS all_addresses) AS total_unique_addresses
             `,
 
@@ -114,3 +98,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, error)
     }
 }
+
+export default withCache(handler, 60)

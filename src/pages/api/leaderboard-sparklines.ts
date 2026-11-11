@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig, TimePeriod } from 'src/config/helper'
 import { sendError, sendReply } from './utils'
@@ -16,7 +17,7 @@ export type SparklineResponse = {
 // Number of segments for the sparkline based on time period
 const SPARKLINE_SEGMENTS = 7
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const timePeriod = (req.query.period as TimePeriod) || 'Last Week'
@@ -106,3 +107,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
     }
 }
+
+export default withCache(handler, 60)
