@@ -1,6 +1,7 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig, TimePeriod } from 'src/config/helper'
-import { sendError, sendReply } from './utils'
+import { parseIntParam, sendError, sendReply } from './utils'
 import db from './database'
 import { computerIntervals } from './cards'
 import { getPrices } from './prices'
@@ -30,14 +31,14 @@ export type LeaderboardResponse = {
     }
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const timePeriod = (req.query.period as TimePeriod) || 'Last Week'
         const addressType = (req.query.addressType as 'all' | 'sui' | 'eth') || 'all'
         const sortBy = (req.query.sortBy as 'volume' | 'count') || 'volume'
-        const limit = Math.min(Number(req.query.limit) || 25, 100)
-        const offset = Number(req.query.offset) || 0
+        const limit = parseIntParam(req.query.limit, 25, 100) || 25
+        const offset = parseIntParam(req.query.offset, 0)
 
         const { fromInterval, toInterval } = computerIntervals(timePeriod, false)
         const prices = await getPrices(networkConfig.network)
@@ -209,3 +210,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
     }
 }
+
+export default withCache(handler, 60)

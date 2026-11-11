@@ -54,12 +54,15 @@ export const endpoints = {
     },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',
+    governance: '/api/governance',
     health: {
         summary: '/api/health/summary',
         unclaimed: '/api/health/unclaimed',
         failures: '/api/health/failures',
+        latency: '/api/health/latency',
     },
     token: {
+        registry: '/api/token/registry',
         summary: '/api/token/summary',
         overview: (id: number) => `/api/token/${id}/overview`,
         volume: (id: number) => `/api/token/${id}/volume`,

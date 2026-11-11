@@ -16,6 +16,7 @@ import { fNumber } from 'src/utils/format-number'
 import { GasUsageDailyType } from 'src/utils/types'
 import useSWR from 'swr'
 import { downloadCsv } from 'src/utils/csv'
+import { renderTooltip, TooltipRow } from 'src/utils/chart-tooltip'
 
 export default function GasUsageChart() {
     const theme = useTheme()
@@ -163,45 +164,17 @@ export default function GasUsageChart() {
                     const timestamp = w.globals.seriesX[0][dataPointIndex]
                     const date = dayjs(timestamp)
                     const formattedDate = date.format('D MMM YYYY')
-                    const tooltips = w.globals.series
-                        .map((_: any, i: any) => {
-                            const value = series[i][dataPointIndex]
-                            if (value === null || value === undefined) return ''
-                            const seriesName = w.globals.seriesNames[i]
-                            const color = w.globals.colors[i]
-                            const formattedValue = `${fNumber(value, { maximumFractionDigits: 7 })}`
-                            return `
-                            <div style="
-                                display: flex;
-                                align-items: center;
-                                padding: 6px;
-                                background-color: rgba(255, 255, 255, 0.8);
-                                color: #333;
-                                border-radius: 4px;
-                                text-align: left;
-                                font-size: 12px;
-                                border-left: 4px solid ${color};
-                                margin-bottom: 4px;">
-                                <span style="margin-left: 8px;">
-                                    <strong>${seriesName}:</strong> ${formattedValue}
-                                </span>
-                            </div>
-                        `
+                    const rows: TooltipRow[] = []
+                    w.globals.series.forEach((_: any, i: number) => {
+                        const value = series[i][dataPointIndex]
+                        if (value === null || value === undefined) return
+                        rows.push({
+                            label: w.globals.seriesNames[i],
+                            color: w.globals.colors[i],
+                            value: fNumber(value, { maximumFractionDigits: 7 }),
                         })
-                        .join('')
-                    return `
-                    <div style="
-                        padding: 8px;
-                        background-color: #e0e0e0;
-                        border-radius: 6px;
-                        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-                        min-width: 120px;
-                        text-align: left;
-                        color: white;">
-                        <strong style="color: black">${formattedDate}</strong>
-                        ${tooltips}
-                    </div>
-                `
+                    })
+                    return renderTooltip({ title: formattedDate, rows })
                 },
             },
             markers: { size: 0 },

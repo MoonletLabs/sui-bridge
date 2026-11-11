@@ -1,6 +1,7 @@
 'use client'
 import { Box, Card, CardHeader, CircularProgress, Grid, Typography, Button } from '@mui/material'
 import dayjs from 'dayjs'
+import { renderTooltip } from 'src/utils/chart-tooltip'
 import { useMemo } from 'react'
 import { Chart, useChart } from 'src/components/chart'
 import { BridgePerformanceChartLoading } from '../skeletons/bridge-performance-chart-loading'
@@ -89,44 +90,14 @@ export default function BridgePerformanceChart() {
                 const ethVal = series?.[1]?.[dataPointIndex] ?? 0
                 const total = (suiVal || 0) + (ethVal || 0)
 
-                const row = (label: string, color: string, value: number) => `
-                    <div style="
-                        display: flex;
-                        align-items: center;
-                        padding: 6px;
-                        background-color: rgba(255, 255, 255, 0.85);
-                        color: #333;
-                        border-radius: 4px;
-                        text-align: left;
-                        font-size: 12px;
-                        border-left: 4px solid ${color};
-                        margin-bottom: 4px;">
-                        <span style="margin-left: 8px;"><strong>${label}:</strong> ${fNumber(value)}</span>
-                    </div>`
-
-                return `
-                    <div style="
-                        padding: 8px;
-                        background-color: #e0e0e0;
-                        border-radius: 6px;
-                        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-                        min-width: 160px;
-                        text-align: left;
-                        color: white;">
-                        <strong style="color: black">${formattedDate}</strong>
-                        ${row('Inflow (to SUI)', '#00A76F', suiVal)}
-                        ${row('Outflow (to ETH)', '#FF5630', ethVal)}
-                        <div style="
-                            margin-top: 6px;
-                            padding: 6px;
-                            background-color: rgba(0, 0, 0, 0.75);
-                            color: #fff;
-                            border-radius: 4px;
-                            font-size: 12px;">
-                            <strong>Total:</strong> ${fNumber(total)}
-                        </div>
-                    </div>
-                `
+                return renderTooltip({
+                    title: formattedDate,
+                    rows: [
+                        { label: 'Inflow (to SUI)', color: '#00A76F', value: fNumber(suiVal) },
+                        { label: 'Outflow (to ETH)', color: '#FF5630', value: fNumber(ethVal) },
+                    ],
+                    total: { label: 'Total', value: fNumber(total) },
+                })
             },
         },
         markers: { size: 0 },

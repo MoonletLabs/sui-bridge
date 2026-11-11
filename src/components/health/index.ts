@@ -1,3 +1,5 @@
 export * from './health-stats'
 export * from './unclaimed-table'
 export * from './failures-panel'
+export * from './latency-panel'
+export * from './health-status-pill'

@@ -1,3 +1,4 @@
+import { NEGATIVE_COLOR, renderTooltip, TooltipOptions, TooltipRow } from './chart-tooltip'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
@@ -147,6 +148,9 @@ export const formatCategories = (data: ChartDataItem[], timePeriod: string) => {
     })
 }
 
+/** Predates the first bridge transfer on both networks (testnet: Jun 2024). */
+export const ALL_TIME_START = '2024-01-01T00:00:00Z'
+
 export const calculateStartDate = (timePeriod: string) => {
     switch (timePeriod) {
         case 'Last 24h':
@@ -160,7 +164,7 @@ export const calculateStartDate = (timePeriod: string) => {
         case 'Last year':
             return dayjs().subtract(365, 'day')
         case 'All time':
-            return dayjs().subtract(1000, 'day')
+            return dayjs(ALL_TIME_START)
         default:
             return dayjs().subtract(30, 'day')
     }
@@ -226,96 +230,54 @@ export const buildTooltip = (opt: {
                 .map((_: any, i: any) => i)
                 .filter((i: any) => !w.globals.collapsedSeriesIndices.includes(i))
 
-            const tooltips = activeSeriesIndices
-                .map((i: string | number) => {
-                    const seriesName = w.globals.seriesNames[i] || 'Unknown'
-                    let value = series[i][dataPointIndex]
-                    const color = w.globals.colors[i]
+            const rows: TooltipRow[] = []
+            activeSeriesIndices.forEach((i: number) => {
+                const seriesName = w.globals.seriesNames[i] || 'Unknown'
+                const value = series[i][dataPointIndex]
+                if (value === undefined || value === null || value === 0) return
+                const color = w.globals.colors[i]
 
-                    // Add value_token logic
-                    const valueToken = chartData?.find(it => it.name === seriesName)?.data?.[
-                        dataPointIndex
-                    ]?.value_token
+                const valueToken = chartData?.find(it => it.name === seriesName)?.data?.[
+                    dataPointIndex
+                ]?.value_token
 
-                    const textColor = (showToken ? valueToken : value) < 0 ? '#FF5630' : ''
+                const negative = (showToken ? valueToken : value) < 0
+                const usd = `${value < 0 ? '-' : ''}$${Math.abs(Number(value.toFixed(0))).toLocaleString()}`
 
-                    let formattedValue
-                    const valWithSign =
-                        value < 0
-                            ? ` -$${Math.abs(Number(value.toFixed(0))).toLocaleString()}`
-                            : ` $${Number(value?.toFixed(0)).toLocaleString()}`
-                    if (!showToken) {
-                        // Directly create the span for dollar value
-                        formattedValue = `<span style="color: ${textColor};">${valWithSign}</span>`
-                    } else {
-                        // Show token value first, then value in dollars (dollars smaller and lighter)
-                        formattedValue = `<span style="color: ${textColor};">${fNumber(valueToken)}</span> <span style="font-size: 10px; color: ${textColor || '#888'}; margin-left: 4px;">${valWithSign}</span>`
-                    }
+                rows.push(
+                    showToken
+                        ? {
+                              label: seriesName,
+                              color,
+                              value: fNumber(valueToken),
+                              secondary: usd,
+                              valueColor: negative ? NEGATIVE_COLOR : undefined,
+                          }
+                        : {
+                              label: seriesName,
+                              color,
+                              value: usd,
+                              valueColor: negative ? NEGATIVE_COLOR : undefined,
+                          },
+                )
+            })
 
-                    return value !== undefined && value !== 0
-                        ? `
-                        <div style="
-                            display: flex;
-                            align-items: center;
-                            padding: 6px;
-                            background-color: rgba(255, 255, 255, 0.8); /* Transparent background */
-                            color: #333;
-                            border-radius: 4px;
-                            text-align: left;
-                            font-size: 12px;
-                            border-left: 4px solid ${color};
-                            margin-bottom: 4px;">
-                            <span style="margin-left: 8px;">
-                                <strong>${seriesName}:</strong>
-                                ${formattedValue}
-                            </span>
-                        </div>
-                    `
-                        : ''
-                })
-                .join('')
+            if (!rows.length) return ''
 
-            let total = 0
+            let total: TooltipOptions['total']
             if (showTotal) {
-                total = activeSeriesIndices.reduce((sum: any, i: any) => {
-                    const value = series?.[i]?.[dataPointIndex]
-                    return sum + (value || 0)
-                }, 0)
+                const sum = activeSeriesIndices.reduce(
+                    (acc: number, i: number) => acc + (series?.[i]?.[dataPointIndex] || 0),
+                    0,
+                )
+                total = {
+                    label: 'Total',
+                    value: `${sum < 0 ? '-' : ''}$${Math.abs(Math.round(sum)).toLocaleString()}`,
+                    valueColor: sum < 0 ? NEGATIVE_COLOR : undefined,
+                }
             }
 
-            const textColor = total < 0 ? '#FF5630' : ''
-
-            const totalTooltip = showTotal
-                ? `
-                    <div style="
-                        margin-top: 8px;
-                        padding: 6px;
-                        background-color: rgba(0, 0, 0, 0.8);
-                        color: white;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        text-align: left;">
-                        <strong>Total:</strong> <span style="color: ${textColor}">$${Math.round(total).toLocaleString()}</span>
-                    </div>
-                `
-                : ''
-
-            return tooltips.trim()
-                ? `
-                    <div style="
-                        padding: 8px;
-                        background-color: #e0e0e0;
-                        border-radius: 6px;
-                        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-                        min-width: 120px;
-                        text-align: left;
-                        color: white;">
-                        <strong style="color: black">${xLabel}</strong>
-                        ${tooltips}
-                        ${totalTooltip}
-                    </div>
-                `
-                : ''
+            return renderTooltip({ title: xLabel, rows, total })
         },
     }
 }

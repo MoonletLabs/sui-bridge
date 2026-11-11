@@ -96,7 +96,6 @@ export function TokenVolumeChart({ tokenId, tokenColor }: Props) {
             },
         },
         tooltip: {
-            theme: 'dark',
             shared: true,
             intersect: false,
             x: {

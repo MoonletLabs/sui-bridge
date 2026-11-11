@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import type { Theme, SxProps } from '@mui/material/styles'
 
 import { useTheme } from '@mui/material/styles'
@@ -8,8 +9,10 @@ import { Box, AppBar, Toolbar, Container, useMediaQuery } from '@mui/material'
 
 import { Logo } from 'src/components/logo'
 import { NetworkPopover } from '../components/network-popover'
-import { FilterPopover } from '../components/filter-popover'
+import { HeaderFilters } from '../components/filter-popover'
+import { getPageFilters } from '../config-page-filters'
 import { GlobalSearch } from '../components/global-search'
+import { HealthStatusPill } from 'src/components/health/health-status-pill'
 import { NavTabs, MobileNavToggle, MobileNavMenu } from '../components/nav-tabs'
 import { layoutClasses } from '../classes'
 import { varAlpha } from 'src/theme/styles'
@@ -26,6 +29,7 @@ export function DashboardLayout({ sx, children, disableTimelines }: DashboardLay
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const pageFilters = getPageFilters(usePathname())
 
     return (
         <Box
@@ -96,12 +100,13 @@ export function DashboardLayout({ sx, children, disableTimelines }: DashboardLay
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,
-                                minWidth: { xs: 'auto', md: 160 },
+                                minWidth: 'auto',
                                 justifyContent: 'flex-end',
                             }}
                         >
+                            <HealthStatusPill />
                             <GlobalSearch />
-                            {!disableTimelines && <FilterPopover />}
+                            {!disableTimelines && <HeaderFilters filters={pageFilters} />}
                             <NetworkPopover />
                         </Box>
                     </Toolbar>

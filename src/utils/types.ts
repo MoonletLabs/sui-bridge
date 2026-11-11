@@ -1,4 +1,5 @@
 import { NETWORK } from 'src/hooks/get-network-storage'
+import { getNetworkConfig, isBundledToken } from 'src/config/helper'
 
 export type CoinType = {
     id: number
@@ -24,7 +25,32 @@ export type TokenColorInfo = {
 
 export type ChainType = 'ETH' | 'SUI'
 
+/** Deterministic colour for tokens we have no brand colour for */
+const FALLBACK_COLORS = ['#a78bfa', '#f472b6', '#34d399', '#fbbf24', '#60a5fa', '#fb7185']
+const fallbackColor = (id: number) => FALLBACK_COLORS[Math.abs(id) % FALLBACK_COLORS.length]
+
+/**
+ * Curated list (brand colours + icons) for the networks' known tokens, plus
+ * any token registered dynamically from the bridge's `prices` table.
+ */
 export const getTokensList: (network: NETWORK) => TokenColorInfo[] = (network: NETWORK) => {
+    const curated = getCuratedTokensList(network)
+
+    // Tokens outside the bundled config only exist because the bridge's
+    // `prices` table listed them (see registerCoins)
+    const dynamic = Object.values(getNetworkConfig({ network }).config.coins)
+        .filter(coin => !isBundledToken(coin.id))
+        .map(coin => ({
+            ticker: coin.name,
+            name: coin.name,
+            color: fallbackColor(coin.id),
+            icon: '',
+        }))
+
+    return [...curated, ...dynamic]
+}
+
+const getCuratedTokensList: (network: NETWORK) => TokenColorInfo[] = (network: NETWORK) => {
     return network === NETWORK.MAINNET
         ? [
               {

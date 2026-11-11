@@ -101,8 +101,10 @@ export function HealthStats({
         {
             title: 'Unclaimed transfers',
             value: data ? data.unclaimed.count.toLocaleString() : '—',
-            caption: data ? `${data.unclaimed.last_7d} in the last 7 days` : undefined,
-            hint: 'Deposits that were never claimed on the destination chain. Funds remain recoverable by the recipient.',
+            caption: data
+                ? `${data.unclaimed.pending_approval} awaiting approval · ${data.unclaimed.awaiting_claim} awaiting claim`
+                : undefined,
+            hint: 'Deposits that were never claimed on the destination chain. "Awaiting approval" is the bridge committee not yet signing the transfer and is the one that needs attention. "Awaiting claim" means it is approved and waiting for the recipient to claim; funds remain recoverable.',
             icon: 'solar:hourglass-bold-duotone',
             color: '#F59E0B',
         },

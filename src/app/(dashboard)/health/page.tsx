@@ -2,7 +2,7 @@
 
 import { Alert, Box, Divider, Typography } from '@mui/material'
 import useSWR from 'swr'
-import { FailuresPanel, HealthStats, UnclaimedTable } from 'src/components/health'
+import { FailuresPanel, HealthStats, LatencyPanel, UnclaimedTable } from 'src/components/health'
 import { Iconify } from 'src/components/iconify'
 import { PageTitle } from 'src/components/page-title'
 import { getNetwork } from 'src/hooks/get-network-storage'
@@ -34,8 +34,8 @@ export default function HealthPage() {
                     <Typography variant="h4">Bridge Health</Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                    Reliability of the Sui bridge: transfers that were never claimed, and why
-                    transactions fail.
+                    Reliability of the Sui bridge: how fast transfers are approved and claimed,
+                    transfers that were never claimed, and why transactions fail.
                 </Typography>
             </Box>
 
@@ -51,6 +51,8 @@ export default function HealthPage() {
             )}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <LatencyPanel />
+                <Divider sx={{ borderStyle: 'dashed' }} />
                 <UnclaimedTable />
                 <Divider sx={{ borderStyle: 'dashed' }} />
                 <FailuresPanel />

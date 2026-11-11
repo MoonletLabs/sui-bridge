@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import db from '../database'
@@ -9,6 +10,16 @@ export type HealthSummaryResponse = {
         total_usd: number
         oldest_timestamp_ms: number | null
         last_7d: number
+        /** Not yet approved by the bridge committee - the ones that need attention */
+        pending_approval: number
+        /** Approved, waiting for the recipient (or a relayer) to claim */
+        awaiting_claim: number
+        /**
+         * Awaiting approval for longer than a normal approval takes (30 min) but
+         * deposited in the last 7 days - i.e. a live problem, not a legacy one.
+         * Drives the header status indicator.
+         */
+        delayed_recent: number
     }
     failures: {
         total: number
@@ -23,7 +34,7 @@ export type HealthSummaryResponse = {
     }
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const sql = db[networkConfig.network]
@@ -41,10 +52,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     FROM public.token_transfer
                     WHERE status = 'Claimed'
                 ),
+                approved AS (
+                    SELECT DISTINCT chain_id, nonce
+                    FROM public.token_transfer
+                    WHERE status = 'Approved'
+                ),
                 stuck AS (
-                    SELECT d.timestamp_ms, td.amount, p.price, p.denominator
+                    SELECT d.timestamp_ms, td.amount, p.price, p.denominator,
+                           (ap.nonce IS NOT NULL) AS is_approved
                     FROM deposited d
                     LEFT JOIN claimed c ON c.chain_id = d.chain_id AND c.nonce = d.nonce
+                    LEFT JOIN approved ap ON ap.chain_id = d.chain_id AND ap.nonce = d.nonce
                     JOIN public.token_transfer_data td
                         ON td.chain_id = d.chain_id AND td.nonce = d.nonce
                     LEFT JOIN public.prices p ON p.token_id = td.token_id
@@ -54,6 +72,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     COUNT(*) AS count,
                     COALESCE(SUM((amount::NUMERIC / NULLIF(denominator, 0)) * price::NUMERIC), 0) AS total_usd,
                     MIN(timestamp_ms) AS oldest_timestamp_ms,
+                    COUNT(*) FILTER (WHERE NOT is_approved) AS pending_approval,
+                    COUNT(*) FILTER (WHERE is_approved) AS awaiting_claim,
+                    COUNT(*) FILTER (
+                        WHERE NOT is_approved
+                        AND timestamp_ms < (EXTRACT(EPOCH FROM NOW()) * 1000 - 1800000)
+                        AND timestamp_ms > (EXTRACT(EPOCH FROM NOW()) * 1000 - 604800000)
+                    ) AS delayed_recent,
                     COUNT(*) FILTER (
                         WHERE timestamp_ms > (EXTRACT(EPOCH FROM NOW()) * 1000 - 604800000)
                     ) AS last_7d
@@ -89,6 +114,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 total_usd: Number(u.total_usd) || 0,
                 oldest_timestamp_ms: u.oldest_timestamp_ms ? Number(u.oldest_timestamp_ms) : null,
                 last_7d: Number(u.last_7d) || 0,
+                pending_approval: Number(u.pending_approval) || 0,
+                awaiting_claim: Number(u.awaiting_claim) || 0,
+                delayed_recent: Number(u.delayed_recent) || 0,
             },
             failures: {
                 total: Number(f.total) || 0,
@@ -108,3 +136,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, { code: 500, message: 'Failed to load bridge health summary' })
     }
 }
+
+export default withCache(handler, 60)

@@ -22,6 +22,7 @@ import { useGlobalContext } from 'src/provider/global-provider'
 import { paths } from 'src/routes/paths'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
+import { useTokenRegistry } from 'src/hooks/use-token-registry'
 import { getTokenMetaList, TokenMeta } from 'src/utils/token-meta'
 import type { TokenSummaryResponse, TokenSummaryRow } from 'src/pages/api/token/summary'
 
@@ -43,9 +44,11 @@ type EnrichedRow = TokenSummaryRow & {
 export default function TokensIndexPage() {
     const network = getNetwork()
     const { timePeriod } = useGlobalContext()
+    // Re-derive the list when a newly listed token is registered
+    const registryVersion = useTokenRegistry()
 
     // Memoize tokens by network so it doesn't generate a new array reference each render
-    const tokens = useMemo(() => getTokenMetaList(network), [network])
+    const tokens = useMemo(() => getTokenMetaList(network), [network, registryVersion])
 
     const url = `${endpoints.token.summary}?network=${network}&period=${encodeURIComponent(
         timePeriod,

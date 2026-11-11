@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { sendError, sendReply } from './utils'
 import db from './database'
@@ -7,6 +8,7 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
 import { getPrices } from './prices'
+import { ALL_TIME_START } from 'src/utils/format-chart-data'
 
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
@@ -25,7 +27,7 @@ export const calculateStartDate = (timePeriod: string, currentDate?: dayjs.Dayjs
         case 'Last year':
             return day.subtract(365, 'day').valueOf()
         case 'All time':
-            return day.subtract(1000, 'day').valueOf()
+            return dayjs(ALL_TIME_START).valueOf()
         default:
             return day.subtract(30, 'day').valueOf()
     }
@@ -33,6 +35,11 @@ export const calculateStartDate = (timePeriod: string, currentDate?: dayjs.Dayjs
 
 export const computerIntervals = (timePeriod: TimePeriod, computePrevious?: boolean) => {
     const startDate = calculateStartDate(timePeriod)
+
+    // "All time" has no preceding period: return an empty window so comparisons show no change
+    if (computePrevious && timePeriod === 'All time') {
+        return { fromInterval: startDate, toInterval: startDate }
+    }
 
     const fromInterval = computePrevious
         ? calculateStartDate(timePeriod, dayjs(startDate))
@@ -103,117 +110,38 @@ const getAddresses = (
 ) => {
     const { fromInterval, toInterval } = computerIntervals(timePeriod, computePrevious)
 
-    // Query to get addresses per token using the bridge-metrics approach
-    const addressesPerToken = db[networkConfig.network]`
-        WITH all_addresses AS (
-            -- Addresses from ETH to SUI (sender on ETH side)
-            SELECT token_id, encode(sender_address, 'hex') AS address
+    const { SUI, ETH } = networkConfig.config.networkId
+
+    // Every finalized transfer contributes its sender and its recipient, so the
+    // set of unique addresses is simply all senders plus all recipients. One
+    // scan of the table with GROUPING SETS yields both the per-token counts and
+    // the overall total (the NULL token_id row), instead of two queries that
+    // each UNION four overlapping scans.
+    return db[networkConfig.network]`
+        WITH transfers AS (
+            SELECT token_id, sender_address, recipient_address
             FROM public.token_transfer_data
-            WHERE 
+            WHERE
                 is_finalized = true
                 AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND sender_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.SUI}
-            
-            UNION
-            
-            -- Addresses from SUI to ETH (recipient on ETH side)
-            SELECT token_id, encode(recipient_address, 'hex') AS address
-            FROM public.token_transfer_data
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND recipient_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.ETH}
-            
-            UNION
-            
-            -- Addresses from ETH to SUI (recipient on SUI side)
-            SELECT token_id, encode(recipient_address, 'hex') AS address
-            FROM public.token_transfer_data
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND recipient_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.SUI}
-            
-            UNION
-            
-            -- Addresses from SUI to ETH (sender on SUI side)
-            SELECT token_id, encode(sender_address, 'hex') AS address
-            FROM public.token_transfer_data
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND sender_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.ETH}
+                AND destination_chain IN (${SUI}, ${ETH})
+        ),
+        addresses AS (
+            SELECT token_id, sender_address AS address
+            FROM transfers WHERE sender_address IS NOT NULL
+            UNION ALL
+            SELECT token_id, recipient_address AS address
+            FROM transfers WHERE recipient_address IS NOT NULL
         )
         SELECT
-            token_id,
+            COALESCE(token_id, -1) AS token_id,
             COUNT(DISTINCT address) AS total_unique_addresses
-        FROM all_addresses
-        GROUP BY token_id
-    `
-
-    // Query to get total unique addresses across all tokens
-    const totalAddresses = db[networkConfig.network]`
-        WITH all_addresses AS (
-            -- Addresses from ETH to SUI (sender on ETH side)
-            SELECT encode(sender_address, 'hex') AS address
-            FROM public.token_transfer_data
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND sender_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.SUI}
-            
-            UNION
-            
-            -- Addresses from SUI to ETH (recipient on ETH side)
-            SELECT encode(recipient_address, 'hex') AS address
-            FROM public.token_transfer_data
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND recipient_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.ETH}
-            
-            UNION
-            
-            -- Addresses from ETH to SUI (recipient on SUI side)
-            SELECT encode(recipient_address, 'hex') AS address
-            FROM public.token_transfer_data
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND recipient_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.SUI}
-            
-            UNION
-            
-            -- Addresses from SUI to ETH (sender on SUI side)
-            SELECT encode(sender_address, 'hex') AS address
-            FROM public.token_transfer_data
-            WHERE 
-                is_finalized = true
-                AND timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
-                AND sender_address IS NOT NULL
-                AND destination_chain = ${networkConfig.config.networkId.ETH}
-        )
-        SELECT
-            -1 as token_id,
-            COUNT(DISTINCT address) AS total_unique_addresses
-        FROM all_addresses
-    `
-
-    // Combine results from both queries
-    return Promise.all([addressesPerToken, totalAddresses]).then(([tokenResults, totalResult]) => {
-        const combinedResults = [...tokenResults, ...totalResult]
-        return transformAmount(networkConfig, combinedResults as any[], prices)
-    })
+        FROM addresses
+        GROUP BY GROUPING SETS ((token_id), ())
+    `.then(rows => transformAmount(networkConfig, rows as any[], prices))
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
 
@@ -243,3 +171,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, error)
     }
 }
+
+export default withCache(handler, 60)

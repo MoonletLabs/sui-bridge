@@ -1,6 +1,7 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig, TimePeriod } from 'src/config/helper'
-import { sendError, sendReply } from '../../utils'
+import { parseIntParam, sendError, sendReply } from '../../utils'
 import db from '../../database'
 import { computerIntervals } from '../../cards'
 
@@ -24,13 +25,13 @@ export type TokenHoldersResponse = {
     holders: TokenHolderRow[]
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const timePeriod = (req.query.period as TimePeriod) || 'Last Month'
         const tokenId = Number(req.query.id)
-        const limit = Math.min(Number(req.query.limit) || 25, 100)
-        const offset = Number(req.query.offset) || 0
+        const limit = parseIntParam(req.query.limit, 25, 100) || 25
+        const offset = parseIntParam(req.query.offset, 0)
         const sortBy = (req.query.sortBy as 'volume' | 'count') || 'volume'
 
         if (!Number.isFinite(tokenId)) {
@@ -113,3 +114,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, error)
     }
 }
+
+export default withCache(handler, 60)

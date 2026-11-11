@@ -1,3 +1,4 @@
+import { withCache } from 'src/utils/api-cache'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig } from 'src/config/helper'
 import { decodeBridgeFailure, failureGroupKey, FailureSeverity } from 'src/utils/bridge-errors'
@@ -38,7 +39,7 @@ export type FailuresResponse = {
     monthly: { month: string; count: number }[]
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
         const sql = db[networkConfig.network]
@@ -143,3 +144,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         sendError(res, { code: 500, message: 'Failed to load bridge failures' })
     }
 }
+
+export default withCache(handler, 60)
