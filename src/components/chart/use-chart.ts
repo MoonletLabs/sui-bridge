@@ -213,6 +213,9 @@ export function useChart(options?: ChartOptions): ChartOptions {
          *************************************** */
         tooltip: {
             enabled: true,
+            // Pie/donut tooltips default to filling with the slice colour, which
+            // makes the label unreadable and breaks the shared tooltip frame
+            fillSeriesColor: false,
             followCursor: true,
             intersect: false,
             ...options?.tooltip,
