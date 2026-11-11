@@ -4,6 +4,8 @@ import { GuestGuard } from 'src/auth/guard'
 
 // ----------------------------------------------------------------------
 
+export const metadata = { robots: { index: false, follow: false } }
+
 type Props = {
     children: React.ReactNode
 }
