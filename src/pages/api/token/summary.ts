@@ -6,6 +6,8 @@ import db from '../database'
 import { computerIntervals } from '../cards'
 
 export type TokenSummaryRow = {
+    /** Volume (USD) per bucket in `TokenSummaryResponse.buckets`, for a trend line */
+    spark: number[]
     token_id: number
     inflow_usd: number
     outflow_usd: number
@@ -21,8 +23,17 @@ export type TokenSummaryRow = {
 
 export type TokenSummaryResponse = {
     period: TimePeriod
+    /** Bucket start times (ms) shared by every row's `spark` */
+    buckets: number[]
     rows: TokenSummaryRow[]
 }
+
+const sparkGranularity = (period: TimePeriod): 'hour' | 'day' | 'week' =>
+    period === 'Last 24h'
+        ? 'hour'
+        : period === 'Last Week' || period === 'Last Month'
+          ? 'day'
+          : 'week'
 
 const aggregateQuery = (sql: any, SUI_ID: number, from: number, to: number) => sql`
     WITH base AS (
@@ -62,10 +73,35 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const sql = db[networkConfig.network]
         const SUI_ID = networkConfig.config.networkId.SUI
 
-        const [current, previous] = await Promise.all([
+        const trunc = sparkGranularity(timePeriod)
+        const [current, previous, seriesRows] = await Promise.all([
             aggregateQuery(sql, SUI_ID, fromInterval, toInterval),
             aggregateQuery(sql, SUI_ID, prevFrom, prevTo),
+            sql`
+                SELECT
+                    t.token_id,
+                    (EXTRACT(EPOCH FROM DATE_TRUNC(${trunc}, TO_TIMESTAMP(t.timestamp_ms / 1000))) * 1000)::BIGINT AS bucket_ms,
+                    COALESCE(SUM((t.amount::NUMERIC / p.denominator) * p.price::FLOAT8), 0) AS volume_usd
+                FROM public.token_transfer_data t
+                JOIN public.prices p ON p.token_id = t.token_id
+                WHERE t.is_finalized = true
+                  AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                GROUP BY 1, 2
+                ORDER BY 2 ASC
+            `,
         ])
+
+        // Align every token's series on the same buckets so the UI can draw them directly
+        const buckets = Array.from(
+            new Set((seriesRows as any[]).map(r => Number(r.bucket_ms))),
+        ).sort((a, b) => a - b)
+        const bucketIndex = new Map(buckets.map((b, i) => [b, i]))
+        const sparkByToken: Record<number, number[]> = {}
+        for (const r of seriesRows as any[]) {
+            const id = Number(r.token_id)
+            if (!sparkByToken[id]) sparkByToken[id] = new Array(buckets.length).fill(0)
+            sparkByToken[id][bucketIndex.get(Number(r.bucket_ms))!] = Number(r.volume_usd) || 0
+        }
 
         const prevByToken: Record<number, number> = {}
         for (const row of previous as any[]) {
@@ -73,6 +109,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         const rows: TokenSummaryRow[] = (current as any[]).map((row: any) => ({
+            spark: sparkByToken[Number(row.token_id)] ?? new Array(buckets.length).fill(0),
             token_id: Number(row.token_id),
             inflow_usd: Number(row.inflow_usd) || 0,
             outflow_usd: Number(row.outflow_usd) || 0,
@@ -86,7 +123,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             prev_total_volume_usd: prevByToken[Number(row.token_id)] || 0,
         }))
 
-        sendReply(res, { period: timePeriod, rows } as TokenSummaryResponse)
+        sendReply(res, { period: timePeriod, buckets, rows } as TokenSummaryResponse)
     } catch (error) {
         console.error('Token summary API error:', error)
         sendError(res, error)

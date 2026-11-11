@@ -143,6 +143,9 @@ export function TransactionsTable({
     autoRefreshIntervalMs = 30000,
     autoRefreshEnabledDefault = true,
     syncFiltersToUrl = false,
+    fixedTokens,
+    title = 'Latest Bridge Transactions',
+    viewAllHref = paths.transactions.root,
 }: {
     ethAddress?: string
     suiAddress?: string
@@ -154,6 +157,12 @@ export function TransactionsTable({
     autoRefreshEnabledDefault?: boolean
     /** Mirror filters into the URL query string so the view is shareable */
     syncFiltersToUrl?: boolean
+    /** Always restrict to these token tickers (e.g. on a token's own page) */
+    fixedTokens?: string[]
+    /** Heading of the table */
+    title?: string
+    /** Where the heading links to when `showTitleLink` is set */
+    viewAllHref?: string
 }) {
     const network = getNetwork()
     const router = useRouter()
@@ -296,13 +305,13 @@ export function TransactionsTable({
                 recipients: debouncedFilters.recipients.join(','),
                 amount_from: debouncedFilters.amountFrom,
                 amount_to: debouncedFilters.amountTo,
-                tokens: debouncedFilters.tokens.join(','),
+                tokens: (fixedTokens ?? debouncedFilters.tokens).join(','),
                 status: debouncedFilters.status,
                 sort: sort.by,
                 order: sort.order,
                 ...extra,
             }).toString(),
-        [debouncedFilters, sort],
+        [debouncedFilters, sort, fixedTokens],
     )
 
     const requestUrl = `${endpoints.transactions}?network=${network}&${buildQuery({
@@ -504,7 +513,7 @@ export function TransactionsTable({
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                         {showTitleLink ? (
                             <Link
-                                href={paths.transactions.root}
+                                href={viewAllHref}
                                 rel="noopener noreferrer"
                                 underline="hover"
                                 color="inherit"
@@ -512,13 +521,13 @@ export function TransactionsTable({
                                 sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
                             >
                                 <Typography variant="h6" fontWeight="bold" sx={{ mr: 1 }}>
-                                    Latest Bridge Transactions
+                                    {title}
                                 </Typography>
                                 <Iconify icon="solar:arrow-right-up-outline" />
                             </Link>
                         ) : (
                             <Typography variant="h6" fontWeight="bold">
-                                Latest Bridge Transactions
+                                {title}
                             </Typography>
                         )}
                         <Box
