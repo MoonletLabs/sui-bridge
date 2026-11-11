@@ -23,6 +23,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
+import { useTokenRegistry } from 'src/hooks/use-token-registry'
 import { useRouter } from 'src/routes/hooks'
 import { paths } from 'src/routes/paths'
 import { endpoints, fetcher } from 'src/utils/axios'
@@ -781,6 +782,8 @@ function TransactionsToolbar({
     pendingNew?: number
     onShowNew: () => void
 }) {
+    // Load the token registry so dynamically listed tokens get a filter chip
+    useTokenRegistry()
     const tokens = getTokensList(network)
 
     const toggleToken = (ticker: string) =>

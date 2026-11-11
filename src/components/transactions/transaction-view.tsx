@@ -137,6 +137,14 @@ function buildBanner(
         }
     }
 
+    if (claimed && deposit && !claimed.is_finalized) {
+        return {
+            severity: 'info',
+            title: 'Claim submitted, waiting for finality',
+            body: `The claim was seen on ${isSuiToEth ? 'Ethereum' : 'Sui'} and is waiting for finality before the transfer counts as complete.`,
+        }
+    }
+
     if (claimed && deposit) {
         const total = claimed.timestamp_ms - deposit.timestamp_ms
         const benchmark = typical?.claim_p50 ? typical.claim_p50 * MS_PER_MIN : null
