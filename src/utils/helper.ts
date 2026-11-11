@@ -162,6 +162,8 @@ export const buildConditionalQuery = (
         recipients,
         amountFrom,
         amountTo,
+        tokenIds,
+        status,
     }: {
         suiAddress?: string
         ethAddress?: string
@@ -170,6 +172,10 @@ export const buildConditionalQuery = (
         recipients?: string[]
         amountFrom?: number
         amountTo?: number
+        /** Only these token ids */
+        tokenIds?: number[]
+        /** Lifecycle stage of the transfer (needs the `t` alias on token_transfer_data) */
+        status?: 'all' | 'completed' | 'awaiting_claim' | 'pending_approval'
     },
     networkConfig?: INetworkConfig,
 ) => {
@@ -218,8 +224,33 @@ export const buildConditionalQuery = (
         conditions.push(sql`(t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8) <= ${amountTo}`)
     }
 
+    // 6) tokens
+    if (tokenIds && tokenIds.length) {
+        conditions.push(sql`t.token_id IN ${sql(tokenIds)}`)
+    }
+
+    // 7) lifecycle stage, from the Approved / Claimed records in token_transfer
+    if (status === 'completed') {
+        conditions.push(sql`${transferHasStatus(sql, 'Claimed')}`)
+    } else if (status === 'awaiting_claim') {
+        conditions.push(
+            sql`(${transferHasStatus(sql, 'Approved')} AND NOT ${transferHasStatus(sql, 'Claimed')})`,
+        )
+    } else if (status === 'pending_approval') {
+        conditions.push(
+            sql`(NOT ${transferHasStatus(sql, 'Approved')} AND NOT ${transferHasStatus(sql, 'Claimed')})`,
+        )
+    }
+
     return conditions.length ? sql`AND (${joinSQL(sql, conditions, sql` AND `)})` : sql``
 }
+
+/** `EXISTS` check that a transfer (alias `t`) has reached a lifecycle status */
+export const transferHasStatus = (sql: any, status: 'Approved' | 'Claimed') =>
+    sql`EXISTS (
+        SELECT 1 FROM public.token_transfer s
+        WHERE s.chain_id = t.chain_id AND s.nonce = t.nonce AND s.status = ${status}
+    )`
 // ----------------------------------------------------------------------
 
 function isObject(item: any) {

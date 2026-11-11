@@ -4,18 +4,33 @@ import {
     buildConditionalQuery,
     isHexadecimal,
     removePrefix,
+    transferHasStatus,
     transformTransfers,
 } from 'src/utils/helper'
 import db from './database'
 import { parseIntParam, sendError, sendReply } from './utils'
 import { getPrices } from './prices'
 
+const SORTS = ['date', 'amount'] as const
+const STATUSES = ['all', 'completed', 'awaiting_claim', 'pending_approval'] as const
+type Status = (typeof STATUSES)[number]
+
+/** One response page is at most this many rows; `export=1` raises it for CSV downloads */
+const MAX_PAGE = 100
+const MAX_EXPORT = 5000
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
 
-        const offset = parseIntParam(req.query.offset, 0)
-        const limit = parseIntParam(req.query.limit, 100, 100) || 100 // max 100 items
+        const isExport = req.query.export === '1'
+        const offset = isExport ? 0 : parseIntParam(req.query.offset, 0)
+        const limit =
+            parseIntParam(
+                req.query.limit,
+                isExport ? MAX_EXPORT : 100,
+                isExport ? MAX_EXPORT : MAX_PAGE,
+            ) || MAX_PAGE
 
         const suiAddress = removePrefix(req.query.suiAddress?.toString() || '')
         const ethAddress = removePrefix(req.query.ethAddress?.toString() || '')
@@ -34,6 +49,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const rawTo = req.query.amount_to ? Number(req.query.amount_to) : undefined
         const amountFrom = Number.isFinite(rawFrom) ? rawFrom : undefined
         const amountTo = Number.isFinite(rawTo) ? rawTo : undefined
+
+        // Token tickers (e.g. "ETH,USDT") -> ids of this network
+        const wantedTokens = (req.query.tokens?.toString() || '')
+            .split(',')
+            .map(t => t.trim())
+            .filter(Boolean)
+        const tokenIds = Object.values(networkConfig.config.coins)
+            .filter(coin => wantedTokens.includes(coin.name))
+            .map(coin => coin.id)
+
+        const statusParam = req.query.status as Status
+        const status: Status = STATUSES.includes(statusParam) ? statusParam : 'all'
+
+        const sort = SORTS.includes(req.query.sort as (typeof SORTS)[number])
+            ? (req.query.sort as (typeof SORTS)[number])
+            : 'date'
+        const ascending = req.query.order === 'asc'
 
         const badSenders = senders.some(s => !isHexadecimal(s))
         const badRecipients = recipients.some(r => !isHexadecimal(r))
@@ -63,12 +95,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 recipients,
                 amountFrom,
                 amountTo,
+                // Asking for tokens that don't exist here must match nothing, not everything
+                tokenIds: wantedTokens.length ? (tokenIds.length ? tokenIds : [-1]) : undefined,
+                status,
             },
             networkConfig,
         )
 
-        // The page, the total and the prices are independent: fetch them together
-        const [query, queryCount, prices] = await Promise.all([
+        // Whitelisted fragments only - never interpolate user input into ORDER BY
+        const direction = ascending ? sql`ASC` : sql`DESC`
+        const orderBy =
+            sort === 'amount'
+                ? sql`amount_usd ${direction} NULLS LAST, t.timestamp_ms DESC`
+                : sql`t.timestamp_ms ${direction}`
+
+        // The page, the totals and the prices are independent: fetch them together
+        const [query, totals, prices] = await Promise.all([
             sql`
             SELECT
                 encode(t.txn_hash, 'hex')           AS tx_hash,
@@ -82,16 +124,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 t.token_id,
                 t.amount,
                 p.price,
-                (t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8) AS amount_usd
+                (t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8) AS amount_usd,
+                ${transferHasStatus(sql, 'Approved')} AS approved,
+                ${transferHasStatus(sql, 'Claimed')}  AS claimed
             FROM token_transfer_data AS t
             JOIN prices AS p
                 ON t.token_id = p.token_id
             WHERE
                 is_finalized = true ${conditionalQuery}
-            ORDER BY timestamp_ms DESC
+            ORDER BY ${orderBy}
             OFFSET ${offset} LIMIT ${limit}`,
             sql`
-            SELECT COUNT(*)
+            SELECT
+                COUNT(*) AS count,
+                COALESCE(SUM((t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8)), 0) AS total_usd
             FROM token_transfer_data AS t
             JOIN prices AS p
                 ON t.token_id = p.token_id
@@ -99,9 +145,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             getPrices(networkConfig.network),
         ])
 
+        const transactions = transformTransfers(networkConfig, query as any[], prices).map(
+            (tx: any) => ({
+                ...tx,
+                status: tx.claimed
+                    ? 'completed'
+                    : tx.approved
+                      ? 'awaiting_claim'
+                      : 'pending_approval',
+            }),
+        )
+
         sendReply(res, {
-            transactions: transformTransfers(networkConfig, query as any[], prices),
-            total: Number(queryCount?.[0]?.count),
+            transactions,
+            total: Number(totals?.[0]?.count),
+            total_usd: Number(totals?.[0]?.total_usd) || 0,
         })
     } catch (error) {
         console.log({ error })
