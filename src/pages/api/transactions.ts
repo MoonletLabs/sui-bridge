@@ -7,15 +7,15 @@ import {
     transformTransfers,
 } from 'src/utils/helper'
 import db from './database'
-import { sendError, sendReply } from './utils'
+import { parseIntParam, sendError, sendReply } from './utils'
 import { getPrices } from './prices'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const networkConfig = getNetworkConfig({ req })
 
-        const offset = req.query.offset || 0
-        const limit = Math.min(Number(req.query.limit) || 100, 100) // max 100 items
+        const offset = parseIntParam(req.query.offset, 0)
+        const limit = parseIntParam(req.query.limit, 100, 100) || 100 // max 100 items
 
         const suiAddress = removePrefix(req.query.suiAddress?.toString() || '')
         const ethAddress = removePrefix(req.query.ethAddress?.toString() || '')
@@ -30,8 +30,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .map(r => removePrefix(r))
             .filter(r => r.length > 0)
 
-        const amountFrom = req.query.amount_from ? Number(req.query.amount_from) : undefined
-        const amountTo = req.query.amount_to ? Number(req.query.amount_to) : undefined
+        const rawFrom = req.query.amount_from ? Number(req.query.amount_from) : undefined
+        const rawTo = req.query.amount_to ? Number(req.query.amount_to) : undefined
+        const amountFrom = Number.isFinite(rawFrom) ? rawFrom : undefined
+        const amountTo = Number.isFinite(rawTo) ? rawTo : undefined
 
         const badSenders = senders.some(s => !isHexadecimal(s))
         const badRecipients = recipients.some(r => !isHexadecimal(r))

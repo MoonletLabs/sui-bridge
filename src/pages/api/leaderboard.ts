@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getNetworkConfig, TimePeriod } from 'src/config/helper'
-import { sendError, sendReply } from './utils'
+import { parseIntParam, sendError, sendReply } from './utils'
 import db from './database'
 import { computerIntervals } from './cards'
 import { getPrices } from './prices'
@@ -36,8 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const timePeriod = (req.query.period as TimePeriod) || 'Last Week'
         const addressType = (req.query.addressType as 'all' | 'sui' | 'eth') || 'all'
         const sortBy = (req.query.sortBy as 'volume' | 'count') || 'volume'
-        const limit = Math.min(Number(req.query.limit) || 25, 100)
-        const offset = Number(req.query.offset) || 0
+        const limit = parseIntParam(req.query.limit, 25, 100) || 25
+        const offset = parseIntParam(req.query.offset, 0)
 
         const { fromInterval, toInterval } = computerIntervals(timePeriod, false)
         const prices = await getPrices(networkConfig.network)

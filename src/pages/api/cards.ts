@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
 import { getPrices } from './prices'
+import { ALL_TIME_START } from 'src/utils/format-chart-data'
 
 dayjs.extend(isoWeek)
 dayjs.extend(weekOfYear)
@@ -25,7 +26,7 @@ export const calculateStartDate = (timePeriod: string, currentDate?: dayjs.Dayjs
         case 'Last year':
             return day.subtract(365, 'day').valueOf()
         case 'All time':
-            return day.subtract(1000, 'day').valueOf()
+            return dayjs(ALL_TIME_START).valueOf()
         default:
             return day.subtract(30, 'day').valueOf()
     }
@@ -33,6 +34,11 @@ export const calculateStartDate = (timePeriod: string, currentDate?: dayjs.Dayjs
 
 export const computerIntervals = (timePeriod: TimePeriod, computePrevious?: boolean) => {
     const startDate = calculateStartDate(timePeriod)
+
+    // "All time" has no preceding period: return an empty window so comparisons show no change
+    if (computePrevious && timePeriod === 'All time') {
+        return { fromInterval: startDate, toInterval: startDate }
+    }
 
     const fromInterval = computePrevious
         ? calculateStartDate(timePeriod, dayjs(startDate))

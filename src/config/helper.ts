@@ -178,7 +178,11 @@ export const getNetworkConfig = (options: {
     req?: NextApiRequest
     network?: NETWORK
 }): INetworkConfig => {
-    const network = (options?.req?.query?.network || options?.network || NETWORK.MAINNET) as NETWORK
+    const requested = options?.req?.query?.network || options?.network
+    // Unknown values fall back to mainnet instead of crashing on an undefined db/config
+    const network = (
+        requested === NETWORK.TESTNET || requested === NETWORK.MAINNET ? requested : NETWORK.MAINNET
+    ) as NETWORK
 
     return {
         config: NETWORK_CONFIG[network],

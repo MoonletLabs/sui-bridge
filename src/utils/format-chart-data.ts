@@ -147,6 +147,9 @@ export const formatCategories = (data: ChartDataItem[], timePeriod: string) => {
     })
 }
 
+/** Predates the first bridge transfer on both networks (testnet: Jun 2024). */
+export const ALL_TIME_START = '2024-01-01T00:00:00Z'
+
 export const calculateStartDate = (timePeriod: string) => {
     switch (timePeriod) {
         case 'Last 24h':
@@ -160,7 +163,7 @@ export const calculateStartDate = (timePeriod: string) => {
         case 'Last year':
             return dayjs().subtract(365, 'day')
         case 'All time':
-            return dayjs().subtract(1000, 'day')
+            return dayjs(ALL_TIME_START)
         default:
             return dayjs().subtract(30, 'day')
     }
