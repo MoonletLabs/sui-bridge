@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const suiAddress = removePrefix(req.query.suiAddress?.toString() || '')
         const ethAddress = removePrefix(req.query.ethAddress?.toString() || '')
+        const address = removePrefix(req.query.address?.toString() || '')
         const flow = (req.query.flow as 'all' | 'inflow' | 'outflow') || 'all'
         const senders = (req.query.senders?.toString() || '')
             .split(',')
@@ -75,6 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (
             (suiAddress && !isHexadecimal(suiAddress)) ||
             (ethAddress && !isHexadecimal(ethAddress)) ||
+            (address && !isHexadecimal(address)) ||
             badRecipients ||
             badSenders
         ) {
@@ -92,6 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             {
                 suiAddress,
                 ethAddress,
+                address,
                 flow,
                 senders,
                 recipients,

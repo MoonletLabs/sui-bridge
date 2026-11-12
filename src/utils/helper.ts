@@ -157,6 +157,7 @@ export const buildConditionalQuery = (
     {
         suiAddress,
         ethAddress,
+        address,
         flow = 'all',
         senders,
         recipients,
@@ -167,6 +168,8 @@ export const buildConditionalQuery = (
     }: {
         suiAddress?: string
         ethAddress?: string
+        /** Any address (SUI or Ethereum) that is the sender or the recipient */
+        address?: string
         flow?: 'all' | 'inflow' | 'outflow'
         senders?: string[]
         recipients?: string[]
@@ -190,6 +193,12 @@ export const buildConditionalQuery = (
     if (ethAddress) {
         conditions.push(
             sql`(sender_address = decode(${ethAddress}, 'hex') OR recipient_address = decode(${ethAddress}, 'hex'))`,
+        )
+    }
+
+    if (address) {
+        conditions.push(
+            sql`(sender_address = decode(${address}, 'hex') OR recipient_address = decode(${address}, 'hex'))`,
         )
     }
 

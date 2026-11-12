@@ -36,6 +36,7 @@ import { Iconify } from '../iconify'
 import { CustomTable } from '../table/table'
 import { InputAdornment } from '@mui/material'
 import { MultiAddressAutocomplete } from './multi-address'
+import { TransactionSearch, type SearchActions } from './transaction-search'
 import { useDebounce } from 'use-debounce'
 import CloseIcon from '@mui/icons-material/Close'
 import { downloadCsv } from 'src/utils/csv'
@@ -55,6 +56,8 @@ type Filters = {
     flow: Flow
     senders: string[]
     recipients: string[]
+    /** Sender or recipient: any address that took part in the transfer */
+    party: string
     amountFrom: string
     amountTo: string
     tokens: string[]
@@ -72,6 +75,7 @@ const EMPTY_FILTERS: Filters = {
     flow: 'all',
     senders: [],
     recipients: [],
+    party: '',
     amountFrom: '',
     amountTo: '',
     tokens: [],
@@ -110,6 +114,7 @@ const filtersKey = (f: Filters) =>
         f.flow,
         f.senders.join(','),
         f.recipients.join(','),
+        f.party,
         f.amountFrom,
         f.amountTo,
         f.tokens.join(','),
@@ -215,6 +220,7 @@ export function TransactionsTable({
             flow: flowParam === 'inflow' || flowParam === 'outflow' ? (flowParam as Flow) : 'all',
             senders: (readQueryParam('senders') || '').split(',').filter(Boolean),
             recipients: (readQueryParam('recipients') || '').split(',').filter(Boolean),
+            party: readQueryParam('address') || '',
             amountFrom: readAmountParam('amountFrom'),
             amountTo: readAmountParam('amountTo'),
             tokens: (readQueryParam('tokens') || '').split(',').filter(Boolean),
@@ -271,6 +277,7 @@ export function TransactionsTable({
             flow: filters.flow === 'all' ? null : filters.flow,
             senders: filters.senders.length ? filters.senders.join(',') : null,
             recipients: filters.recipients.length ? filters.recipients.join(',') : null,
+            address: filters.party || null,
             amountFrom: filters.amountFrom || null,
             amountTo: filters.amountTo || null,
             tokens: filters.tokens.length ? filters.tokens.join(',') : null,
@@ -304,6 +311,7 @@ export function TransactionsTable({
                 flow: debouncedFilters.flow,
                 senders: debouncedFilters.senders.join(','),
                 recipients: debouncedFilters.recipients.join(','),
+                address: debouncedFilters.party,
                 amount_from: debouncedFilters.amountFrom,
                 amount_to: debouncedFilters.amountTo,
                 tokens: (fixedTokens ?? debouncedFilters.tokens).join(','),
@@ -585,6 +593,30 @@ export function TransactionsTable({
                             total={view?.total}
                             totalUsd={view?.total_usd}
                             pendingNew={pendingForView?.count}
+                            searchActions={{
+                                filterAddress: hex => setFilters(f => ({ ...f, party: hex })),
+                                addToken: ticker =>
+                                    setFilters(f => ({
+                                        ...f,
+                                        tokens: f.tokens.includes(ticker)
+                                            ? f.tokens
+                                            : [...f.tokens, ticker],
+                                    })),
+                                applyParams: params =>
+                                    setFilters(f => {
+                                        const status = params.get('status')
+                                        const from = params.get('amountFrom')
+                                        const to = params.get('amountTo')
+                                        return {
+                                            ...f,
+                                            status: (status as TxStatus) || f.status,
+                                            amountFrom: from ?? f.amountFrom,
+                                            amountTo: to ?? f.amountTo,
+                                        }
+                                    }),
+                                openTx: onNavigateTx,
+                                go: href => router.push(href),
+                            }}
                             onShowNew={() => {
                                 if (pendingForView) {
                                     setShown({ url: requestUrl, data: pendingForView.data })
@@ -770,6 +802,7 @@ function TransactionsToolbar({
     totalUsd,
     pendingNew,
     onShowNew,
+    searchActions,
 }: {
     network: NETWORK
     filters: Filters
@@ -781,6 +814,7 @@ function TransactionsToolbar({
     totalUsd?: number
     pendingNew?: number
     onShowNew: () => void
+    searchActions: SearchActions
 }) {
     // Load the token registry so dynamically listed tokens get a filter chip
     useTokenRegistry()
@@ -796,6 +830,13 @@ function TransactionsToolbar({
 
     // Filters that only exist in the collapsible panel get a chip here
     const panelChips: { key: string; label: string; onDelete: () => void }[] = []
+    if (filters.party) {
+        panelChips.push({
+            key: 'party',
+            label: `Address ${truncateAddress(filters.party)}`,
+            onDelete: () => setFilters(f => ({ ...f, party: '' })),
+        })
+    }
     filters.senders.forEach(s =>
         panelChips.push({
             key: `s-${s}`,
@@ -823,6 +864,8 @@ function TransactionsToolbar({
 
     return (
         <Stack spacing={1.5} sx={{ px: 2, pb: 2 }}>
+            <TransactionSearch network={network} actions={searchActions} />
+
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
                 <Typography variant="body2" color="text.secondary">
                     {total === undefined ? (
