@@ -41,7 +41,7 @@ const ORDER: SearchResult['group'][] = ['Transfers', 'Addresses', 'Filters', 'To
 export function useSearch(query: string, enabled = true): SearchState {
     const network = getNetwork()
     // Dynamically listed tokens become searchable once the registry is loaded
-    useTokenRegistry()
+    const registryVersion = useTokenRegistry()
 
     const [debounced] = useDebounce(query, 300)
     const lookupNeeded = enabled && needsLookup(query)
@@ -80,5 +80,5 @@ export function useSearch(query: string, enabled = true): SearchState {
             prefixWindowDays: data?.prefixWindowDays ?? 30,
             minPrefixChars: data?.minPrefixChars ?? 6,
         }
-    }, [query, debounced, enabled, network, lookupNeeded, data, error, isLoading])
+    }, [query, debounced, enabled, network, registryVersion, lookupNeeded, data, error, isLoading])
 }

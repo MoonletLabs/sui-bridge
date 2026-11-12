@@ -1,7 +1,7 @@
 'use client'
 
 import { CircularProgress, IconButton, InputAdornment, TextField } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Iconify } from 'src/components/iconify'
 import type { NETWORK } from 'src/hooks/get-network-storage'
 import { useTokenRegistry } from 'src/hooks/use-token-registry'
@@ -40,10 +40,20 @@ export function TransactionSearch({
     const [value, setValue] = useState('')
     const [busy, setBusy] = useState(false)
     const [note, setNote] = useState('')
+    // Only the latest submission may apply its result: typing again, a new submit or a
+    // network switch invalidates whatever is still in flight
+    const latest = useRef(0)
+
+    useEffect(() => {
+        latest.current += 1
+        setBusy(false)
+    }, [network])
 
     const submit = async (raw: string) => {
         const query = cleanSearchQuery(raw)
         if (!query) return
+        const id = (latest.current += 1)
+        const isLatest = () => id === latest.current
         setNote('')
 
         if (isShortHex(query)) {
@@ -57,6 +67,7 @@ export function TransactionSearch({
                 const data: SearchResponse = await fetcher(
                     `${endpoints.search}?network=${network}&q=${encodeURIComponent(query)}`,
                 )
+                if (!isLatest()) return
                 const txs = data.hits.filter(h => h.kind === 'tx')
                 const addresses = data.hits.filter(h => h.kind !== 'tx')
 
@@ -80,13 +91,14 @@ export function TransactionSearch({
                     )
                 }
             } catch (error) {
+                if (!isLatest()) return
                 setNote(
                     (error as { code?: number })?.code === 429
                         ? 'Too many searches. Try again in a few seconds'
                         : 'Search is unavailable right now',
                 )
             } finally {
-                setBusy(false)
+                if (isLatest()) setBusy(false)
             }
             return
         }
@@ -112,6 +124,8 @@ export function TransactionSearch({
             size="small"
             value={value}
             onChange={event => {
+                latest.current += 1
+                setBusy(false)
                 setValue(event.target.value)
                 if (note) setNote('')
             }}
@@ -153,6 +167,7 @@ export function TransactionSearch({
                                 size="small"
                                 aria-label="Clear"
                                 onClick={() => {
+                                    latest.current += 1
                                     setValue('')
                                     setNote('')
                                 }}

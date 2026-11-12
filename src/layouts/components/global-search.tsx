@@ -56,7 +56,8 @@ export function GlobalSearch() {
     const [open, setOpen] = useState(false)
     const [query, setQuery] = useState('')
     const [active, setActive] = useState(0)
-    const [enterPending, setEnterPending] = useState(false)
+    // The query a queued Enter was pressed for (null = none)
+    const [enterPending, setEnterPending] = useState<string | null>(null)
     const [recent, setRecent] = useState<SearchResult[]>([])
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -125,21 +126,24 @@ export function GlobalSearch() {
                 handleNavigate(visible[active])
             } else if (trimmed && search.loading) {
                 // Enter pressed before the lookup answered: open the first result once it does
-                setEnterPending(true)
+                setEnterPending(query)
             }
         }
     }
 
     // Run a queued Enter as soon as the lookup has finished
     useEffect(() => {
-        if (!enterPending || search.loading) return
-        setEnterPending(false)
+        if (enterPending === null) return
+        // The query changed since Enter was pressed: that Enter no longer applies
+        if (enterPending !== query) {
+            setEnterPending(null)
+            return
+        }
+        if (search.loading) return
+        setEnterPending(null)
         if (results[0]) handleNavigate(results[0])
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enterPending, search.loading, results])
-
-    // Typing again cancels a queued Enter
-    useEffect(() => setEnterPending(false), [query])
+    }, [enterPending, query, search.loading, results])
 
     // Keep the highlighted row in view while arrowing through a long list
     useEffect(() => {
@@ -200,7 +204,17 @@ export function GlobalSearch() {
                         value={query}
                         onChange={event => setQuery(event.target.value)}
                         onKeyDown={handleKeyDownInput}
-                        inputProps={{ 'aria-label': 'Search', autoComplete: 'off' }}
+                        inputProps={{
+                            'aria-label': 'Search',
+                            autoComplete: 'off',
+                            // Arrow keys move a highlight, not focus: tell assistive tech about it
+                            role: 'combobox',
+                            'aria-autocomplete': 'list',
+                            'aria-expanded': visible.length > 0,
+                            'aria-controls': 'global-search-listbox',
+                            'aria-activedescendant':
+                                visible.length > 0 ? `global-search-row-${active}` : undefined,
+                        }}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -261,6 +275,7 @@ export function GlobalSearch() {
                         <List
                             dense
                             sx={{ mt: 0.5, pb: 0, maxHeight: '50vh', overflowY: 'auto' }}
+                            id="global-search-listbox"
                             role="listbox"
                         >
                             {visible.map((result, index) => {

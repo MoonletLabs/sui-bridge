@@ -254,11 +254,16 @@ export const buildConditionalQuery = (
     return conditions.length ? sql`AND (${joinSQL(sql, conditions, sql` AND `)})` : sql``
 }
 
-/** `EXISTS` check that a transfer (alias `t`) has reached a lifecycle status */
+/**
+ * `EXISTS` check that a transfer (alias `t`) has reached a lifecycle status. Only
+ * finalized records count, so the list, filters and CSV agree with the detail page
+ * (which shows a not-yet-finalized approval / claim as still pending).
+ */
 export const transferHasStatus = (sql: any, status: 'Approved' | 'Claimed') =>
     sql`EXISTS (
         SELECT 1 FROM public.token_transfer s
         WHERE s.chain_id = t.chain_id AND s.nonce = t.nonce AND s.status = ${status}
+          AND s.is_finalized = true
     )`
 // ----------------------------------------------------------------------
 

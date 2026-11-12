@@ -20,11 +20,11 @@ import {
     Typography,
 } from '@mui/material'
 import { formatDistanceToNow } from 'date-fns'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { formatExplorerUrl, truncateAddress } from 'src/config/helper'
 import { getNetwork, NETWORK } from 'src/hooks/get-network-storage'
 import { useTokenRegistry } from 'src/hooks/use-token-registry'
-import { useRouter } from 'src/routes/hooks'
+import { useRouter, useSearchParams } from 'src/routes/hooks'
 import { paths } from 'src/routes/paths'
 import { endpoints, fetcher } from 'src/utils/axios'
 import { fNumber } from 'src/utils/format-number'
@@ -121,6 +121,63 @@ const filtersKey = (f: Filters) =>
         f.status,
     ].join('|')
 
+/**
+ * Reports when the URL's query string changes (navigation, ⌘K), including this
+ * table's own `replaceState` writes. It sits in its own Suspense boundary because
+ * `useSearchParams` opts a page out of static rendering otherwise.
+ */
+function UrlChangeWatcher({ onChange }: { onChange: () => void }) {
+    const key = useSearchParams()?.toString()
+    useEffect(() => {
+        onChange()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key])
+    return null
+}
+
+/** The filters / sort / page encoded in the current URL (client side only) */
+function readViewFromUrl(): {
+    urlFilters: Filters
+    urlSort: { by: SortBy; order: SortOrder }
+    urlPage: number
+} {
+    // Only accept finite, non-negative numbers for amounts — a malformed
+    // shared link (?amountFrom=abc) would otherwise push NaN into the API
+    const readAmountParam = (key: string): string => {
+        const raw = readQueryParam(key)
+        if (!raw) {
+            return ''
+        }
+        const parsed = Number(raw)
+        return Number.isFinite(parsed) && parsed >= 0 ? raw : ''
+    }
+    const flowParam = readQueryParam('flow')
+    const statusParam = readQueryParam('status')
+    const urlFilters: Filters = {
+        flow: flowParam === 'inflow' || flowParam === 'outflow' ? (flowParam as Flow) : 'all',
+        senders: (readQueryParam('senders') || '').split(',').filter(Boolean),
+        recipients: (readQueryParam('recipients') || '').split(',').filter(Boolean),
+        party: readQueryParam('address') || '',
+        amountFrom: readAmountParam('amountFrom'),
+        amountTo: readAmountParam('amountTo'),
+        tokens: (readQueryParam('tokens') || '').split(',').filter(Boolean),
+        status:
+            statusParam === 'completed' ||
+            statusParam === 'awaiting_claim' ||
+            statusParam === 'pending_approval'
+                ? statusParam
+                : 'all',
+    }
+    const urlSort: { by: SortBy; order: SortOrder } = {
+        by: readQueryParam('sort') === 'amount' ? 'amount' : 'date',
+        order: readQueryParam('order') === 'asc' ? 'asc' : 'desc',
+    }
+    const rawPage = Number(readQueryParam('page'))
+    const urlPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 0
+
+    return { urlFilters, urlSort, urlPage }
+}
+
 const amountPresetOf = (f: Filters): AmountPreset => {
     if (!f.amountFrom && !f.amountTo) return 'any'
     if (!f.amountFrom && f.amountTo === '10000') return 'low'
@@ -204,39 +261,7 @@ export function TransactionsTable({
         if (!syncFiltersToUrl) {
             return
         }
-        // Only accept finite, non-negative numbers for amounts — a malformed
-        // shared link (?amountFrom=abc) would otherwise push NaN into the API
-        const readAmountParam = (key: string): string => {
-            const raw = readQueryParam(key)
-            if (!raw) {
-                return ''
-            }
-            const parsed = Number(raw)
-            return Number.isFinite(parsed) && parsed >= 0 ? raw : ''
-        }
-        const flowParam = readQueryParam('flow')
-        const statusParam = readQueryParam('status')
-        const urlFilters: Filters = {
-            flow: flowParam === 'inflow' || flowParam === 'outflow' ? (flowParam as Flow) : 'all',
-            senders: (readQueryParam('senders') || '').split(',').filter(Boolean),
-            recipients: (readQueryParam('recipients') || '').split(',').filter(Boolean),
-            party: readQueryParam('address') || '',
-            amountFrom: readAmountParam('amountFrom'),
-            amountTo: readAmountParam('amountTo'),
-            tokens: (readQueryParam('tokens') || '').split(',').filter(Boolean),
-            status:
-                statusParam === 'completed' ||
-                statusParam === 'awaiting_claim' ||
-                statusParam === 'pending_approval'
-                    ? statusParam
-                    : 'all',
-        }
-        const urlSort: { by: SortBy; order: SortOrder } = {
-            by: readQueryParam('sort') === 'amount' ? 'amount' : 'date',
-            order: readQueryParam('order') === 'asc' ? 'asc' : 'desc',
-        }
-        const rawPage = Number(readQueryParam('page'))
-        const urlPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 0
+        const { urlFilters, urlSort, urlPage } = readViewFromUrl()
 
         const hasUrlFilters = filtersKey(urlFilters) !== filtersKey(EMPTY_FILTERS)
         const hasUrlSort = urlSort.by !== 'date' || urlSort.order !== 'desc'
@@ -267,6 +292,33 @@ export function TransactionsTable({
         setUrlHydrated(true)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [syncFiltersToUrl])
+
+    // The view can also change without a remount: a link or the search (⌘K) opening
+    // `/transactions?status=...` while this page is already showing. The table's own
+    // URL writes describe the current view, so they compare equal and are ignored.
+    const rehydrateFromUrl = () => {
+        if (!syncFiltersToUrl || !urlHydrated) {
+            return
+        }
+        const { urlFilters, urlSort, urlPage } = readViewFromUrl()
+        if (viewKey(urlFilters, urlSort) === viewKey(filters, sort) && urlPage === page) {
+            return
+        }
+        prevViewKey.current = viewKey(urlFilters, urlSort)
+        setFilters(urlFilters)
+        setSort(urlSort)
+        setPage(urlPage)
+        if (
+            urlFilters.senders.length ||
+            urlFilters.recipients.length ||
+            amountPresetOf(urlFilters) === 'custom'
+        ) {
+            setShowFilters(true)
+        }
+    }
+    // The watcher below calls the latest version of this, never a stale one
+    const rehydrateRef = useRef(rehydrateFromUrl)
+    rehydrateRef.current = rehydrateFromUrl
 
     // Mirror filters/sort/page into the URL so the current view is shareable
     useEffect(() => {
@@ -470,6 +522,11 @@ export function TransactionsTable({
 
     return (
         <Box>
+            {syncFiltersToUrl && (
+                <Suspense fallback={null}>
+                    <UrlChangeWatcher onChange={() => rehydrateRef.current()} />
+                </Suspense>
+            )}
             <CustomTable
                 headLabel={[
                     { id: 'chain', label: 'Route', width: 120, sortable: false },

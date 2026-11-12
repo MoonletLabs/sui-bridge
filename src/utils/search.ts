@@ -10,7 +10,7 @@ const URL_HASH_RE = /0x[0-9a-fA-F]{64}|0x[0-9a-fA-F]{40}/
  * the hash / address / digest inside them.
  */
 export function cleanSearchQuery(raw: string): string {
-    let q = raw.trim().replace(/^["'`(<\[]+|["'`)>\],;.:]+$/g, '')
+    let q = unwrap(raw.trim())
 
     if (/^(https?:\/\/|[\w-]+(\.[\w-]+)+\/)/i.test(q) || q.includes('/')) {
         // Drop query string / fragment, then look for a hash or a base58 digest in the path
@@ -22,6 +22,26 @@ export function cleanSearchQuery(raw: string): string {
     }
 
     return q
+}
+
+const PAIRS: Record<string, string> = { '"': '"', "'": "'", '`': '`', '(': ')', '[': ']', '<': '>' }
+
+/**
+ * Remove wrapping quotes / brackets and trailing sentence punctuation. A bracket
+ * is only removed as a matching pair, so a comparison like "< 500" or ">= 1k" is kept.
+ */
+function unwrap(value: string): string {
+    // Sentence punctuation can sit outside the brackets: "(0xabc)."
+    let q = value.replace(/[.,;:]+$/, '')
+    for (let i = 0; i < 3; i += 1) {
+        const close = PAIRS[q[0]]
+        if (q.length > 1 && close && q[q.length - 1] === close) {
+            q = q.slice(1, -1).trim()
+        } else {
+            break
+        }
+    }
+    return q.replace(/[.,;:]+$/, '')
 }
 
 export type QueryKind =
