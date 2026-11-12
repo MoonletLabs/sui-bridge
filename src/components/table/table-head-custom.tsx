@@ -35,6 +35,10 @@ export type TableHeadCustomProps = {
         label: string
         align?: 'left' | 'right' | 'center'
         minWidth?: number
+        /** Fixed column width (px) at every breakpoint, for tables with `tableLayout: fixed` */
+        width?: number
+        /** With `onSort`, whether this column can be sorted (default true) */
+        sortable?: boolean
     }[]
     onSelectAllRows?: (checked: boolean) => void
 }
@@ -73,11 +77,15 @@ export function TableHeadCustom({
                         key={headCell.id}
                         align={headCell.align || 'left'}
                         sortDirection={orderBy === headCell.id ? order : false}
-                        sx={{ width: { xs: headCell.minWidth, sm: 'auto' } }}
+                        sx={{
+                            width: headCell.width ?? { xs: headCell.minWidth, sm: 'auto' },
+                        }}
                     >
-                        {onSort ? (
+                        {onSort && headCell.sortable !== false ? (
                             <TableSortLabel
-                                hideSortIcon
+                                hideSortIcon={
+                                    orderBy !== headCell.id && headCell.sortable === undefined
+                                }
                                 active={orderBy === headCell.id}
                                 direction={orderBy === headCell.id ? order : 'asc'}
                                 onClick={() => onSort(headCell.id)}

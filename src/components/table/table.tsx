@@ -12,6 +12,8 @@ import {
     TablePagination,
     TableRow,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import { useMediaQuery } from '@mui/material'
 import { ComponentType, FC, ReactNode } from 'react'
 import { Scrollbar } from '../scrollbar'
 import { TableHeadCustom } from './table-head-custom'
@@ -30,6 +32,8 @@ type Props<T> = CardProps & {
         label: string
         align?: 'left' | 'right' | 'center'
         minWidth?: number
+        sortable?: boolean
+        width?: number
     }[]
     tableData: T[]
     RowComponent: ComponentType<RowComponentProps<T>>
@@ -47,6 +51,18 @@ type Props<T> = CardProps & {
         onPageChange: (newPage: number) => void
     }
     handleExport?: () => void
+    /** Disables the export button and shows progress while a download is being prepared */
+    exporting?: boolean
+    /** Minimum table width in px before the table scrolls horizontally (default 720) */
+    minTableWidth?: number
+    /** Always-visible content between the header and the table (summary, quick filters, ...) */
+    toolbar?: ReactNode
+    /** Extra controls placed next to "Show filters" */
+    headerActions?: ReactNode
+    /** Column sorting: pass `sortable: true` on the columns that support it */
+    sort?: { orderBy: string; order: 'asc' | 'desc'; onSort: (id: string) => void }
+    /** Rendered instead of the table on small screens (e.g. cards) */
+    MobileRowComponent?: ComponentType<RowComponentProps<T>>
 }
 
 export function CustomTable<T>({
@@ -65,8 +81,18 @@ export function CustomTable<T>({
     setShowFilters,
     minHeight,
     handleExport,
+    exporting,
+    headerActions,
+    toolbar,
+    minTableWidth,
+    sort,
+    MobileRowComponent,
     ...other
 }: Props<T>) {
+    const theme = useTheme()
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+    const showCards = !!MobileRowComponent && isMobile
+
     return (
         <Card {...other} sx={{ mt: 4 }}>
             <CardHeader
@@ -89,6 +115,7 @@ export function CustomTable<T>({
                                     flexDirection: { xs: 'column', sm: 'row' },
                                 }}
                             >
+                                {headerActions}
                                 <Button
                                     style={{ display: 'flex', gap: 4, fontSize: 14 }}
                                     onClick={() => setShowFilters(!showFilters)}
@@ -109,6 +136,7 @@ export function CustomTable<T>({
                                     <Button
                                         variant="outlined"
                                         onClick={handleExport}
+                                        disabled={exporting}
                                         sx={{
                                             height: 34,
                                             typography: 'subtitle2',
@@ -116,7 +144,7 @@ export function CustomTable<T>({
                                             borderRadius: 1,
                                         }}
                                     >
-                                        Export CSV
+                                        {exporting ? 'Exporting…' : 'Export CSV'}
                                     </Button>
                                 )}
                             </Box>
@@ -129,28 +157,56 @@ export function CustomTable<T>({
                 sx={{ mb: 3 }}
             />
 
+            {toolbar}
+
             {showFilters && filters}
 
-            <Scrollbar sx={{ minHeight: minHeight || 800 }}>
-                <Table sx={{ width: '100%', tableLayout: 'fixed', minWidth: 720 }}>
-                    <TableHeadCustom headLabel={headLabel} />
-                    <TableBody>
-                        {loading
-                            ? Array.from(new Array(pagination?.rowsPerPage || 5)).map(
-                                  (_, index) => (
-                                      <SkeletonRow
-                                          rowHeight={rowHeight}
-                                          key={index}
-                                          columnCount={headLabel?.length}
-                                      />
-                                  ),
-                              )
-                            : tableData.map((row, index) => (
-                                  <RowComponent key={(row as any).id || index} row={row} />
-                              ))}
-                    </TableBody>
-                </Table>
-            </Scrollbar>
+            {showCards && MobileRowComponent ? (
+                <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {loading
+                        ? Array.from(new Array(Math.min(pagination?.rowsPerPage || 5, 6))).map(
+                              (_, index) => (
+                                  <Skeleton
+                                      key={index}
+                                      variant="rectangular"
+                                      height={120}
+                                      sx={{ borderRadius: 2 }}
+                                  />
+                              ),
+                          )
+                        : tableData.map((row, index) => (
+                              <MobileRowComponent key={(row as any).id || index} row={row} />
+                          ))}
+                </Box>
+            ) : (
+                <Scrollbar sx={{ minHeight: minHeight || 800 }}>
+                    <Table
+                        sx={{ width: '100%', tableLayout: 'fixed', minWidth: minTableWidth || 720 }}
+                    >
+                        <TableHeadCustom
+                            headLabel={headLabel}
+                            orderBy={sort?.orderBy}
+                            order={sort?.order}
+                            onSort={sort?.onSort}
+                        />
+                        <TableBody>
+                            {loading
+                                ? Array.from(new Array(pagination?.rowsPerPage || 5)).map(
+                                      (_, index) => (
+                                          <SkeletonRow
+                                              rowHeight={rowHeight}
+                                              key={index}
+                                              columnCount={headLabel?.length}
+                                          />
+                                      ),
+                                  )
+                                : tableData.map((row, index) => (
+                                      <RowComponent key={(row as any).id || index} row={row} />
+                                  ))}
+                        </TableBody>
+                    </Table>
+                </Scrollbar>
+            )}
 
             <Divider sx={{ borderStyle: 'dashed' }} />
 
