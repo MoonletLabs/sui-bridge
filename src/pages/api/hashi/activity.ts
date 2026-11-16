@@ -11,6 +11,7 @@ import { sendError, sendReply } from '../utils'
 
 const DAY_MS = 86_400_000
 const RECENT_BUCKET_MS = 600_000 // 10 minutes
+const HOUR_MS = 3_600_000
 
 export type HashiStatusCount = { status: string; count: number; sats: number }
 
@@ -58,6 +59,8 @@ export type HashiActivityResponse = {
     depositStatus: HashiStatusCount[]
     withdrawalStatus: HashiStatusCount[]
     daily: HashiDailyPoint[]
+    /** The last 24 hours in hourly buckets, for the 1d range (full mode only) */
+    hourly: HashiDailyPoint[]
     recent: ((HashiDeposit & { kind: 'deposit' }) | (HashiWithdrawal & { kind: 'withdrawal' }))[]
 }
 
@@ -131,6 +134,30 @@ export function buildActivity(
         }
     }
 
+    // Last 24 hours, hour by hour, so the 1d range has something finer than one bar
+    const hourStart = Math.floor(Date.now() / HOUR_MS) * HOUR_MS - 23 * HOUR_MS
+    const hourly: HashiDailyPoint[] = Array.from({ length: 24 }, (_, i) => ({
+        day_ms: hourStart + i * HOUR_MS,
+        deposits: 0,
+        deposit_sats: 0,
+        withdrawals: 0,
+        withdrawal_sats: 0,
+    }))
+    doneDeposits.forEach(d => {
+        const p = hourly[Math.floor(((d.confirmedMs as number) - hourStart) / HOUR_MS)]
+        if (p) {
+            p.deposits += 1
+            p.deposit_sats += d.amountSats
+        }
+    })
+    doneWithdrawals.forEach(w => {
+        const p = hourly[Math.floor(((w.confirmedMs as number) - hourStart) / HOUR_MS)]
+        if (p) {
+            p.withdrawals += 1
+            p.withdrawal_sats += w.amountSats
+        }
+    })
+
     const depositMs = doneDeposits.map(d => (d.confirmedMs as number) - d.createdMs)
     const approvalMs = doneDeposits
         .filter(d => d.approvedMs)
@@ -180,6 +207,7 @@ export function buildActivity(
         depositStatus: statusCounts(deposits, ['pending', 'approved', 'confirmed']),
         withdrawalStatus: statusCounts(withdrawals, ['pending', 'approved', 'signed', 'confirmed']),
         daily,
+        hourly,
         recent,
     }
 }
@@ -248,6 +276,7 @@ export function buildRecentActivity(
         depositStatus: [],
         withdrawalStatus: [],
         daily,
+        hourly: [],
         recent,
     }
 }

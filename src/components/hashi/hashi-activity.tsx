@@ -48,16 +48,25 @@ export function HashiVolumeChart({
     const [metric, setMetric] = useState<Metric>('volume')
     const [rangeDays, setRangeDays] = useState(0)
 
-    // Hourly buckets (recent mode) are already a short window: no range there
+    // 1d switches to hourly bars: one daily bar says nothing. Recent mode (large networks)
+    // already shows a short window, so there is no range there.
+    const full = data?.mode === 'full'
+    const hourlyView = full && rangeDays === 1 && (data?.hourly?.length ?? 0) > 0
     const allDays = data?.daily ?? []
-    const shown = rangeDays && data?.mode === 'full' ? allDays.slice(-rangeDays) : allDays
+    const shown = hourlyView
+        ? (data?.hourly ?? [])
+        : rangeDays && full
+          ? allDays.slice(-rangeDays)
+          : allDays
+    const bucketMs = hourlyView ? 3_600_000 : (data?.bucketMs ?? 86_400_000)
+    const fineBuckets = bucketMs < 86_400_000
 
     const { series, categories } = useMemo(() => {
         const days = shown
         const cats = days.map(d =>
             dayjs(d.day_ms)
                 .utc()
-                .format(data && data.bucketMs < 86_400_000 ? 'HH:mm' : 'MMM DD'),
+                .format(fineBuckets ? 'HH:mm' : 'MMM DD'),
         )
         if (metric === 'volume') {
             return {
@@ -81,7 +90,14 @@ export function HashiVolumeChart({
                 { name: 'Withdrawals (Sui → BTC)', data: days.map(d => -d.withdrawals) },
             ],
         }
-    }, [data, metric, rangeDays])
+    }, [data, metric, rangeDays, hourlyView])
+
+    // Small ranges (an hour of deposits is a few thousand sats) need more decimals to read
+    const maxVolumeBtc = Math.max(
+        0,
+        ...shown.map(d => satsToBtc(Math.max(d.deposit_sats, d.withdrawal_sats))),
+    )
+    const volumeDecimals = maxVolumeBtc >= 1 ? 2 : maxVolumeBtc >= 0.01 ? 3 : 5
 
     const options = useChart({
         chart: {
@@ -103,13 +119,13 @@ export function HashiVolumeChart({
                 rotate: 0,
                 hideOverlappingLabels: true,
                 formatter: (value: string, _timestamp?: number, opts?: { i?: number }) =>
-                    (opts?.i ?? 0) % 2 === 0 ? value : '',
+                    (opts?.i ?? 0) % (hourlyView ? 3 : 2) === 0 ? value : '',
             },
         },
         yaxis: {
             labels: {
                 formatter: (v: number) =>
-                    metric === 'volume' ? `${Math.abs(v).toFixed(2)}` : String(Math.abs(v)),
+                    metric === 'volume' ? Math.abs(v).toFixed(volumeDecimals) : String(Math.abs(v)),
             },
         },
         tooltip: {
@@ -121,11 +137,7 @@ export function HashiVolumeChart({
                     if (!day) return ''
                     return dayjs(day.day_ms)
                         .utc()
-                        .format(
-                            data && data.bucketMs < 86_400_000
-                                ? 'MMM D, HH:mm [UTC]'
-                                : 'MMM D, YYYY',
-                        )
+                        .format(fineBuckets ? 'MMM D, HH:mm [UTC]' : 'MMM D, YYYY')
                 },
             },
             y: {
@@ -148,7 +160,9 @@ export function HashiVolumeChart({
                 subheader={
                     data?.mode === 'recent'
                         ? `Requests per 10 minutes (UTC), ${dayjs(data.window?.fromMs).utc().format('MMM D HH:mm')} to ${dayjs(data.window?.toMs).utc().format('HH:mm')} UTC`
-                        : "Completed requests per day (UTC), read from Hashi's on-chain queues"
+                        : hourlyView
+                          ? 'Completed requests per hour (UTC), last 24 hours'
+                          : "Completed requests per day (UTC), read from Hashi's on-chain queues"
                 }
                 action={
                     <Stack direction="row" spacing={1}>
