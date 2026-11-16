@@ -12,6 +12,7 @@ const ROUTES = [
     '/hashi',
     '/hashi/activity',
     '/hashi/operations',
+    '/hashi/health',
     '/hashi/committee',
     '/hashi/governance',
 ]

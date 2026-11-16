@@ -29,6 +29,7 @@ type HashiObject = {
         members: TableRef
         committees: TableRef
         epoch: string
+        pending_epoch_change?: unknown
     }
     config: { config: { contents: { key: string; value: Json }[] } }
     treasury: { objects: TableRef }
@@ -914,5 +915,336 @@ export async function getHashiOperations(network: string): Promise<HashiOperatio
             epochStartMs: Date.parse(chain.epoch.startTimestamp),
         },
         epochs,
+    }
+}
+
+// ----------------------------------------------------------------------
+// Health
+
+export type HashiCheckStatus = 'healthy' | 'watch' | 'info' | 'unavailable'
+
+export type HashiHealthCheck = {
+    key: string
+    group: 'Protocol state' | 'Bridge progression' | 'Request outcomes'
+    label: string
+    status: HashiCheckStatus
+    summary: string
+    detail: string
+}
+
+export type HashiHealth = {
+    network: string
+    status: 'healthy' | 'watch'
+    watchCount: number
+    checkedAt: string
+    checks: HashiHealthCheck[]
+}
+
+const MIN = 60_000
+const HOUR = 60 * MIN
+
+// Same rules HashiView applies: a queue only turns to "watch" when several requests from
+// several different people are overdue, so one stuck request does not raise an alarm
+const WATCH_MIN_REQUESTS = 5
+const WATCH_MIN_REQUESTERS = 3
+
+const THRESHOLDS = {
+    requestedDepositMs: 6 * HOUR,
+    approvedDepositMs: 2 * HOUR + 10 * MIN,
+    requestedWithdrawalMs: 2 * HOUR,
+    approvedWithdrawalMs: 2 * HOUR,
+}
+
+const ageText = (ms: number) => {
+    const minutes = Math.round(ms / MIN)
+    if (minutes < 60) return `${minutes}m`
+    const hours = Math.floor(minutes / 60)
+    return `${hours}h ${minutes % 60}m`
+}
+
+type Waiting = { sender: string; sinceMs: number }
+
+/** A queue check: overdue means waiting longer than `thresholdMs` */
+function queueCheck(
+    base: Pick<HashiHealthCheck, 'key' | 'group' | 'label'>,
+    waiting: Waiting[],
+    thresholdMs: number,
+    noun: string,
+    emptyText: string,
+    now: number,
+): HashiHealthCheck {
+    if (!waiting.length) {
+        return { ...base, status: 'healthy', summary: emptyText, detail: `Nothing is waiting.` }
+    }
+    const overdue = waiting.filter(w => now - w.sinceMs > thresholdMs)
+    const requesters = new Set(overdue.map(w => w.sender)).size
+    const oldest = Math.max(...waiting.map(w => now - w.sinceMs))
+    const watch = overdue.length >= WATCH_MIN_REQUESTS && requesters >= WATCH_MIN_REQUESTERS
+    return {
+        ...base,
+        status: watch ? 'watch' : 'healthy',
+        summary: watch
+            ? `${overdue.length} ${noun} are overdue`
+            : `${waiting.length} ${noun} waiting, none unusually delayed`,
+        detail: `Oldest has waited ${ageText(oldest)}. Timing threshold ${ageText(thresholdMs)}. Watch needs at least ${WATCH_MIN_REQUESTS} overdue requests from ${WATCH_MIN_REQUESTERS} different users (now ${overdue.length} from ${requesters}).`,
+    }
+}
+
+const TX_QUERY = `
+query ($fn: String!, $before: String) {
+    transactions(last: 50, before: $before, filter: { function: $fn }) {
+        pageInfo { hasPreviousPage startCursor }
+        nodes { sender { address } effects { status timestamp } }
+    }
+}`
+
+type TxResponse = {
+    transactions: {
+        pageInfo: { hasPreviousPage: boolean; startCursor: string | null }
+        nodes: {
+            sender: { address: string } | null
+            effects: { status: string; timestamp: string }
+        }[]
+    }
+}
+
+type RequestTx = { sender: string; failed: boolean; atMs: number }
+
+/** Request transactions (successful or not) in the last `sinceMs`, newest pages first */
+async function readRequestTransactions(
+    cfg: HashiNetworkConfig,
+    fn: string,
+    sinceMs: number,
+    maxPages = 6,
+) {
+    const out: RequestTx[] = []
+    let before: string | null = null
+    let capped = false
+    for (let page = 0; page < maxPages; page += 1) {
+        const data: TxResponse = await suiGraphql<TxResponse>(cfg.graphql, TX_QUERY, {
+            fn: `${cfg.packageId}::${fn}`,
+            before,
+        })
+        const nodes = data.transactions.nodes
+        nodes.forEach(n =>
+            out.push({
+                sender: n.sender?.address ?? '',
+                failed: n.effects.status !== 'SUCCESS',
+                atMs: Date.parse(n.effects.timestamp),
+            }),
+        )
+        const oldest = nodes.length ? Date.parse(nodes[0].effects.timestamp) : 0
+        if (!data.transactions.pageInfo.hasPreviousPage || oldest < sinceMs) break
+        if (page === maxPages - 1) capped = true
+        before = data.transactions.pageInfo.startCursor
+    }
+    return { txs: out.filter(t => t.atMs >= sinceMs), capped }
+}
+
+function outcomeCheck(
+    base: Pick<HashiHealthCheck, 'key' | 'group' | 'label'>,
+    result: { txs: RequestTx[]; capped: boolean },
+    now: number,
+    noun: string,
+): HashiHealthCheck {
+    const { txs, capped } = result
+    if (!txs.length) {
+        return {
+            ...base,
+            status: 'healthy',
+            summary: `No ${noun} request transactions in the last 24 hours`,
+            detail: 'Nothing to judge: no one submitted one in the last day.',
+        }
+    }
+    const failed = txs.filter(t => t.failed)
+    const lastHour = txs.filter(t => now - t.atMs <= HOUR)
+    const failedHour = lastHour.filter(t => t.failed)
+    const senders = new Set(failedHour.map(t => t.sender)).size
+    const rate = lastHour.length ? failedHour.length / lastHour.length : 0
+    const watch = failedHour.length >= 20 && rate >= 0.5 && senders >= 5
+    return {
+        ...base,
+        status: watch ? 'watch' : 'healthy',
+        summary: `${failed.length} of ${txs.length} ${noun} request transactions failed ${capped ? 'among the most recent' : 'in the last 24 hours'}`,
+        detail: `Last hour: ${failedHour.length} of ${lastHour.length} failed (${(rate * 100).toFixed(1)}%) across ${senders} different senders. Watch needs at least 20 failures, a 50% failure rate and 5 senders in that hour. Individual failures can be invalid user requests.${capped ? ' Only the most recent transactions were read on this busy network.' : ''}`,
+    }
+}
+
+export async function getHashiHealth(network: string): Promise<HashiHealth> {
+    const cfg = getHashiConfig(network)
+    const now = Date.now()
+    const [{ hashi, bitcoin }, chain, requests, depositTxs, withdrawalTxs] = await Promise.all([
+        readHashiState(cfg),
+        suiGraphql<ChainResponse>(cfg.graphql, CHAIN_QUERY),
+        getHashiRequests(network),
+        readRequestTransactions(cfg, 'deposit::deposit', now - 24 * HOUR),
+        readRequestTransactions(cfg, 'withdraw::request_withdrawal', now - 24 * HOUR),
+    ])
+    const config = parseConfig(hashi.config.config.contents)
+    const checks: HashiHealthCheck[] = []
+
+    // --- Protocol state
+    checks.push({
+        key: 'pause',
+        group: 'Protocol state',
+        label: 'Protocol pause',
+        status: config.paused ? 'watch' : 'healthy',
+        summary: config.paused ? 'Hashi is paused' : 'Hashi is not paused',
+        detail: 'Read from the on-chain pause flag.',
+    })
+
+    const hashiEpoch = Number(hashi.committee_set.epoch)
+    const suiEpoch = Number(chain.epoch.epochId)
+    const epochAgeMs = now - Date.parse(chain.epoch.startTimestamp)
+    const pending = hashi.committee_set.pending_epoch_change != null
+    const lagging = hashiEpoch < suiEpoch
+    const stuck = (lagging || pending) && epochAgeMs > 2 * HOUR
+    checks.push({
+        key: 'reconfiguration',
+        group: 'Protocol state',
+        label: 'Reconfiguration',
+        status: stuck ? 'watch' : 'healthy',
+        summary: pending
+            ? 'A reconfiguration is in progress'
+            : lagging
+              ? `Hashi is at epoch ${hashiEpoch}, Sui at ${suiEpoch}`
+              : 'No reconfiguration is pending',
+        detail: `Hashi and Sui are at epochs ${hashiEpoch} and ${suiEpoch}. The committee hands over at each Sui epoch change; it only counts as a problem when it has not finished two hours into the new epoch (this epoch is ${ageText(epochAgeMs)} old).${config.reconfigHold ? ' A reconfiguration hold is set.' : ''}`,
+    })
+
+    checks.push({
+        key: 'online-weight',
+        group: 'Protocol state',
+        label: 'Online committee weight',
+        status: 'unavailable',
+        summary: 'Not checked yet',
+        detail: 'Needs a live probe of every operator endpoint, which will come with the scheduled data job.',
+    })
+    checks.push({
+        key: 'guardian',
+        group: 'Protocol state',
+        label: 'Guardian availability and capacity',
+        status: 'unavailable',
+        summary: 'Not checked yet',
+        detail: `Needs a live probe of the Guardian service${config.guardianUrl ? ` (${config.guardianUrl})` : ''}, planned with the scheduled data job.`,
+    })
+
+    // --- Bridge progression
+    if (requests.tooLarge) {
+        const note = 'This network has too many requests to read from Sui in full.'
+        ;[
+            ['requested-deposits', 'Requested deposits'],
+            ['approved-deposits', 'Approved deposits'],
+            ['requested-withdrawals', 'Requested withdrawals'],
+            ['approved-withdrawals', 'Approved withdrawals'],
+        ].forEach(([key, label]) =>
+            checks.push({
+                key,
+                group: 'Bridge progression',
+                label,
+                status: 'unavailable',
+                summary: 'Not available on this network',
+                detail: note,
+            }),
+        )
+    } else {
+        const { deposits, withdrawals } = requests
+        const reqDep = deposits.filter(d => d.status === 'pending')
+        const appDep = deposits.filter(d => d.status === 'approved')
+        const reqWd = withdrawals.filter(w => w.status === 'pending')
+        const appWd = withdrawals.filter(w => w.status === 'approved' || w.status === 'signed')
+        checks.push(
+            queueCheck(
+                {
+                    key: 'requested-deposits',
+                    group: 'Bridge progression',
+                    label: 'Requested deposits',
+                },
+                reqDep.map(d => ({ sender: d.sender, sinceMs: d.createdMs })),
+                THRESHOLDS.requestedDepositMs,
+                'deposit requests',
+                'No deposit requests are waiting for approval',
+                now,
+            ),
+            queueCheck(
+                {
+                    key: 'approved-deposits',
+                    group: 'Bridge progression',
+                    label: 'Approved deposits',
+                },
+                appDep.map(d => ({ sender: d.sender, sinceMs: d.approvedMs ?? d.createdMs })),
+                THRESHOLDS.approvedDepositMs,
+                'approved deposits',
+                'No approved deposits are waiting to be minted',
+                now,
+            ),
+            queueCheck(
+                {
+                    key: 'requested-withdrawals',
+                    group: 'Bridge progression',
+                    label: 'Requested withdrawals',
+                },
+                reqWd.map(w => ({ sender: w.sender, sinceMs: w.createdMs })),
+                THRESHOLDS.requestedWithdrawalMs,
+                'withdrawal requests',
+                'No withdrawal requests are waiting for approval',
+                now,
+            ),
+            queueCheck(
+                {
+                    key: 'approved-withdrawals',
+                    group: 'Bridge progression',
+                    label: 'Approved withdrawals',
+                },
+                appWd.map(w => ({ sender: w.sender, sinceMs: w.approvedMs ?? w.createdMs })),
+                THRESHOLDS.approvedWithdrawalMs,
+                'approved withdrawals',
+                'No approved withdrawals are waiting for Bitcoin',
+                now,
+            ),
+        )
+    }
+
+    const archived = Number(bitcoin.withdrawal_queue.confirmed_txns.size)
+    checks.push({
+        key: 'archival',
+        group: 'Bridge progression',
+        label: 'Confirmed withdrawal archival',
+        status: 'info',
+        summary: `${archived} confirmed withdrawal transactions are still on-chain`,
+        detail: 'Confirmed batches stay on-chain until the committee archives them. Bitcoin payments are already confirmed; archival is internal clean-up, so the backlog is informational and never raises an alert.',
+    })
+
+    // --- Request outcomes
+    checks.push(
+        outcomeCheck(
+            {
+                key: 'deposit-outcomes',
+                group: 'Request outcomes',
+                label: 'Deposit request transactions',
+            },
+            depositTxs,
+            now,
+            'deposit',
+        ),
+        outcomeCheck(
+            {
+                key: 'withdrawal-outcomes',
+                group: 'Request outcomes',
+                label: 'Withdrawal request transactions',
+            },
+            withdrawalTxs,
+            now,
+            'withdrawal',
+        ),
+    )
+
+    const watchCount = checks.filter(c => c.status === 'watch').length
+    return {
+        network: network === 'testnet' ? 'testnet' : 'mainnet',
+        status: watchCount ? 'watch' : 'healthy',
+        watchCount,
+        checkedAt: new Date().toISOString(),
+        checks,
     }
 }

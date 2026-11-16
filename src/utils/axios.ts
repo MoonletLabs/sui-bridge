@@ -58,6 +58,7 @@ export const endpoints = {
         committee: '/api/hashi/committee',
         governance: '/api/hashi/governance',
         operations: '/api/hashi/operations',
+        health: '/api/hashi/health',
     },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',
