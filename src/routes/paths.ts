@@ -100,6 +100,7 @@ export const paths = {
     hashi: {
         root: ROOTS.HASHI,
         activity: `${ROOTS.HASHI}/activity`,
+        operations: `${ROOTS.HASHI}/operations`,
         committee: `${ROOTS.HASHI}/committee`,
         governance: `${ROOTS.HASHI}/governance`,
     },

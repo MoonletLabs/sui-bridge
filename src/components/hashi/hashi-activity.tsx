@@ -20,12 +20,23 @@ import {
     Typography,
 } from '@mui/material'
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { useMemo, useState } from 'react'
 import { Chart, useChart } from 'src/components/chart'
 import type { HashiActivityResponse } from 'src/pages/api/hashi/activity'
 import { btcTxUrl, fBtc, fDuration, satsToBtc, shortAddress, suiAccountUrl } from './format'
 
+dayjs.extend(utc)
+
 type Metric = 'volume' | 'count'
+
+// Days shown by the range selector (0 = everything)
+const RANGES = [
+    { label: '1d', days: 1 },
+    { label: '7d', days: 7 },
+    { label: '14d', days: 14 },
+    { label: 'All', days: 0 },
+]
 
 export function HashiVolumeChart({
     data,
@@ -35,10 +46,19 @@ export function HashiVolumeChart({
     loading: boolean
 }) {
     const [metric, setMetric] = useState<Metric>('volume')
+    const [rangeDays, setRangeDays] = useState(0)
+
+    // Hourly buckets (recent mode) are already a short window: no range there
+    const allDays = data?.daily ?? []
+    const shown = rangeDays && data?.mode === 'full' ? allDays.slice(-rangeDays) : allDays
 
     const { series, categories } = useMemo(() => {
-        const days = data?.daily ?? []
-        const cats = days.map(d => d.day_ms)
+        const days = shown
+        const cats = days.map(d =>
+            dayjs(d.day_ms)
+                .utc()
+                .format(data && data.bucketMs < 86_400_000 ? 'HH:mm' : 'MMM DD'),
+        )
         if (metric === 'volume') {
             return {
                 categories: cats,
@@ -61,7 +81,7 @@ export function HashiVolumeChart({
                 { name: 'Withdrawals (Sui → BTC)', data: days.map(d => -d.withdrawals) },
             ],
         }
-    }, [data, metric])
+    }, [data, metric, rangeDays])
 
     const options = useChart({
         chart: {
@@ -70,11 +90,22 @@ export function HashiVolumeChart({
             toolbar: { show: false },
             animations: { enabled: false },
         },
-        plotOptions: { bar: { columnWidth: '70%', borderRadius: 2 } },
         colors: ['#22C55E', '#F7931A'],
+        // No outline: empty days would otherwise show up as thin dashes at zero
+        stroke: { width: 0 },
+        plotOptions: { bar: { borderRadius: 0 } },
         dataLabels: { enabled: false },
         legend: { position: 'top', horizontalAlign: 'right' },
-        xaxis: { type: 'datetime', categories, labels: { datetimeUTC: false } },
+        // A category axis (like the other charts) keeps the hover band centred on the bar
+        xaxis: {
+            categories,
+            labels: {
+                rotate: 0,
+                hideOverlappingLabels: true,
+                formatter: (value: string, _timestamp?: number, opts?: { i?: number }) =>
+                    (opts?.i ?? 0) % 2 === 0 ? value : '',
+            },
+        },
         yaxis: {
             labels: {
                 formatter: (v: number) =>
@@ -84,7 +115,19 @@ export function HashiVolumeChart({
         tooltip: {
             shared: true,
             intersect: false,
-            x: { formatter: (val: number) => dayjs(val).format('MMM D, YYYY') },
+            x: {
+                formatter: (_val: number, opts?: { dataPointIndex?: number }) => {
+                    const day = shown[opts?.dataPointIndex ?? 0]
+                    if (!day) return ''
+                    return dayjs(day.day_ms)
+                        .utc()
+                        .format(
+                            data && data.bucketMs < 86_400_000
+                                ? 'MMM D, HH:mm [UTC]'
+                                : 'MMM D, YYYY',
+                        )
+                },
+            },
             y: {
                 formatter: (v: number) =>
                     metric === 'volume'
@@ -97,18 +140,42 @@ export function HashiVolumeChart({
     return (
         <Card>
             <CardHeader
-                title="Deposits and withdrawals"
-                subheader="Completed requests per day (UTC), read from Hashi's on-chain queues"
+                title={
+                    data?.mode === 'recent'
+                        ? 'Latest deposit and withdrawal requests'
+                        : 'Deposits and withdrawals'
+                }
+                subheader={
+                    data?.mode === 'recent'
+                        ? `Requests per 10 minutes (UTC), ${dayjs(data.window?.fromMs).utc().format('MMM D HH:mm')} to ${dayjs(data.window?.toMs).utc().format('HH:mm')} UTC`
+                        : "Completed requests per day (UTC), read from Hashi's on-chain queues"
+                }
                 action={
-                    <ToggleButtonGroup
-                        size="small"
-                        exclusive
-                        value={metric}
-                        onChange={(_, v) => v && setMetric(v)}
-                    >
-                        <ToggleButton value="volume">BTC</ToggleButton>
-                        <ToggleButton value="count">Count</ToggleButton>
-                    </ToggleButtonGroup>
+                    <Stack direction="row" spacing={1}>
+                        {data?.mode === 'full' && (
+                            <ToggleButtonGroup
+                                size="small"
+                                exclusive
+                                value={rangeDays}
+                                onChange={(_, v) => v !== null && setRangeDays(v)}
+                            >
+                                {RANGES.map(r => (
+                                    <ToggleButton key={r.label} value={r.days}>
+                                        {r.label}
+                                    </ToggleButton>
+                                ))}
+                            </ToggleButtonGroup>
+                        )}
+                        <ToggleButtonGroup
+                            size="small"
+                            exclusive
+                            value={metric}
+                            onChange={(_, v) => v && setMetric(v)}
+                        >
+                            <ToggleButton value="volume">BTC</ToggleButton>
+                            <ToggleButton value="count">Count</ToggleButton>
+                        </ToggleButtonGroup>
+                    </Stack>
                 }
             />
             <Box sx={{ p: 2, pt: 0 }}>
@@ -146,46 +213,50 @@ export function HashiSpeedAndSize({
     loading: boolean
 }) {
     const t = data?.totals
+    // Request events carry no completion times, so the speed card only exists for full history
+    const recent = data?.mode === 'recent'
     return (
         <Grid container spacing={2.5}>
-            <Grid item xs={12} md={6}>
+            {!recent && (
+                <Grid item xs={12} md={6}>
+                    <Card sx={{ p: 2.5, height: '100%' }}>
+                        <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                            Speed
+                        </Typography>
+                        {loading ? (
+                            <Skeleton variant="rounded" height={110} />
+                        ) : (
+                            <Grid container spacing={2}>
+                                <Grid item xs={6}>
+                                    <Metric
+                                        label="Deposit, request to hBTC"
+                                        value={fDuration(data?.depositTime.medianMs)}
+                                        sub={`median · p90 ${fDuration(data?.depositTime.p90Ms)}`}
+                                    />
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Metric
+                                        label="Withdrawal, request to BTC"
+                                        value={fDuration(data?.withdrawalTime.medianMs)}
+                                        sub={`median · p90 ${fDuration(data?.withdrawalTime.p90Ms)}`}
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Committee approval takes a median{' '}
+                                        {fDuration(data?.depositTime.approvalMedianMs)} after a
+                                        deposit request.
+                                    </Typography>
+                                </Grid>
+                            </Grid>
+                        )}
+                    </Card>
+                </Grid>
+            )}
+            <Grid item xs={12} md={recent ? 12 : 6}>
                 <Card sx={{ p: 2.5, height: '100%' }}>
                     <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                        Speed
-                    </Typography>
-                    {loading ? (
-                        <Skeleton variant="rounded" height={110} />
-                    ) : (
-                        <Grid container spacing={2}>
-                            <Grid item xs={6}>
-                                <Metric
-                                    label="Deposit, request to hBTC"
-                                    value={fDuration(data?.depositTime.medianMs)}
-                                    sub={`median · p90 ${fDuration(data?.depositTime.p90Ms)}`}
-                                />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <Metric
-                                    label="Withdrawal, request to BTC"
-                                    value={fDuration(data?.withdrawalTime.medianMs)}
-                                    sub={`median · p90 ${fDuration(data?.withdrawalTime.p90Ms)}`}
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Typography variant="caption" color="text.secondary">
-                                    Committee approval takes a median{' '}
-                                    {fDuration(data?.depositTime.approvalMedianMs)} after a deposit
-                                    request.
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                    )}
-                </Card>
-            </Grid>
-            <Grid item xs={12} md={6}>
-                <Card sx={{ p: 2.5, height: '100%' }}>
-                    <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                        Size and users
+                        {recent ? 'Size and users in this window' : 'Size and users'}
                     </Typography>
                     {loading || !t ? (
                         <Skeleton variant="rounded" height={110} />
@@ -331,5 +402,155 @@ export function HashiRecentRequests({
                 </Typography>
             </Stack>
         </Card>
+    )
+}
+
+// ----------------------------------------------------------------------
+
+/** hBTC in circulation over time: every deposit mints, every withdrawal burns */
+export function HashiSupplyChart({
+    data,
+    loading,
+}: {
+    data?: HashiActivityResponse
+    loading: boolean
+}) {
+    const days = data?.daily ?? []
+    let running = 0
+    const supply = days.map(d => {
+        running += d.deposit_sats - d.withdrawal_sats
+        return Number(satsToBtc(running).toFixed(6))
+    })
+
+    const options = useChart({
+        chart: { type: 'area', toolbar: { show: false }, animations: { enabled: false } },
+        colors: ['#F7931A'],
+        stroke: { width: 2, curve: 'stepline' },
+        fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0.02 } },
+        dataLabels: { enabled: false },
+        legend: { show: false },
+        xaxis: {
+            // Centre each point in its day so the line does not start on top of the y-axis labels
+            tickPlacement: 'between',
+            categories: days.map(d => dayjs(d.day_ms).utc().format('MMM DD')),
+            labels: {
+                rotate: 0,
+                hideOverlappingLabels: true,
+                formatter: (value: string, _timestamp?: number, opts?: { i?: number }) =>
+                    (opts?.i ?? 0) % 2 === 0 ? value : '',
+            },
+        },
+        yaxis: { min: 0, labels: { formatter: (v: number) => v.toFixed(2) } },
+        tooltip: {
+            x: {
+                formatter: (_val: number, opts?: { dataPointIndex?: number }) => {
+                    const day = days[opts?.dataPointIndex ?? 0]
+                    return day ? dayjs(day.day_ms).utc().format('MMM D, YYYY') : ''
+                },
+            },
+            y: { formatter: (v: number) => `${v.toLocaleString()} BTC` },
+        },
+    })
+
+    return (
+        <Card>
+            <CardHeader
+                title="hBTC supply"
+                subheader="Running total at the end of each day (deposits minted minus withdrawals burned)"
+            />
+            <Box sx={{ p: 2, pt: 0 }}>
+                {loading ? (
+                    <Skeleton variant="rounded" height={260} />
+                ) : (
+                    <Chart
+                        type="area"
+                        height={260}
+                        options={options}
+                        series={[{ name: 'hBTC supply', data: supply }]}
+                    />
+                )}
+            </Box>
+        </Card>
+    )
+}
+
+const STATUS_LABEL: Record<string, string> = {
+    pending: 'Waiting for approval',
+    approved: 'Approved',
+    signed: 'Signed, awaiting Bitcoin confirmation',
+    confirmed: 'Completed',
+}
+
+export function HashiUsersAndStatus({
+    data,
+    loading,
+}: {
+    data?: HashiActivityResponse
+    loading: boolean
+}) {
+    const t = data?.totals
+    return (
+        <Grid container spacing={2.5}>
+            <Grid item xs={12} md={6}>
+                <Card sx={{ p: 2.5, height: '100%' }}>
+                    <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                        Users
+                    </Typography>
+                    {loading || !t ? (
+                        <Skeleton variant="rounded" height={90} />
+                    ) : (
+                        <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                                <Metric label="Unique users" value={String(t.uniqueUsers)} />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <Metric
+                                    label="Used both ways"
+                                    value={String(t.twoWayUsers)}
+                                    sub="deposited and withdrew"
+                                />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <Metric label="Depositors" value={String(t.uniqueDepositors)} />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <Metric label="Withdrawers" value={String(t.uniqueWithdrawers)} />
+                            </Grid>
+                        </Grid>
+                    )}
+                </Card>
+            </Grid>
+            <Grid item xs={12} md={6}>
+                <Card sx={{ p: 2.5, height: '100%' }}>
+                    <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                        Requests by stage
+                    </Typography>
+                    {loading || !data ? (
+                        <Skeleton variant="rounded" height={90} />
+                    ) : (
+                        <Stack spacing={1}>
+                            {[
+                                ...data.depositStatus.map(s => ({ ...s, kind: 'Deposits' })),
+                                ...data.withdrawalStatus.map(s => ({ ...s, kind: 'Withdrawals' })),
+                            ].map(s => (
+                                <Stack
+                                    key={`${s.kind}-${s.status}`}
+                                    direction="row"
+                                    justifyContent="space-between"
+                                    spacing={2}
+                                >
+                                    <Typography variant="body2" color="text.secondary">
+                                        {s.kind}: {STATUS_LABEL[s.status] ?? s.status}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                        {s.count} · {fBtc(s.sats)}
+                                    </Typography>
+                                </Stack>
+                            ))}
+                        </Stack>
+                    )}
+                </Card>
+            </Grid>
+        </Grid>
     )
 }

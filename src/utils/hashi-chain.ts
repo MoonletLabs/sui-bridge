@@ -33,6 +33,7 @@ type HashiObject = {
     config: { config: { contents: { key: string; value: Json }[] } }
     treasury: { objects: TableRef }
     proposals: { active: TableRef; executed: TableRef }
+    presig_allocator: { num_consumed: string }
 }
 
 const HASHI_QUERY = `
@@ -203,8 +204,8 @@ type WithdrawalTxnJson = {
     confirmed_timestamp_ms: string | null
 }
 
-export type DepositStatus = 'pending' | 'approved' | 'confirmed'
-export type WithdrawalStatus = 'pending' | 'approved' | 'signed' | 'confirmed'
+export type DepositStatus = 'requested' | 'pending' | 'approved' | 'confirmed'
+export type WithdrawalStatus = 'requested' | 'pending' | 'approved' | 'signed' | 'confirmed'
 
 export type HashiDeposit = {
     id: string
@@ -309,6 +310,84 @@ export async function getHashiRequests(network: string) {
         .sort((a, b) => b.createdMs - a.createdMs)
 
     return { deposits, withdrawals, tooLarge: false }
+}
+
+/**
+ * For networks too busy to read every request (testnet has over a million), read the most
+ * recent request events instead. Events come newest first, so this gives an honest window of
+ * the latest activity rather than an arbitrary slice of the tables.
+ */
+const EVENTS_QUERY = `
+query ($type: String!, $before: String) {
+    events(last: 50, before: $before, filter: { type: $type }) {
+        pageInfo { hasPreviousPage startCursor }
+        nodes { timestamp contents { json } }
+    }
+}`
+
+type EventsResponse = {
+    events: {
+        pageInfo: { hasPreviousPage: boolean; startCursor: string | null }
+        nodes: { timestamp: string; contents: { json: Json } }[]
+    }
+}
+
+async function readRecentEvents(cfg: HashiNetworkConfig, typeName: string, max: number) {
+    const out: { timestamp: string; json: Json }[] = []
+    let before: string | null = null
+    while (out.length < max) {
+        const data: EventsResponse = await suiGraphql<EventsResponse>(cfg.graphql, EVENTS_QUERY, {
+            type: `${cfg.packageId}::${typeName}`,
+            before,
+        })
+        data.events.nodes.forEach(n => out.push({ timestamp: n.timestamp, json: n.contents.json }))
+        if (!data.events.pageInfo.hasPreviousPage) break
+        before = data.events.pageInfo.startCursor
+    }
+    return out
+}
+
+const RECENT_EVENTS_PER_KIND = 1500
+
+export async function getHashiRecentRequests(network: string) {
+    const cfg = getHashiConfig(network)
+    const [depositEvents, withdrawalEvents] = await Promise.all([
+        readRecentEvents(cfg, 'deposit::DepositRequested', RECENT_EVENTS_PER_KIND),
+        readRecentEvents(cfg, 'withdrawal_queue::WithdrawalRequested', RECENT_EVENTS_PER_KIND),
+    ])
+
+    const deposits: HashiDeposit[] = depositEvents.map(e => ({
+        id: e.json.request_id,
+        sender: e.json.requester_address,
+        amountSats: Number(e.json.amount),
+        btcTxid: e.json.utxo_id?.txid ?? '',
+        status: 'requested',
+        createdMs: Number(e.json.timestamp_ms) || Date.parse(e.timestamp),
+        approvedMs: null,
+        confirmedMs: null,
+    }))
+    const withdrawals: HashiWithdrawal[] = withdrawalEvents.map(e => ({
+        id: e.json.request_id,
+        sender: e.json.requester_address,
+        amountSats: Number(e.json.btc_amount),
+        btcTxid: null,
+        status: 'requested',
+        createdMs: Number(e.json.timestamp_ms) || Date.parse(e.timestamp),
+        approvedMs: null,
+        confirmedMs: null,
+    }))
+
+    // Both kinds must cover the same period, or the counts could not be compared: cut each
+    // to the later of the two oldest timestamps (a kind that hit the cap reaches back less far)
+    const oldest = (list: { createdMs: number }[]) =>
+        list.length ? Math.min(...list.map(r => r.createdMs)) : 0
+    const fromMs = Math.max(oldest(deposits), oldest(withdrawals))
+    return {
+        deposits: deposits.filter(d => d.createdMs >= fromMs),
+        withdrawals: withdrawals.filter(w => w.createdMs >= fromMs),
+        fromMs,
+        toMs: Date.now(),
+    }
 }
 
 // ----------------------------------------------------------------------
@@ -640,5 +719,200 @@ export async function getHashiGovernance(network: string): Promise<HashiGovernan
         proposals,
         participation,
         totalProposals: proposals.length,
+    }
+}
+
+// ----------------------------------------------------------------------
+// Operations: withdrawal batches, miner fees, chain progress
+
+type BatchJson = WithdrawalTxnJson & {
+    request_ids: string[]
+    inputs: { amount: string }[]
+    withdrawal_outputs: { amount: string }[]
+    change_outputs: { amount: string }[]
+}
+
+export type HashiBatch = {
+    id: string
+    btcTxid: string
+    status: 'pending' | 'signed' | 'confirmed'
+    withdrawals: number
+    /** BTC paid out to users */
+    outputSats: number
+    /** Miner fee: inputs minus every output */
+    feeSats: number
+    inputs: number
+    createdMs: number
+    signedMs: number | null
+    confirmedMs: number | null
+}
+
+export type HashiBatchDay = {
+    day_ms: number
+    batches: number
+    withdrawals: number
+    fee_sats: number
+    btc_sats: number
+}
+
+export type HashiEpochRow = {
+    epoch: number
+    members: number
+    totalWeight: number
+    memberChange: number
+}
+
+export type HashiOperations = {
+    network: string
+    /** Too many batches to read in full: only the network section is filled */
+    tooLarge: boolean
+    batches: {
+        confirmed: number
+        pending: number
+        signed: number
+        totalFeeSats: number
+        avgFeeSats: number
+        avgWithdrawalsPerBatch: number
+        avgBtcSatsPerBatch: number
+        medianConfirmMs: number | null
+        daily: HashiBatchDay[]
+        recent: HashiBatch[]
+    } | null
+    presigsConsumed: number
+    chain: {
+        suiCheckpoint: number
+        checkpointAtMs: number
+        suiEpoch: number
+        epochStartMs: number
+    }
+    epochs: HashiEpochRow[]
+}
+
+const CHAIN_QUERY = `{ checkpoint { sequenceNumber timestamp } epoch { epochId startTimestamp } }`
+
+type ChainResponse = {
+    checkpoint: { sequenceNumber: number; timestamp: string }
+    epoch: { epochId: number; startTimestamp: string }
+}
+
+const sumAmounts = (items: { amount: string }[] | undefined) =>
+    (items ?? []).reduce((total, item) => total + Number(item.amount), 0)
+
+const median = (values: number[]) => {
+    if (!values.length) return null
+    const sorted = [...values].sort((a, b) => a - b)
+    return sorted[Math.floor(sorted.length / 2)]
+}
+
+export async function getHashiOperations(network: string): Promise<HashiOperations> {
+    const cfg = getHashiConfig(network)
+    const { hashi, bitcoin } = await readHashiState(cfg)
+    const q = bitcoin.withdrawal_queue
+
+    const tooLarge = [q.withdrawal_txns, q.confirmed_txns].some(
+        t => Number(t.size) > MAX_TABLE_ROWS,
+    )
+
+    const [chain, committee, open, done] = await Promise.all([
+        suiGraphql<ChainResponse>(cfg.graphql, CHAIN_QUERY),
+        cachedCommittee(network),
+        tooLarge ? [] : readTable<BatchJson>(cfg.graphql, q.withdrawal_txns.id, { pageSize: 20 }),
+        tooLarge ? [] : readTable<BatchJson>(cfg.graphql, q.confirmed_txns.id, { pageSize: 20 }),
+    ])
+
+    let batches: HashiOperations['batches'] = null
+    if (!tooLarge) {
+        const toBatch = (j: BatchJson): HashiBatch => {
+            const inputSats = sumAmounts(j.inputs)
+            const outputSats = sumAmounts(j.withdrawal_outputs)
+            const changeSats = sumAmounts(j.change_outputs)
+            const confirmedMs = msOrNull(j.confirmed_timestamp_ms)
+            const signedMs = msOrNull(j.signed_timestamp_ms)
+            return {
+                id: j.id,
+                btcTxid: j.txid,
+                status: confirmedMs ? 'confirmed' : signedMs ? 'signed' : 'pending',
+                withdrawals: j.request_ids.length,
+                outputSats,
+                feeSats: Math.max(0, inputSats - outputSats - changeSats),
+                inputs: j.inputs.length,
+                createdMs: Number(j.created_timestamp_ms),
+                signedMs,
+                confirmedMs,
+            }
+        }
+        const all = [...open, ...done]
+            .filter(e => e.value)
+            .map(e => toBatch(e.value))
+            .sort((a, b) => b.createdMs - a.createdMs)
+        const confirmed = all.filter(b => b.status === 'confirmed')
+
+        const byDay = new Map<number, HashiBatchDay>()
+        confirmed.forEach(b => {
+            const day = Math.floor((b.confirmedMs as number) / 86_400_000) * 86_400_000
+            const d = byDay.get(day) ?? {
+                day_ms: day,
+                batches: 0,
+                withdrawals: 0,
+                fee_sats: 0,
+                btc_sats: 0,
+            }
+            d.batches += 1
+            d.withdrawals += b.withdrawals
+            d.fee_sats += b.feeSats
+            d.btc_sats += b.outputSats
+            byDay.set(day, d)
+        })
+        const days = Array.from(byDay.keys()).sort((a, b) => a - b)
+        const daily: HashiBatchDay[] = []
+        if (days.length) {
+            for (let t = days[0]; t <= days[days.length - 1]; t += 86_400_000) {
+                daily.push(
+                    byDay.get(t) ?? {
+                        day_ms: t,
+                        batches: 0,
+                        withdrawals: 0,
+                        fee_sats: 0,
+                        btc_sats: 0,
+                    },
+                )
+            }
+        }
+
+        const totalFee = confirmed.reduce((a, b) => a + b.feeSats, 0)
+        const n = confirmed.length
+        batches = {
+            confirmed: n,
+            pending: all.filter(b => b.status === 'pending').length,
+            signed: all.filter(b => b.status === 'signed').length,
+            totalFeeSats: totalFee,
+            avgFeeSats: n ? totalFee / n : 0,
+            avgWithdrawalsPerBatch: n ? confirmed.reduce((a, b) => a + b.withdrawals, 0) / n : 0,
+            avgBtcSatsPerBatch: n ? confirmed.reduce((a, b) => a + b.outputSats, 0) / n : 0,
+            medianConfirmMs: median(confirmed.map(b => (b.confirmedMs as number) - b.createdMs)),
+            daily,
+            recent: all.slice(0, 15),
+        }
+    }
+
+    const epochs: HashiEpochRow[] = committee.stats.map((stat, i, list) => ({
+        epoch: stat.epoch,
+        members: stat.members,
+        totalWeight: stat.totalWeight,
+        memberChange: i === 0 ? 0 : stat.members - list[i - 1].members,
+    }))
+
+    return {
+        network: network === 'testnet' ? 'testnet' : 'mainnet',
+        tooLarge,
+        batches,
+        presigsConsumed: Number(hashi.presig_allocator?.num_consumed ?? 0),
+        chain: {
+            suiCheckpoint: Number(chain.checkpoint.sequenceNumber),
+            checkpointAtMs: Date.parse(chain.checkpoint.timestamp),
+            suiEpoch: Number(chain.epoch.epochId),
+            epochStartMs: Date.parse(chain.epoch.startTimestamp),
+        },
+        epochs,
     }
 }

@@ -13,6 +13,7 @@ import { HashiStatusChips } from './hashi-overview'
 const TABS = [
     { label: 'Overview', path: paths.hashi.root },
     { label: 'Activity', path: paths.hashi.activity },
+    { label: 'Operations', path: paths.hashi.operations },
     { label: 'Committee', path: paths.hashi.committee },
     { label: 'Governance', path: paths.hashi.governance },
 ]
