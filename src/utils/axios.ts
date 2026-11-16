@@ -52,6 +52,12 @@ export const endpoints = {
         daily: '/api/cumulative_inflow/daily',
         hourly: '/api/cumulative_inflow/hourly',
     },
+    hashi: {
+        overview: '/api/hashi/overview',
+        activity: '/api/hashi/activity',
+        committee: '/api/hashi/committee',
+        governance: '/api/hashi/governance',
+    },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',
     governance: '/api/governance',

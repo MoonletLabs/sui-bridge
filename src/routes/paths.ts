@@ -10,6 +10,7 @@ const ROOTS = {
     TOKENS: '/tokens',
     HEALTH: '/health',
     GOVERNANCE: '/governance',
+    HASHI: '/hashi',
 }
 
 // ----------------------------------------------------------------------
@@ -93,5 +94,13 @@ export const paths = {
     // GOVERNANCE
     governance: {
         root: ROOTS.GOVERNANCE,
+    },
+
+    // HASHI
+    hashi: {
+        root: ROOTS.HASHI,
+        activity: `${ROOTS.HASHI}/activity`,
+        committee: `${ROOTS.HASHI}/committee`,
+        governance: `${ROOTS.HASHI}/governance`,
     },
 }

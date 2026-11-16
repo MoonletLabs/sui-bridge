@@ -111,6 +111,18 @@ const NAV_GROUPS: NavGroup[] = [
             },
         ],
     },
+    {
+        label: 'Hashi',
+        icon: icon('ic-lock'),
+        items: [
+            {
+                label: 'Hashi Bitcoin',
+                description: 'hBTC supply, deposits, withdrawals and committee',
+                path: paths.hashi.root,
+                icon: icon('ic-lock'),
+            },
+        ],
+    },
 ]
 
 const matches = (pathname: string | null, path: string) =>
@@ -129,24 +141,33 @@ function NavGroupButton({ group }: { group: NavGroup }) {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
     const open = Boolean(anchorEl)
     const active = isGroupActive(pathname, group)
+    // A group with a single page is a plain link, not a dropdown of one
+    const direct = group.items.length === 1 ? group.items[0] : null
 
     return (
         <>
             <Button
                 color="inherit"
-                onClick={e => setAnchorEl(e.currentTarget)}
-                aria-haspopup="menu"
-                aria-expanded={open}
+                {...(direct
+                    ? { component: RouterLink, href: direct.path }
+                    : {
+                          onClick: (e: React.MouseEvent<HTMLElement>) =>
+                              setAnchorEl(e.currentTarget),
+                          'aria-haspopup': 'menu' as const,
+                          'aria-expanded': open,
+                      })}
                 startIcon={<Box sx={{ width: 22, height: 22, display: 'flex' }}>{group.icon}</Box>}
                 endIcon={
-                    <Iconify
-                        icon="eva:arrow-ios-downward-fill"
-                        width={16}
-                        sx={{
-                            transition: 'transform 150ms',
-                            transform: open ? 'rotate(180deg)' : 'none',
-                        }}
-                    />
+                    direct ? undefined : (
+                        <Iconify
+                            icon="eva:arrow-ios-downward-fill"
+                            width={16}
+                            sx={{
+                                transition: 'transform 150ms',
+                                transform: open ? 'rotate(180deg)' : 'none',
+                            }}
+                        />
+                    )
                 }
                 sx={{
                     position: 'relative',
@@ -179,52 +200,56 @@ function NavGroupButton({ group }: { group: NavGroup }) {
                 {group.label}
             </Button>
 
-            <Menu
-                anchorEl={anchorEl}
-                open={open}
-                onClose={() => setAnchorEl(null)}
-                slotProps={{ paper: { sx: { mt: 0.5, minWidth: 300, borderRadius: 1.5 } } }}
-            >
-                {group.items.map(item => {
-                    const itemActive = isItemActive(pathname, item)
-                    return (
-                        <MenuItem
-                            key={item.path}
-                            component={RouterLink}
-                            href={item.path}
-                            selected={itemActive}
-                            onClick={() => setAnchorEl(null)}
-                            sx={{ gap: 1.5, py: 1.25, borderRadius: 1, mx: 0.5 }}
-                        >
-                            <Box
-                                sx={{
-                                    width: 24,
-                                    height: 24,
-                                    display: 'flex',
-                                    color: itemActive
-                                        ? theme.palette.primary.main
-                                        : theme.palette.text.secondary,
-                                }}
+            {!direct && (
+                <Menu
+                    anchorEl={anchorEl}
+                    open={open}
+                    onClose={() => setAnchorEl(null)}
+                    slotProps={{ paper: { sx: { mt: 0.5, minWidth: 300, borderRadius: 1.5 } } }}
+                >
+                    {group.items.map(item => {
+                        const itemActive = isItemActive(pathname, item)
+                        return (
+                            <MenuItem
+                                key={item.path}
+                                component={RouterLink}
+                                href={item.path}
+                                selected={itemActive}
+                                onClick={() => setAnchorEl(null)}
+                                sx={{ gap: 1.5, py: 1.25, borderRadius: 1, mx: 0.5 }}
                             >
-                                {item.icon}
-                            </Box>
-                            <Box>
-                                <Typography
-                                    variant="subtitle2"
+                                <Box
                                     sx={{
-                                        color: itemActive ? theme.palette.primary.main : undefined,
+                                        width: 24,
+                                        height: 24,
+                                        display: 'flex',
+                                        color: itemActive
+                                            ? theme.palette.primary.main
+                                            : theme.palette.text.secondary,
                                     }}
                                 >
-                                    {item.label}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {item.description}
-                                </Typography>
-                            </Box>
-                        </MenuItem>
-                    )
-                })}
-            </Menu>
+                                    {item.icon}
+                                </Box>
+                                <Box>
+                                    <Typography
+                                        variant="subtitle2"
+                                        sx={{
+                                            color: itemActive
+                                                ? theme.palette.primary.main
+                                                : undefined,
+                                        }}
+                                    >
+                                        {item.label}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {item.description}
+                                    </Typography>
+                                </Box>
+                            </MenuItem>
+                        )
+                    })}
+                </Menu>
+            )}
         </>
     )
 }

@@ -1,7 +1,19 @@
 import type { MetadataRoute } from 'next'
 import { SITE_URL } from 'src/utils/seo'
 
-const ROUTES = ['/', '/health', '/governance', '/flows', '/tokens', '/transactions', '/leaderboard']
+const ROUTES = [
+    '/',
+    '/health',
+    '/governance',
+    '/flows',
+    '/tokens',
+    '/transactions',
+    '/leaderboard',
+    '/hashi',
+    '/hashi/activity',
+    '/hashi/committee',
+    '/hashi/governance',
+]
 
 export default function sitemap(): MetadataRoute.Sitemap {
     return ROUTES.map(path => ({
