@@ -134,7 +134,13 @@ export function HashiOverviewCards({ data, loading }: { data?: HashiOverview; lo
                     color="warning.main"
                     title="Completed withdrawals"
                     value={data ? data.processedWithdrawals.toLocaleString() : '-'}
-                    sub={data ? `Minimum ${fBtc(data.config.withdrawalMinimumSats)}` : undefined}
+                    sub={
+                        data
+                            ? `Minimum ${fBtc(data.config.withdrawalMinimumSats)}${
+                                  data.withdrawalCountsExact ? '' : ' · approximate'
+                              }`
+                            : undefined
+                    }
                 />
             </Grid>
         </Grid>

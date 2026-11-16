@@ -28,10 +28,18 @@ export function fDuration(ms: number | null | undefined): string {
 export const shortAddress = (value: string, head = 6, tail = 4) =>
     value.length > head + tail + 3 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value
 
-export const btcTxUrl = (txid: string, network: string) => {
-    const id = txid.replace(/^0x/, '')
-    return `https://mempool.space/${network === 'testnet' ? 'signet/' : ''}tx/${id}`
+/**
+ * Hashi stores Bitcoin transaction ids in Bitcoin's internal byte order (as Move
+ * `address` values). Explorers and wallets show them reversed, so reverse the byte pairs.
+ */
+export const displayTxid = (txid: string) => {
+    const hex = txid.replace(/^0x/, '')
+    const pairs = hex.match(/../g) ?? []
+    return pairs.reverse().join('')
 }
+
+export const btcTxUrl = (txid: string, network: string) =>
+    `https://mempool.space/${network === 'testnet' ? 'signet/' : ''}tx/${displayTxid(txid)}`
 
 export const suiAccountUrl = (address: string, network: string) =>
     `https://suiscan.xyz/${network === 'testnet' ? 'testnet' : 'mainnet'}/account/${address}`

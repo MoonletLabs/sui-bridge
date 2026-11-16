@@ -119,6 +119,8 @@ export type HashiOverview = {
     backingRatio: number | null
     pendingDeposits: number
     pendingWithdrawals: number
+    /** False when the withdrawal queue was too large to tell confirmed-but-unarchived apart */
+    withdrawalCountsExact: boolean
     processedDeposits: number
     processedWithdrawals: number
     spentUtxos: number
@@ -152,9 +154,40 @@ export async function getHashiOverview(network: string): Promise<HashiOverview> 
     const utxos = await readTable<{ utxo: { amount: string }; spent_by: unknown }>(
         cfg.graphql,
         bitcoin.utxo_pool.utxo_records.id,
+        { size: Number(bitcoin.utxo_pool.utxo_records.size) },
     )
     const unspent = utxos.filter(u => u.value && u.value.spent_by == null)
     const poolSats = unspent.reduce((sum, u) => sum + Number(u.value.utxo.amount), 0)
+
+    // A confirmed withdrawal stays in `requests` until it is archived into `processed`, so
+    // the table sizes alone would count it as in progress. Tell them apart by the batch.
+    const wq = bitcoin.withdrawal_queue
+    let pendingWithdrawals = Number(wq.requests.size)
+    let processedWithdrawals = Number(wq.processed.size)
+    let withdrawalCountsExact = true
+    if (pendingWithdrawals <= MAX_TABLE_ROWS && Number(wq.withdrawal_txns.size) <= MAX_TABLE_ROWS) {
+        const [requests, batches] = await Promise.all([
+            readTable<{ withdrawal_txn_id: string | null }>(cfg.graphql, wq.requests.id, {
+                pageSize: 40,
+                size: pendingWithdrawals,
+            }),
+            readTable<{ id: string; confirmed_timestamp_ms: string | null }>(
+                cfg.graphql,
+                wq.withdrawal_txns.id,
+                { pageSize: 20, size: Number(wq.withdrawal_txns.size) },
+            ),
+        ])
+        const confirmedBatches = new Set(
+            batches.filter(b => b.value?.confirmed_timestamp_ms).map(b => b.value.id),
+        )
+        const unarchived = requests.filter(
+            r => r.value?.withdrawal_txn_id && confirmedBatches.has(r.value.withdrawal_txn_id),
+        ).length
+        pendingWithdrawals -= unarchived
+        processedWithdrawals += unarchived
+    } else {
+        withdrawalCountsExact = false
+    }
 
     return {
         network: network === 'testnet' ? 'testnet' : 'mainnet',
@@ -168,9 +201,10 @@ export async function getHashiOverview(network: string): Promise<HashiOverview> 
         poolUtxoCount: unspent.length,
         backingRatio: supplySats > 0 ? poolSats / supplySats : null,
         pendingDeposits: Number(bitcoin.deposit_queue.requests.size),
-        pendingWithdrawals: Number(bitcoin.withdrawal_queue.requests.size),
+        pendingWithdrawals,
+        withdrawalCountsExact,
         processedDeposits: Number(bitcoin.deposit_queue.processed.size),
-        processedWithdrawals: Number(bitcoin.withdrawal_queue.processed.size),
+        processedWithdrawals,
         spentUtxos: Number(bitcoin.utxo_pool.spent_utxos.size),
         fetchedAt: new Date().toISOString(),
     }
@@ -227,6 +261,8 @@ export type HashiWithdrawal = {
     status: WithdrawalStatus
     createdMs: number
     approvedMs: number | null
+    /** When the batch was created: hBTC is burned then, not when Bitcoin confirms */
+    burnedMs: number | null
     confirmedMs: number | null
 }
 
@@ -253,7 +289,8 @@ export async function getHashiRequests(network: string) {
         return { deposits: [] as HashiDeposit[], withdrawals: [] as HashiWithdrawal[], tooLarge }
     }
 
-    const read = <T>(table: TableRef) => readTable<T>(cfg.graphql, table.id, { pageSize: 40 })
+    const read = <T>(table: TableRef) =>
+        readTable<T>(cfg.graphql, table.id, { pageSize: 40, size: Number(table.size) })
     const [depPending, depProcessed, wdPending, wdProcessed, txnsOpen, txnsDone] =
         await Promise.all([
             read<DepositJson>(bitcoin.deposit_queue.requests),
@@ -297,6 +334,7 @@ export async function getHashiRequests(network: string) {
             status,
             createdMs: Number(w.created_timestamp_ms),
             approvedMs: msOrNull(w.approved_timestamp_ms),
+            burnedMs: txn ? Number(txn.created_timestamp_ms) : null,
             confirmedMs,
         }
     }
@@ -375,6 +413,7 @@ export async function getHashiRecentRequests(network: string) {
         status: 'requested',
         createdMs: Number(e.json.timestamp_ms) || Date.parse(e.timestamp),
         approvedMs: null,
+        burnedMs: null,
         confirmedMs: null,
     }))
 
@@ -514,9 +553,15 @@ export async function getHashiCommittee(network: string) {
     const set = hashi.committee_set
 
     const [members, committees, names] = await Promise.all([
-        readTable<MemberInfoJson>(cfg.graphql, set.members.id, { pageSize: 40 }),
+        readTable<MemberInfoJson>(cfg.graphql, set.members.id, {
+            pageSize: 40,
+            size: Number(set.members.size),
+        }),
         // Committees are large (one entry per member with its keys): few per page
-        readTable<CommitteeJson>(cfg.graphql, set.committees.id, { pageSize: 10 }),
+        readTable<CommitteeJson>(cfg.graphql, set.committees.id, {
+            pageSize: 10,
+            size: Number(set.committees.size),
+        }),
         readValidatorNames(cfg),
     ])
 
@@ -636,7 +681,7 @@ export async function getHashiGovernance(network: string): Promise<HashiGovernan
     const { active, executed } = hashi.proposals
 
     const read = (table: TableRef) =>
-        readTable<ProposalJson>(cfg.graphql, table.id, { pageSize: 10 })
+        readTable<ProposalJson>(cfg.graphql, table.id, { pageSize: 10, size: Number(table.size) })
     const [activeRows, executedRows, committee] = await Promise.all([
         read(active),
         read(executed),
@@ -817,8 +862,18 @@ export async function getHashiOperations(network: string): Promise<HashiOperatio
     const [chain, committee, open, done] = await Promise.all([
         suiGraphql<ChainResponse>(cfg.graphql, CHAIN_QUERY),
         cachedCommittee(network),
-        tooLarge ? [] : readTable<BatchJson>(cfg.graphql, q.withdrawal_txns.id, { pageSize: 20 }),
-        tooLarge ? [] : readTable<BatchJson>(cfg.graphql, q.confirmed_txns.id, { pageSize: 20 }),
+        tooLarge
+            ? []
+            : readTable<BatchJson>(cfg.graphql, q.withdrawal_txns.id, {
+                  pageSize: 20,
+                  size: Number(q.withdrawal_txns.size),
+              }),
+        tooLarge
+            ? []
+            : readTable<BatchJson>(cfg.graphql, q.confirmed_txns.id, {
+                  pageSize: 20,
+                  size: Number(q.confirmed_txns.size),
+              }),
     ])
 
     let batches: HashiOperations['batches'] = null
@@ -1205,15 +1260,39 @@ export async function getHashiHealth(network: string): Promise<HashiHealth> {
         )
     }
 
-    const archived = Number(bitcoin.withdrawal_queue.confirmed_txns.size)
-    checks.push({
-        key: 'archival',
-        group: 'Bridge progression',
-        label: 'Confirmed withdrawal archival',
-        status: 'info',
-        summary: `${archived} confirmed withdrawal transactions are still on-chain`,
-        detail: 'Confirmed batches stay on-chain until the committee archives them. Bitcoin payments are already confirmed; archival is internal clean-up, so the backlog is informational and never raises an alert.',
-    })
+    // Confirmed batches wait in `withdrawal_txns` until archived into `confirmed_txns`
+    const openBatches = bitcoin.withdrawal_queue.withdrawal_txns
+    const archivedCount = Number(bitcoin.withdrawal_queue.confirmed_txns.size)
+    if (Number(openBatches.size) > MAX_TABLE_ROWS) {
+        checks.push({
+            key: 'archival',
+            group: 'Bridge progression',
+            label: 'Confirmed withdrawal archival',
+            status: 'unavailable',
+            summary: 'Not available on this network',
+            detail: 'Too many batches to read from Sui in full.',
+        })
+    } else {
+        const open = await readTable<{ confirmed_timestamp_ms: string | null }>(
+            cfg.graphql,
+            openBatches.id,
+            { pageSize: 20, size: Number(openBatches.size) },
+        )
+        const awaiting = open
+            .map(e => msOrNull(e.value?.confirmed_timestamp_ms))
+            .filter((ms): ms is number => ms != null)
+        const oldestWait = awaiting.length ? now - Math.min(...awaiting) : 0
+        checks.push({
+            key: 'archival',
+            group: 'Bridge progression',
+            label: 'Confirmed withdrawal archival',
+            status: 'info',
+            summary: awaiting.length
+                ? `${awaiting.length} confirmed transactions await archival (oldest ${ageText(oldestWait)})`
+                : 'No confirmed transactions await archival',
+            detail: `${archivedCount} batches are already archived. Bitcoin payments are confirmed before archival; archival is internal on-chain clean-up, so the backlog is informational and never raises an alert.`,
+        })
+    }
 
     // --- Request outcomes
     checks.push(

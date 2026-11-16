@@ -24,7 +24,15 @@ import utc from 'dayjs/plugin/utc'
 import { useMemo, useState } from 'react'
 import { Chart, useChart } from 'src/components/chart'
 import type { HashiActivityResponse } from 'src/pages/api/hashi/activity'
-import { btcTxUrl, fBtc, fDuration, satsToBtc, shortAddress, suiAccountUrl } from './format'
+import {
+    btcTxUrl,
+    displayTxid,
+    fBtc,
+    fDuration,
+    satsToBtc,
+    shortAddress,
+    suiAccountUrl,
+} from './format'
 
 dayjs.extend(utc)
 
@@ -393,7 +401,7 @@ export function HashiRecentRequests({
                                             rel="noopener"
                                             underline="hover"
                                         >
-                                            {shortAddress(r.btcTxid.replace(/^0x/, ''), 6, 4)}
+                                            {shortAddress(displayTxid(r.btcTxid), 6, 4)}
                                         </MuiLink>
                                     ) : (
                                         '-'
@@ -429,10 +437,11 @@ export function HashiSupplyChart({
     data?: HashiActivityResponse
     loading: boolean
 }) {
-    const days = data?.daily ?? []
+    // Older cached replies may lack the series: show nothing rather than fail
+    const days = data?.supplyDaily ?? []
     let running = 0
     const supply = days.map(d => {
-        running += d.deposit_sats - d.withdrawal_sats
+        running += d.minted_sats - d.burned_sats
         return Number(satsToBtc(running).toFixed(6))
     })
 
@@ -470,7 +479,7 @@ export function HashiSupplyChart({
         <Card>
             <CardHeader
                 title="hBTC supply"
-                subheader="Running total at the end of each day (deposits minted minus withdrawals burned)"
+                subheader="Running total at the end of each day: minted when a deposit is confirmed, burned when a withdrawal batch is created"
             />
             <Box sx={{ p: 2, pt: 0 }}>
                 {loading ? (

@@ -57,11 +57,21 @@ type TableResponse = {
 export async function readTable<T = any>(
     endpoint: string,
     tableId: string,
-    { pageSize = 50, maxPages = 20 }: { pageSize?: number; maxPages?: number } = {},
+    {
+        pageSize = 50,
+        maxPages = 20,
+        size,
+    }: {
+        pageSize?: number
+        maxPages?: number
+        /** The table's known size: reads as many pages as it needs to return every entry */
+        size?: number
+    } = {},
 ): Promise<TableEntry<T>[]> {
+    const pageBudget = size == null ? maxPages : Math.ceil(size / pageSize) + 1
     const out: TableEntry<T>[] = []
     let after: string | null = null
-    for (let page = 0; page < maxPages; page += 1) {
+    for (let page = 0; page < pageBudget; page += 1) {
         const data: TableResponse = await suiGraphql<TableResponse>(endpoint, TABLE_QUERY, {
             table: tableId,
             first: pageSize,

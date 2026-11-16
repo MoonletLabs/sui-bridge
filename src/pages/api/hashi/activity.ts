@@ -15,6 +15,8 @@ const HOUR_MS = 3_600_000
 
 export type HashiStatusCount = { status: string; count: number; sats: number }
 
+export type HashiSupplyPoint = { day_ms: number; minted_sats: number; burned_sats: number }
+
 export type HashiDailyPoint = {
     day_ms: number
     deposits: number
@@ -59,6 +61,8 @@ export type HashiActivityResponse = {
     depositStatus: HashiStatusCount[]
     withdrawalStatus: HashiStatusCount[]
     daily: HashiDailyPoint[]
+    /** hBTC minted (deposit confirmed) and burned (withdrawal batch created) per UTC day */
+    supplyDaily: HashiSupplyPoint[]
     /** The last 24 hours in hourly buckets, for the 1d range (full mode only) */
     hourly: HashiDailyPoint[]
     recent: ((HashiDeposit & { kind: 'deposit' }) | (HashiWithdrawal & { kind: 'withdrawal' }))[]
@@ -120,8 +124,11 @@ export function buildActivity(
     // Fill empty days so the chart has a continuous axis
     const days = Array.from(byDay.keys()).sort((a, b) => a - b)
     const daily: HashiDailyPoint[] = []
+    // Run through today: with a quiet last week, a 7d range must show empty recent days
+    // rather than older activity
+    const today = Math.floor(Date.now() / DAY_MS) * DAY_MS
     if (days.length) {
-        for (let t = days[0]; t <= days[days.length - 1]; t += DAY_MS) {
+        for (let t = days[0]; t <= Math.max(days[days.length - 1], today); t += DAY_MS) {
             daily.push(
                 byDay.get(t) ?? {
                     day_ms: t,
@@ -131,6 +138,36 @@ export function buildActivity(
                     withdrawal_sats: 0,
                 },
             )
+        }
+    }
+
+    // Supply moves when hBTC is minted (deposit confirmed) and burned (the withdrawal's
+    // batch is created), which is earlier than the Bitcoin confirmation that ends a withdrawal
+    const supplyByDay = new Map<number, HashiSupplyPoint>()
+    const supplyPoint = (ms: number) => {
+        const day = Math.floor(ms / DAY_MS) * DAY_MS
+        let p = supplyByDay.get(day)
+        if (!p) {
+            p = { day_ms: day, minted_sats: 0, burned_sats: 0 }
+            supplyByDay.set(day, p)
+        }
+        return p
+    }
+    doneDeposits.forEach(d => {
+        supplyPoint(d.confirmedMs as number).minted_sats += d.amountSats
+    })
+    withdrawals.forEach(w => {
+        if (w.burnedMs) supplyPoint(w.burnedMs).burned_sats += w.amountSats
+    })
+    const supplyDays = Array.from(supplyByDay.keys()).sort((a, b) => a - b)
+    const supplyDaily: HashiSupplyPoint[] = []
+    if (supplyDays.length) {
+        for (
+            let t = supplyDays[0];
+            t <= Math.max(supplyDays[supplyDays.length - 1], today);
+            t += DAY_MS
+        ) {
+            supplyDaily.push(supplyByDay.get(t) ?? { day_ms: t, minted_sats: 0, burned_sats: 0 })
         }
     }
 
@@ -207,6 +244,7 @@ export function buildActivity(
         depositStatus: statusCounts(deposits, ['pending', 'approved', 'confirmed']),
         withdrawalStatus: statusCounts(withdrawals, ['pending', 'approved', 'signed', 'confirmed']),
         daily,
+        supplyDaily,
         hourly,
         recent,
     }
@@ -276,6 +314,7 @@ export function buildRecentActivity(
         depositStatus: [],
         withdrawalStatus: [],
         daily,
+        supplyDaily: [],
         hourly: [],
         recent,
     }

@@ -24,7 +24,7 @@ import utc from 'dayjs/plugin/utc'
 import { useState } from 'react'
 import { Chart, useChart } from 'src/components/chart'
 import type { HashiOperations } from 'src/utils/hashi-chain'
-import { btcTxUrl, fBtc, fDuration, satsToBtc, shortAddress } from './format'
+import { btcTxUrl, displayTxid, fBtc, fDuration, satsToBtc, shortAddress } from './format'
 
 dayjs.extend(utc)
 
@@ -238,7 +238,7 @@ export function HashiBatchesTable({
                                         rel="noopener"
                                         underline="hover"
                                     >
-                                        {shortAddress(b.btcTxid.replace(/^0x/, ''), 6, 4)}
+                                        {shortAddress(displayTxid(b.btcTxid), 6, 4)}
                                     </MuiLink>
                                 </TableCell>
                                 <TableCell align="right">{b.withdrawals}</TableCell>
