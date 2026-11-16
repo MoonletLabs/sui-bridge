@@ -26,10 +26,13 @@ export function pageMetadata({
     title,
     description,
     path,
+    noindex = false,
 }: {
     title: string
     description: string
     path: string
+    /** Keep the page out of search results (links on it are still followed) */
+    noindex?: boolean
 }): Metadata {
     const fullTitle = `${title} | ${SITE_NAME}`
     return {
@@ -37,6 +40,7 @@ export function pageMetadata({
         title: { absolute: fullTitle },
         description,
         alternates: { canonical: path },
+        ...(noindex && { robots: { index: false, follow: true } }),
         openGraph: {
             type: 'website',
             siteName: SITE_NAME,

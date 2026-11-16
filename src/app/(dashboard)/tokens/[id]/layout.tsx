@@ -7,6 +7,8 @@ export function generateMetadata({ params }: { params: { id: string } }): Metada
         title: `Token #${params.id}`,
         description: `Bridge volume, inflows and outflows, top senders and latest transfers for token #${params.id} on the Sui bridge.`,
         path: `/tokens/${id}`,
+        // Unknown ids render a "not found" view with a 200 status (a soft 404)
+        noindex: !/^\d+$/.test(params.id),
     })
 }
 
