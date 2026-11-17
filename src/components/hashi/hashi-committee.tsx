@@ -32,7 +32,8 @@ export function HashiCommitteeSummary({
     data?: HashiCommitteeResponse
     loading: boolean
 }) {
-    const latest = data?.stats.at(-1)
+    // The stat of the epoch whose operators the page lists, not a committee still being formed
+    const latest = data?.stats.find(stat => stat.epoch === data.epoch) ?? data?.stats.at(-1)
     const items = [
         {
             label: 'Largest operator',
@@ -47,12 +48,12 @@ export function HashiCommitteeSummary({
         {
             label: 'Operators needed to block',
             value: latest ? String(latest.blockingMembers) : '-',
-            sub: 'more than 1/3 of weight',
+            sub: 'weight enough to stop a quorum',
         },
         {
             label: 'Operators needed for quorum',
             value: latest ? String(latest.quorumMembers) : '-',
-            sub: '2/3 of weight',
+            sub: 'weight needed for a quorum (2/3)',
         },
     ]
     return (

@@ -217,7 +217,12 @@ type DepositJson = {
     id: string
     sender: string
     created_timestamp_ms: string
-    utxo: { id: { txid: string; vout: number }; amount: string }
+    utxo: {
+        id: { txid: string; vout: number }
+        amount: string
+        /** Absent when the deposit has no recipient: it adds reserves without minting */
+        derivation_path?: string | null
+    }
     approved_timestamp_ms: string | null
     confirmed_timestamp_ms: string | null
 }
@@ -246,6 +251,8 @@ export type HashiDeposit = {
     id: string
     sender: string
     amountSats: number
+    /** False for a reserve-only deposit (no recipient): it adds BTC but mints no hBTC */
+    mints: boolean
     btcTxid: string
     status: DepositStatus
     createdMs: number
@@ -308,6 +315,7 @@ export async function getHashiRequests(network: string) {
             id: d.id,
             sender: d.sender,
             amountSats: Number(d.utxo.amount),
+            mints: d.utxo.derivation_path != null,
             btcTxid: d.utxo.id.txid,
             status: confirmedMs ? 'confirmed' : approvedMs ? 'approved' : 'pending',
             createdMs: Number(d.created_timestamp_ms),
@@ -399,6 +407,7 @@ export async function getHashiRecentRequests(network: string) {
         id: e.json.request_id,
         sender: e.json.requester_address,
         amountSats: Number(e.json.amount),
+        mints: e.json.derivation_path != null,
         btcTxid: e.json.utxo_id?.txid ?? '',
         status: 'requested',
         createdMs: Number(e.json.timestamp_ms) || Date.parse(e.timestamp),
@@ -421,7 +430,8 @@ export async function getHashiRecentRequests(network: string) {
     // to the later of the two oldest timestamps (a kind that hit the cap reaches back less far)
     const oldest = (list: { createdMs: number }[]) =>
         list.length ? Math.min(...list.map(r => r.createdMs)) : 0
-    const fromMs = Math.max(oldest(deposits), oldest(withdrawals))
+    // With no events at all, start the window now (an hour back) instead of at the epoch
+    const fromMs = Math.max(oldest(deposits), oldest(withdrawals)) || Date.now() - 60 * 60_000
     return {
         deposits: deposits.filter(d => d.createdMs >= fromMs),
         withdrawals: withdrawals.filter(w => w.createdMs >= fromMs),
@@ -516,22 +526,29 @@ export type HashiEpochStat = {
     top1Pct: number
     top5Pct: number
     top10Pct: number
-    /** Fewest members whose combined weight exceeds one third (can block a quorum) */
+    /** Fewest members whose combined weight is enough to stop a quorum from forming */
     blockingMembers: number
-    /** Fewest members whose combined weight reaches the 2/3 quorum */
+    /** Fewest members whose combined weight reaches the quorum threshold */
     quorumMembers: number
 }
+
+/** Hashi's committee quorum, in basis points of total weight */
+const QUORUM_BPS = 6667
 
 const epochStat = (c: CommitteeJson): HashiEpochStat => {
     const weights = c.members.map(m => Number(m.weight)).sort((a, b) => b - a)
     const total = weights.reduce((a, b) => a + b, 0)
     const topPct = (n: number) =>
         total ? (weights.slice(0, n).reduce((a, b) => a + b, 0) / total) * 100 : 0
-    const countFor = (share: number, inclusive: boolean) => {
+    // Hashi's certificate threshold is an integer weight, ceil(total * 6667 / 10000). A
+    // group can block a quorum once the weight left over cannot reach it.
+    const quorumWeight = Math.ceil((total * QUORUM_BPS) / 10_000)
+    const blockingWeight = total - quorumWeight + 1
+    const membersFor = (needed: number) => {
         let acc = 0
         for (let i = 0; i < weights.length; i += 1) {
             acc += weights[i]
-            if (inclusive ? acc >= total * share : acc > total * share) return i + 1
+            if (acc >= needed) return i + 1
         }
         return weights.length
     }
@@ -542,8 +559,8 @@ const epochStat = (c: CommitteeJson): HashiEpochStat => {
         top1Pct: topPct(1),
         top5Pct: topPct(5),
         top10Pct: topPct(10),
-        blockingMembers: countFor(1 / 3, false),
-        quorumMembers: countFor(2 / 3, true),
+        blockingMembers: membersFor(blockingWeight),
+        quorumMembers: membersFor(quorumWeight),
     }
 }
 
@@ -597,7 +614,8 @@ export async function getHashiCommittee(network: string) {
         epoch: Number(set.epoch),
         totalWeight,
         members: list,
-        stats: history.map(epochStat),
+        // The next committee is stored when reconfiguration starts, before the epoch advances
+        stats: history.filter(c => Number(c.epoch) <= Number(set.epoch)).map(epochStat),
     }
 }
 

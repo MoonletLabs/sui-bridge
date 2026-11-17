@@ -10,18 +10,23 @@ import type {
     HashiOverview,
 } from 'src/utils/hashi-chain'
 
-// SWR dedupes by URL, so the shell and the page can both call these without extra requests
-const swrOptions = { revalidateOnFocus: false, dedupingInterval: 30000 }
-
-const useHashi = <T>(endpoint: string) => {
+// SWR dedupes by URL, so the shell and the page can both call these without extra requests.
+// An open page refreshes on the same cadence as the API cache (paused while the tab is
+// hidden), so status indicators such as "Running" and the Health checks do not go stale.
+const useHashi = <T>(endpoint: string, refreshSeconds: number) => {
     const network = getNetwork()
-    const swr = useSWR<T>(`${endpoint}?network=${network}`, fetcher, swrOptions)
+    const swr = useSWR<T>(`${endpoint}?network=${network}`, fetcher, {
+        revalidateOnFocus: false,
+        dedupingInterval: 30000,
+        refreshInterval: refreshSeconds * 1000,
+    })
     return { ...swr, network }
 }
 
-export const useHashiOverview = () => useHashi<HashiOverview>(endpoints.hashi.overview)
-export const useHashiActivity = () => useHashi<HashiActivityResponse>(endpoints.hashi.activity)
-export const useHashiCommittee = () => useHashi<HashiCommitteeResponse>(endpoints.hashi.committee)
-export const useHashiGovernance = () => useHashi<HashiGovernance>(endpoints.hashi.governance)
-export const useHashiOperations = () => useHashi<HashiOperations>(endpoints.hashi.operations)
-export const useHashiHealth = () => useHashi<HashiHealth>(endpoints.hashi.health)
+export const useHashiOverview = () => useHashi<HashiOverview>(endpoints.hashi.overview, 60)
+export const useHashiActivity = () => useHashi<HashiActivityResponse>(endpoints.hashi.activity, 120)
+export const useHashiCommittee = () =>
+    useHashi<HashiCommitteeResponse>(endpoints.hashi.committee, 600)
+export const useHashiGovernance = () => useHashi<HashiGovernance>(endpoints.hashi.governance, 120)
+export const useHashiOperations = () => useHashi<HashiOperations>(endpoints.hashi.operations, 120)
+export const useHashiHealth = () => useHashi<HashiHealth>(endpoints.hashi.health, 60)

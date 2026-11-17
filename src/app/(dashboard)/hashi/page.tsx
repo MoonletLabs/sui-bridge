@@ -13,7 +13,11 @@ export default function HashiOverviewPage() {
 
     return (
         <HashiShell title="Hashi" error={overview.error || committee.error}>
-            <HashiOverviewCards data={overview.data} loading={overview.isLoading} />
+            <HashiOverviewCards
+                data={overview.data}
+                loading={overview.isLoading}
+                committeeSize={committee.data?.members.filter(m => m.inCommittee).length}
+            />
 
             <Typography variant="h5" sx={{ mt: 4, mb: 2 }}>
                 Committee at a glance

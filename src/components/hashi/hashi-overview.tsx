@@ -55,7 +55,16 @@ function Stat({ title, value, sub, icon, color = 'primary.main', loading }: Stat
     )
 }
 
-export function HashiOverviewCards({ data, loading }: { data?: HashiOverview; loading: boolean }) {
+export function HashiOverviewCards({
+    data,
+    loading,
+    committeeSize,
+}: {
+    data?: HashiOverview
+    loading: boolean
+    /** Operators in the current committee (registered operators can be outside it) */
+    committeeSize?: number
+}) {
     const backing = data?.backingRatio
     const queueTotal = (data?.pendingDeposits ?? 0) + (data?.pendingWithdrawals ?? 0)
 
@@ -107,8 +116,20 @@ export function HashiOverviewCards({ data, loading }: { data?: HashiOverview; lo
                     icon="solar:users-group-rounded-bold-duotone"
                     color="primary.main"
                     title="Committee"
-                    value={data ? `${data.registeredMembers} operators` : '-'}
-                    sub={data ? `Epoch ${data.epoch.toLocaleString()}` : undefined}
+                    value={
+                        data
+                            ? committeeSize != null
+                                ? `${committeeSize} operators`
+                                : `${data.registeredMembers} registered`
+                            : '-'
+                    }
+                    sub={
+                        data
+                            ? committeeSize != null
+                                ? `${data.registeredMembers} registered · epoch ${data.epoch.toLocaleString()}`
+                                : `Epoch ${data.epoch.toLocaleString()}`
+                            : undefined
+                    }
                 />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>

@@ -153,8 +153,9 @@ export function buildActivity(
         }
         return p
     }
+    // A reserve-only deposit adds BTC but mints nothing, so it does not move supply
     doneDeposits.forEach(d => {
-        supplyPoint(d.confirmedMs as number).minted_sats += d.amountSats
+        if (d.mints) supplyPoint(d.confirmedMs as number).minted_sats += d.amountSats
     })
     withdrawals.forEach(w => {
         if (w.burnedMs) supplyPoint(w.burnedMs).burned_sats += w.amountSats
@@ -256,8 +257,12 @@ export function buildRecentActivity(
     withdrawals: HashiWithdrawal[],
     window: { fromMs: number; toMs: number },
 ): HashiActivityResponse {
-    const start = Math.floor(window.fromMs / RECENT_BUCKET_MS) * RECENT_BUCKET_MS
     const end = Math.floor(window.toMs / RECENT_BUCKET_MS) * RECENT_BUCKET_MS
+    // Never allocate more than a day of buckets, whatever the window says
+    const start = Math.max(
+        Math.floor(window.fromMs / RECENT_BUCKET_MS) * RECENT_BUCKET_MS,
+        end - 144 * RECENT_BUCKET_MS,
+    )
     const daily: HashiDailyPoint[] = []
     for (let t = start; t <= end; t += RECENT_BUCKET_MS) {
         daily.push({ day_ms: t, deposits: 0, deposit_sats: 0, withdrawals: 0, withdrawal_sats: 0 })
