@@ -48,7 +48,7 @@ export function HashiShell({
                     <Iconify icon="mdi:bitcoin" width={30} sx={{ color: '#F7931A' }} />
                     <Typography variant="h4">Hashi</Typography>
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, maxWidth: 720 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     Hashi is Sui&apos;s native Bitcoin orchestrator: a committee of Sui validators
                     holds BTC with threshold signatures and mints hBTC on Sui against confirmed
                     deposits. Live figures are read from Sui; history and request details come from
