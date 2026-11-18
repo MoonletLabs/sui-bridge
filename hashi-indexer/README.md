@@ -141,9 +141,10 @@ indexer :9199/metrics  ->  moonlet-agent (autodiscovery, every 2 min)  ->  Victo
 **Set up on each Hashi host** (once):
 
 1. Deploy a release that has metrics (`./deploy.sh hashi-indexer-v2.0`).
-2. In the admin UI, open the server's *Autodiscovery config* and add a port label mapping for **9199**, for
-   example `blockchain=sui`, `server_type=rpc`, `node_type=hashi-indexer`. Do not add a `network` mapping for the
-   port: the server-level mapping already sets it.
+2. In the admin UI, open the server's *Autodiscovery config* and add a port label mapping for **9199**:
+   `blockchain: sui`, `server_type: rpc`, `node_type: hashi-indexer`. The dashboard filters on `blockchain` and
+   `node_type`, so use exactly these. Do not add a `network` mapping for the port: the server-level mapping
+   already sets it.
 3. Check it: `moonlet-agent stats` lists `http://127.0.0.1:9199/metrics` as a valid endpoint, and
    `curl -s localhost:9199/metrics | head` shows the metrics.
 
@@ -163,7 +164,8 @@ can legitimately be hours old. The database figures are refreshed in the backgro
 scrape never waits for Postgres.
 
 **Dashboard** (`monitoring/grafana-dashboard.json`): in Grafana, *Dashboards > New > Import*, upload the file and
-pick the Prometheus (VictoriaMetrics) data source. The `network` and `hostname` variables come from the agent's labels.
+pick the Prometheus (VictoriaMetrics) data source. It has the same three dropdowns as the Sui Bridge Indexer
+dashboard: **Network**, **Hostname** and **Host** (the IP from `instance`), filtered by the labels above.
 
 **Suggested alerts** (create them where you manage alert rules; the agent samples every 2 minutes, so use a `for:` of
 at least 5 minutes). The staleness limits match the container healthcheck:
