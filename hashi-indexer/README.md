@@ -162,13 +162,26 @@ Use `events_caught_up` (not the age of the newest event) to tell whether the ind
 can legitimately be hours old. The database figures are refreshed in the background at most once a minute, so a
 scrape never waits for Postgres.
 
-**Dashboard and alerts** are in `monitoring/`:
+**Dashboard** (`monitoring/grafana-dashboard.json`): in Grafana, *Dashboards > New > Import*, upload the file and
+pick the Prometheus (VictoriaMetrics) data source. The `network` and `hostname` variables come from the agent's labels.
 
-- `grafana-dashboard.json`: in Grafana, *Dashboards > New > Import*, upload the file and pick the Prometheus
-  (VictoriaMetrics) data source. The `network` and `hostname` variables come from the agent's labels.
-- `alerts.yml`: Prometheus/vmalert rules (indexer down, a stale or failing job, not caught up, Sui errors,
-  database, and the protocol: paused, reserve below supply, withdrawals stuck on mainnet). The thresholds match the
-  container healthcheck. The agent samples every 2 minutes, so each `for:` spans several samples.
+**Suggested alerts** (create them where you manage alert rules; the agent samples every 2 minutes, so use a `for:` of
+at least 5 minutes). The staleness limits match the container healthcheck:
+
+| Alert | Condition |
+|---|---|
+| Metrics missing | `absent_over_time(hashi_indexer_info[15m])` |
+| Events job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{job="events"} > 900` |
+| Snapshot job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{job="snapshot"} > 2400` |
+| A job keeps failing | `hashi_indexer_job_last_run_ok == 0` for 10m |
+| Behind the chain | `min by (network, hostname)(hashi_indexer_events_caught_up) == 0` for 30m |
+| History not stored | `min by (network, hostname)(hashi_indexer_backfill_done) == 0` for 6h |
+| Sui GraphQL errors | error share of `hashi_indexer_graphql_requests_total` over 10m above 20% |
+| Database unreachable | `hashi_indexer_db_up == 0` |
+| Database large | `hashi_indexer_db_size_bytes > 10e9` (testnet grows about 50 MB a day) |
+| Hashi paused | `hashi_indexer_paused == 1` |
+| Reserve below supply | `hashi_indexer_backing_ratio < 1` for 15m |
+| Withdrawals stuck (mainnet) | `hashi_indexer_pending_withdrawals > 0` while `changes(hashi_indexer_processed_withdrawals[12h]) == 0` |
 
 ## Checking that mainnet history is complete
 

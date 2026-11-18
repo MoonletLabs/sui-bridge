@@ -424,7 +424,7 @@
             "id": 8,
             "type": "timeseries",
             "title": "Time since last successful run",
-            "description": "Alerts fire when events pass 15 minutes or the snapshot passes 40 minutes.",
+            "description": "Healthy while events stay under 15 minutes and the snapshot under 40 minutes (the container healthcheck uses the same limits).",
             "datasource": {
                 "type": "prometheus",
                 "uid": "${datasource}"
