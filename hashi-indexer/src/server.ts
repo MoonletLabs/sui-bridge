@@ -27,4 +27,7 @@ export function startMetricsServer(port: number) {
     })
     server.on('error', error => log('warn', 'metrics server error', { error: String(error) }))
     server.listen(port, '0.0.0.0', () => log('info', 'metrics listening', { port }))
+    // Best effort: an open listener must not keep the process alive after a graceful stop
+    // (SIGTERM ends the job loops, and the process should then exit instead of waiting for SIGKILL)
+    server.unref()
 }

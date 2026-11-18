@@ -6,7 +6,7 @@ import { Iconify } from 'src/components/iconify'
 import type { HashiActivityResponse } from 'src/pages/api/hashi/activity'
 import type { HashiHistoryResponse } from 'src/pages/api/hashi/history'
 import type { HashiOverview } from 'src/utils/hashi-chain'
-import { fBtc, fDuration } from './format'
+import { fBtc, fDuration, sinceNote } from './format'
 
 /** A small line under a card's figure, and how far it moved over the period it covers */
 type Trend = { values: number[]; color: string; label: string }
@@ -312,7 +312,7 @@ export function HashiOverviewCards({
                             }
                             sub={
                                 full
-                                    ? `${fBtc(full.totals.depositSats)} in · ${fBtc(full.totals.withdrawalSats)} out`
+                                    ? `${fBtc(full.totals.depositSats)} in · ${fBtc(full.totals.withdrawalSats)} out${sinceNote(full.coverage)}`
                                     : undefined
                             }
                         />
@@ -327,7 +327,7 @@ export function HashiOverviewCards({
                             value={full ? full.totals.uniqueUsers.toLocaleString() : '-'}
                             sub={
                                 full
-                                    ? `${full.totals.twoWayUsers.toLocaleString()} deposited and withdrew`
+                                    ? `${full.totals.twoWayUsers.toLocaleString()} deposited and withdrew${sinceNote(full.coverage)}`
                                     : undefined
                             }
                         />

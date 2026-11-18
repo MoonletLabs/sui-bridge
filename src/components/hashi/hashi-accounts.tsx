@@ -15,7 +15,7 @@ import {
     Typography,
 } from '@mui/material'
 import type { HashiActivityResponse } from 'src/pages/api/hashi/activity'
-import { fBtc, shortAddress, suiAccountUrl } from './format'
+import { fBtc, shortAddress, sinceNote, suiAccountUrl } from './format'
 
 /** The busiest Sui addresses by what they moved through Hashi (completed requests only) */
 export function HashiAccounts({
@@ -37,7 +37,7 @@ export function HashiAccounts({
                 title="Top accounts"
                 subheader={
                     data
-                        ? `${data.accountCount.toLocaleString()} addresses have used Hashi. The busiest ${accounts.length}, by volume.`
+                        ? `${data.accountCount.toLocaleString()} addresses have used Hashi${sinceNote(data.coverage)}. The busiest ${accounts.length}, by volume.`
                         : 'The busiest addresses, by volume'
                 }
             />

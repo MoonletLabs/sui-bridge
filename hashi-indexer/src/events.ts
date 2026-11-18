@@ -229,10 +229,14 @@ export async function runEvents(sql: Sql, network: string) {
             let count = 0
             // null: this run did not read new events (the first run of a backfill)
             let caughtUp: boolean | null = null
+            // A first scan that found no events at all: nothing to wait for, and the forward
+            // cursor stays unset so the next run scans again and picks up the first event
+            let emptyScan = false
             if (!fwd) {
                 // First run for this type
                 if (config.backfillDays > 0) {
                     count += await backfill(sql, network, type, fullType, null)
+                    emptyScan = !(await getCursor(sql, network, FORWARD_NAME(type)))
                 } else {
                     const first = await forward(sql, network, type, fullType, null)
                     count += first.stored
@@ -254,8 +258,8 @@ export async function runEvents(sql: Sql, network: string) {
             recordEventType(
                 type,
                 count,
-                caughtUp,
-                config.backfillDays === 0 || bf === BACKFILL_DONE,
+                emptyScan ? true : caughtUp,
+                emptyScan || config.backfillDays === 0 || bf === BACKFILL_DONE,
             )
         } catch (error) {
             // One failing type must not stop the others...

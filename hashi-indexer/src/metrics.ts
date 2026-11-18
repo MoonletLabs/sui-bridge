@@ -123,6 +123,12 @@ const jobLastSuccess = gauge(
 )
 const jobLastOk = gauge('job_last_run_ok', '1 if the last run of the job succeeded, 0 if it failed')
 
+// Both outcomes exist from the start: a counter that first appears at 1 hides that first failure
+// from rate() and increase()
+const JOBS = ['snapshot', 'events']
+const OUTCOMES = ['ok', 'error', 'skipped'] as const
+JOBS.forEach(job => OUTCOMES.forEach(result => jobRuns.inc({ job, result }, 0)))
+
 const eventsStored = counter('events_stored_total', 'Events read from Sui and stored, by type')
 const eventsCaughtUp = gauge(
     'events_caught_up',
@@ -136,6 +142,9 @@ const graphqlDuration = histogram(
     'Latency of requests to Sui GraphQL',
     [0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15],
 )
+
+graphqlRequests.inc({ result: 'ok' }, 0)
+graphqlRequests.inc({ result: 'error' }, 0)
 
 // Hashi's on-chain state, as of the last snapshot
 const chain = {

@@ -49,13 +49,13 @@ export async function getHashiRequestsFromDb(
         if (!oldest) return null
 
         // Start at the first full UTC day after the oldest stored event (never more than
-        // MAX_DAYS back), unless the store holds under two days: then use all of it
+        // MAX_DAYS back), unless the store holds under two days: then use all of it. The
+        // MAX_DAYS limit is rounded up to a UTC midnight too: the day filters below (and the
+        // daily buckets built from them) assume the window starts on a day boundary
         const now = Date.now()
         const nextDay = Math.ceil(oldest / DAY_MS) * DAY_MS
-        const fromMs = Math.max(
-            now - oldest < 2 * DAY_MS ? oldest : nextDay,
-            now - MAX_DAYS * DAY_MS,
-        )
+        const rollingStart = Math.ceil((now - MAX_DAYS * DAY_MS) / DAY_MS) * DAY_MS
+        const fromMs = Math.max(now - oldest < 2 * DAY_MS ? oldest : nextDay, rollingStart)
         const from = new Date(fromMs)
 
         // Several small queries joined here, not one big join: the reader role has a short

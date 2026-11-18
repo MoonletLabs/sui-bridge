@@ -172,7 +172,7 @@ at least 5 minutes). The staleness limits match the container healthcheck:
 
 | Alert | Condition |
 |---|---|
-| Metrics missing | `absent_over_time(hashi_indexer_info[15m])` |
+| Metrics missing (per host) | `count by (network, hostname)(last_over_time(hashi_indexer_info[1d])) unless count by (network, hostname)(hashi_indexer_info)` for 10m. Plain `absent_over_time(hashi_indexer_info[15m])` only fires when every host disappears, so one healthy host would hide another's outage. |
 | Events job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{job="events"} > 900` |
 | Snapshot job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{job="snapshot"} > 2400` |
 | A job keeps failing | `hashi_indexer_job_last_run_ok == 0` for 10m |

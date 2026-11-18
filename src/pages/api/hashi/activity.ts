@@ -45,6 +45,11 @@ export type HashiActivityResponse = {
     /** Where the requests came from: the indexer's store, or the chain (the default) */
     source?: 'database' | 'chain'
     /**
+     * Set when the figures cover only part of the history (the store's window, at most 30 days):
+     * totals, users and accounts then count from this moment, not from the first request ever.
+     */
+    coverage?: { fromMs: number }
+    /**
      * 'full': every completed request. 'recent': only the latest request events (large
      * networks), counted as requests, with no timing data.
      */
@@ -97,6 +102,9 @@ const percentile = (values: number[], p: number): number | null => {
 }
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0)
+
+// Not Math.max(...values): a long window can have more values than a call may take as arguments
+const maxOf = (values: number[]) => values.reduce((max, v) => Math.max(max, v), 0)
 
 const statusCounts = (items: { status: string; amountSats: number }[], order: string[]) =>
     order
@@ -310,8 +318,8 @@ export function buildActivity(
             avgWithdrawalSats: withdrawalAmounts.length
                 ? sum(withdrawalAmounts) / withdrawalAmounts.length
                 : 0,
-            largestDepositSats: Math.max(0, ...depositAmounts),
-            largestWithdrawalSats: Math.max(0, ...withdrawalAmounts),
+            largestDepositSats: maxOf(depositAmounts),
+            largestWithdrawalSats: maxOf(withdrawalAmounts),
         },
         depositTime: {
             medianMs: percentile(depositMs, 0.5),
@@ -398,8 +406,8 @@ export function buildRecentActivity(
             avgWithdrawalSats: withdrawalAmounts.length
                 ? sum(withdrawalAmounts) / withdrawalAmounts.length
                 : 0,
-            largestDepositSats: Math.max(0, ...depositAmounts),
-            largestWithdrawalSats: Math.max(0, ...withdrawalAmounts),
+            largestDepositSats: maxOf(depositAmounts),
+            largestWithdrawalSats: maxOf(withdrawalAmounts),
         },
         depositTime: { medianMs: null, p90Ms: null, approvalMedianMs: null },
         withdrawalTime: { medianMs: null, p90Ms: null },
@@ -427,6 +435,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                     ...buildActivity(stored.deposits, stored.withdrawals),
                     tooLarge: false,
                     source: 'database',
+                    coverage: { fromMs: stored.fromMs },
                 })
             }
         }

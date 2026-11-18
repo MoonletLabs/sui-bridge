@@ -48,8 +48,9 @@ async function runJob(sql: Sql, name: string, job: () => Promise<unknown>) {
             return
         }
         heartbeat(name)
-        recordJob(name, 'ok', (Date.now() - started) / 1000)
         await recordRun(sql, name, null)
+        // Only now: a failing recordRun lands in the catch below, so one invocation is one outcome
+        recordJob(name, 'ok', (Date.now() - started) / 1000)
         log('info', 'job ok', { job: name, ms: Date.now() - started, result })
     } catch (error) {
         recordJob(name, 'error', (Date.now() - started) / 1000)
