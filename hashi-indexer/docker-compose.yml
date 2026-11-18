@@ -56,11 +56,18 @@ services:
                 condition: service_healthy
         environment:
             NETWORK: ${NETWORK:?set NETWORK to mainnet or testnet}
-            DATABASE_URL: postgres://hashi_indexer:${HASHI_WRITER_PASSWORD}@hashi-db:${DB_PORT:-5433}/hashi
+            # Separate fields, not a URL: a password with / # ? or @ needs no percent-encoding
+            DB_HOST: hashi-db
+            DB_PORT: ${DB_PORT:-5433}
+            DB_NAME: hashi
+            DB_USER: hashi_indexer
+            DB_PASSWORD: ${HASHI_WRITER_PASSWORD}
             SNAPSHOT_SECONDS: ${SNAPSHOT_SECONDS:-600}
             EVENT_SECONDS: ${EVENT_SECONDS:-60}
             # Empty = the network's default (mainnet reads all history, testnet a few days)
             BACKFILL_DAYS: ${BACKFILL_DAYS:-}
+            # Pages (50 events each) read per event type per run; empty = the default (100)
+            EVENTS_MAX_PAGES_PER_RUN: ${EVENTS_MAX_PAGES_PER_RUN:-}
         mem_limit: 256m
         cpus: 0.5
         healthcheck:

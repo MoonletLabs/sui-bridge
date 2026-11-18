@@ -102,8 +102,12 @@ export async function runSnapshot(sql: Sql, network: string) {
                 confirmed_ms = excluded.confirmed_ms, updated_at = now()`,
         )
         withdrawals = requests.withdrawals.length
+    }
 
-        const b = await getHashiBatches(network)
+    // Batches have their own size check: they are collected even when the request tables are
+    // too large to read, as long as the batch tables themselves are small enough
+    const b = await getHashiBatches(network)
+    if (!b.tooLarge) {
         await inChunks(
             b.batches,
             200,

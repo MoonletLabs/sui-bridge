@@ -53,7 +53,9 @@ before the first start on a host:
 - **Docker access.** If the Hashi node's own user is not in the docker group, use a dedicated user for this
   stack (docker access is root-equivalent, and the Hashi user holds the node's keys). The stack must
   not mount anything from `/opt/sui`.
-- **Env file** (`.env`, mode 600): `NETWORK`, strong passwords, and `DB_PORT=5433` on **both** hosts.
+- **Env file** (`.env`, mode 600): `NETWORK`, strong passwords (any characters: the indexer gets them as
+  separate settings, and the init script quotes them; only the dashboard's own database URLs, which are
+  real URLs, need the password percent-encoded), and `DB_PORT=5433` on **both** hosts.
   Postgres listens on `DB_PORT` inside the container as well as on the host: Docker rewrites the
   destination port before the host firewall's `DOCKER-USER` chain, so one number inside and out keeps a
   firewall rule for it valid in both chains. Set `DB_BIND` to the interface the dashboard reaches.
@@ -78,6 +80,13 @@ The workflow `.github/workflows/hashi-indexer-image.yml` then typechecks, builds
 `ghcr.io/moonletlabs/hashi-indexer:1.0`, and creates a GitHub Release that lists the image and its
 digest. Pull requests and manual runs only build, so merging to `main` publishes nothing. The version
 is also baked into the image and logged when the indexer starts.
+
+This is a public repository, so triggering is limited on purpose:
+
+- pull requests build only when their branch lives in this repository (fork PRs are skipped);
+- publishing needs a **pushed tag** (a manual run on a tag does not publish) **and an approval** on the
+  `hashi-indexer-release` environment, whose required reviewers are the Moonlet team;
+- only the publish job has write permissions (`packages`, `contents`).
 
 Promote one version through the environments: local, then the testnet host, then the mainnet host.
 Versions are `MAJOR.MINOR` (for example `1.0`, then `1.1`), with an optional patch part; `-rc.1` style tags create a pre-release.

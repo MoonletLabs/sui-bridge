@@ -8,12 +8,35 @@ const int = (name: string, fallback: number) => {
 
 const network = process.env.NETWORK === 'testnet' ? 'testnet' : 'mainnet'
 
-const databaseUrl = process.env.DATABASE_URL
-if (!databaseUrl) throw new Error('DATABASE_URL is required')
+export type Database =
+    | { url: string }
+    | { host: string; port: number; database: string; user: string; password: string }
+
+/**
+ * Either DATABASE_URL, or the connection fields separately (DB_HOST, DB_PORT, DB_NAME, DB_USER,
+ * DB_PASSWORD). The compose file uses the fields: a password with characters such as / # ? or @
+ * would need percent-encoding inside a URL, but works as it is when passed on its own.
+ */
+const database = (): Database => {
+    if (process.env.DATABASE_URL) return { url: process.env.DATABASE_URL }
+    const host = process.env.DB_HOST
+    const name = process.env.DB_NAME
+    const user = process.env.DB_USER
+    if (!host || !name || !user) {
+        throw new Error('Set DATABASE_URL, or DB_HOST, DB_PORT, DB_NAME, DB_USER and DB_PASSWORD')
+    }
+    return {
+        host,
+        port: int('DB_PORT', 5433),
+        database: name,
+        user,
+        password: process.env.DB_PASSWORD ?? '',
+    }
+}
 
 export const config = {
     network,
-    databaseUrl,
+    database: database(),
     /** How often the state snapshot (supply, reserve, queues, committee, requests) runs */
     snapshotSeconds: int('SNAPSHOT_SECONDS', 600),
     /** How often new Hashi events are pulled */

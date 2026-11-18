@@ -57,7 +57,7 @@ async function loop(sql: Sql, name: string, everySeconds: number, job: () => Pro
 }
 
 async function main() {
-    const sql = connect(config.databaseUrl)
+    const sql = connect(config.database)
     log('info', 'starting', {
         version: process.env.HASHI_INDEXER_VERSION || 'dev',
         network: config.network,

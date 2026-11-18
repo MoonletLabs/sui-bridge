@@ -1,12 +1,19 @@
 #!/bin/sh
 # Runs once, when the database volume is first created.
 # hashi_indexer writes (and owns the tables); hashi_reader is the dashboard's read-only role.
+#
+# The passwords and the database name go to psql as variables and are quoted by psql itself
+# (:'name' for a string literal, :"name" for an identifier), so any characters are safe: an
+# apostrophe in a password cannot break the statements.
 set -e
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<SQL
-create role hashi_indexer login password '${HASHI_WRITER_PASSWORD}' connection limit 14;
-create role hashi_reader  login password '${HASHI_READER_PASSWORD}' connection limit 5;
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    -v writer_pw="$HASHI_WRITER_PASSWORD" \
+    -v reader_pw="$HASHI_READER_PASSWORD" \
+    -v dbname="$POSTGRES_DB" <<'SQL'
+create role hashi_indexer login password :'writer_pw' connection limit 14;
+create role hashi_reader  login password :'reader_pw' connection limit 5;
 
-grant connect on database ${POSTGRES_DB} to hashi_indexer, hashi_reader;
+grant connect on database :"dbname" to hashi_indexer, hashi_reader;
 grant usage, create on schema public to hashi_indexer;
 grant usage on schema public to hashi_reader;
 

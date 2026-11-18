@@ -1,7 +1,19 @@
 import postgres from 'postgres'
+import type { Database } from './config'
 
-export const connect = (url: string) =>
-    postgres(url, { max: 6, idle_timeout: 30, onnotice: () => undefined })
+export const connect = (db: Database) => {
+    const options = { max: 6, idle_timeout: 30, onnotice: () => undefined }
+    return 'url' in db
+        ? postgres(db.url, options)
+        : postgres({
+              ...options,
+              host: db.host,
+              port: db.port,
+              database: db.database,
+              user: db.user,
+              password: db.password,
+          })
+}
 
 export type Sql = ReturnType<typeof connect>
 
