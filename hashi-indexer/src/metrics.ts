@@ -35,11 +35,11 @@ const header = (name: string, help: string, type: string) => [
     `# TYPE ${PREFIX}${name} ${type}`,
 ]
 
-function gauge(name: string, help: string) {
+function gauge(name: string, help: string, type: 'gauge' | 'counter' = 'gauge') {
     const series = new Map<string, number>()
     registry.push({
         render: () => {
-            const lines = header(name, help, 'gauge')
+            const lines = header(name, help, type)
             series.forEach((value, key) => {
                 const v = number(value)
                 if (v !== null) lines.push(`${PREFIX}${name}${braces(key)} ${v}`)
@@ -165,7 +165,7 @@ const chain = {
 const dbUp = gauge('db_up', '1 if the last database check worked')
 const dbSize = gauge('db_size_bytes', 'Size of the Hashi database')
 const dbTableBytes = gauge('db_table_bytes', 'Size of a table with its indexes')
-const dbTableRows = gauge('db_table_rows', 'Estimated rows in a table')
+const dbTableRows = gauge('db_table_rows', 'Rows in a table, as Postgres counts them (approximate)')
 const eventsInDb = gauge('events_in_db', 'Events stored, by type')
 const newestEvent = gauge(
     'newest_event_timestamp_seconds',
@@ -176,7 +176,11 @@ const newestEvent = gauge(
 const processGauges = {
     rss: gauge('process_resident_memory_bytes', 'Resident memory'),
     heap: gauge('process_heap_used_bytes', 'Heap in use'),
-    cpu: gauge('process_cpu_seconds_total', 'CPU time used by the process (user + system)'),
+    cpu: gauge(
+        'process_cpu_seconds_total',
+        'CPU time used by the process (user + system)',
+        'counter',
+    ),
     loop: gauge('process_event_loop_delay_seconds_p99', 'Event loop delay, 99th percentile'),
 }
 const loopDelay = monitorEventLoopDelay({ resolution: 20 })
@@ -239,11 +243,13 @@ export async function collectDbStats(sql: Sql, network: string) {
     lastDbStats = Date.now()
     try {
         const [size] = await sql`select pg_database_size(current_database())::float8 as bytes`
+        // n_live_tup is kept up to date as rows are written. pg_class.reltuples is not: it stays at -1
+        // until a table is first vacuumed or analyzed, which showed every small table as empty
         const tables = await sql`
-            select c.relname as name, pg_total_relation_size(c.oid)::float8 as bytes,
-                greatest(c.reltuples, 0)::float8 as rows
-            from pg_class c join pg_namespace n on n.oid = c.relnamespace
-            where n.nspname = 'public' and c.relkind = 'r'`
+            select relname as name, pg_total_relation_size(relid)::float8 as bytes,
+                n_live_tup::float8 as rows
+            from pg_stat_user_tables
+            where schemaname = 'public'`
         const events = await sql`
             select event_type, count(*)::float8 as n,
                 extract(epoch from max(ts))::float8 as newest
