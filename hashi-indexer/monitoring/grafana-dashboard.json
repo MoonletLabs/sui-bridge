@@ -201,8 +201,8 @@
             },
             "targets": [
                 {
-                    "expr": "min by (hostname, job)(hashi_indexer_job_last_run_ok{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"})",
-                    "legendFormat": "{{hostname}} {{job}}",
+                    "expr": "min by (hostname, task)(hashi_indexer_job_last_run_ok{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"})",
+                    "legendFormat": "{{hostname}} {{task}}",
                     "refId": "A",
                     "instant": true
                 }
@@ -410,7 +410,7 @@
             "targets": [
                 {
                     "expr": "time() - hashi_indexer_job_last_success_timestamp_seconds{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
-                    "legendFormat": "{{hostname}} {{job}}",
+                    "legendFormat": "{{hostname}} {{task}}",
                     "refId": "A"
                 }
             ],
@@ -466,8 +466,8 @@
             },
             "targets": [
                 {
-                    "expr": "histogram_quantile(0.95, sum by (le, job, hostname)(rate(hashi_indexer_job_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])))",
-                    "legendFormat": "{{hostname}} {{job}}",
+                    "expr": "histogram_quantile(0.95, sum by (le, task, hostname)(rate(hashi_indexer_job_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])))",
+                    "legendFormat": "{{hostname}} {{task}}",
                     "refId": "A"
                 }
             ],

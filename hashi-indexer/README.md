@@ -69,8 +69,14 @@ before the first start on a host:
 - **Firewall** (ansible `host_vars`): allow `tcp/5433` from the dashboard's Swarm IPs only (and the dev
   environment's IPs if the dev dashboard should show Hashi history). Postgres uses scram passwords; the
   dashboard uses the `hashi_reader` role (read-only, 8s statement timeout, 5 connections).
-- **Dashboard secrets** (Swarm): `sui-hashi-postgres-url` (mainnet) and
-  `sui-hashi-testnet-postgres-url`, wired in `deployment/dashboard.yml` like the bridge ones.
+- **Dashboard secrets** (Swarm): `deployment/dashboard.yml` and `dashboard-dev.yml` mount the Swarm secrets
+  `SUI_HASHI_POSTGRES_URL` (mainnet) and `SUI_HASHI_TESTNET_POSTGRES_URL` as
+  `/run/secrets/sui-hashi-postgres-url` and `/run/secrets/sui-hashi-testnet-postgres-url`. Each value is the
+  reader URL, `postgres://hashi_reader:<HASHI_READER_PASSWORD>@<host>:5433/hashi` (percent-encode special
+  characters in the password). **Create both secrets on a Swarm before deploying a stack that mounts them**:
+  Swarm refuses to start a stack whose external secret is missing, and the deploy workflow runs on every merge to
+  `main`. Without a working store the dashboard still runs (no history, live reads only). Each Swarm's workers
+  also need `tcp/5433` allowed on the Hashi host they read.
 - **Testnet is busy** (millions of requests): leave `BACKFILL_DAYS` at its default (7 days, about 600,000 events
   and half a gigabyte, read in roughly an hour). The indexer reads at most `EVENTS_MAX_PAGES_PER_RUN` pages per
   type per run and logs a warning at the cap.
@@ -153,11 +159,14 @@ indexer :9199/metrics  ->  moonlet-agent (autodiscovery, every 2 min)  ->  Victo
 | Group | Metrics |
 |---|---|
 | Process | `info{version}`, `start_time_seconds`, `process_resident_memory_bytes`, `process_heap_used_bytes`, `process_cpu_seconds_total`, `process_event_loop_delay_seconds_p99` |
-| Jobs (`snapshot`, `events`) | `job_runs_total{job,result}`, `job_duration_seconds` (histogram), `job_last_success_timestamp_seconds`, `job_last_run_ok` |
+| Jobs (`snapshot`, `events`) | `job_runs_total{task,result}`, `job_duration_seconds` (histogram), `job_last_success_timestamp_seconds`, `job_last_run_ok` |
 | Events | `events_stored_total{type}`, `events_caught_up{type}`, `backfill_done{type}`, `events_in_db{type}`, `newest_event_timestamp_seconds{type}` |
 | Sui GraphQL | `graphql_requests_total{result}`, `graphql_request_duration_seconds` (histogram) |
 | Hashi state (last snapshot) | `supply_sats`, `reserve_sats`, `backing_ratio`, `utxos`, `pending_deposits`, `pending_withdrawals`, `processed_deposits`, `processed_withdrawals`, `epoch`, `paused`, `registered_members` |
 | Database | `db_up`, `db_size_bytes`, `db_table_bytes{table}`, `db_table_rows{table}` |
+
+The job metrics are labelled `task` (`snapshot`, `events`), not `job`: `job` is the scraper's own label, and a metric's own
+`job` label is renamed to `exported_job`, so a query on `job` would match nothing.
 
 Use `events_caught_up` (not the age of the newest event) to tell whether the indexer keeps up: a quiet event type
 can legitimately be hours old. The database figures are refreshed in the background at most once a minute, so a
@@ -173,8 +182,8 @@ at least 5 minutes). The staleness limits match the container healthcheck:
 | Alert | Condition |
 |---|---|
 | Metrics missing (per host) | `count by (network, hostname)(last_over_time(hashi_indexer_info[1d])) unless count by (network, hostname)(hashi_indexer_info)` for 10m. Plain `absent_over_time(hashi_indexer_info[15m])` only fires when every host disappears, so one healthy host would hide another's outage. |
-| Events job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{job="events"} > 900` |
-| Snapshot job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{job="snapshot"} > 2400` |
+| Events job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{task="events"} > 900` |
+| Snapshot job stale | `time() - hashi_indexer_job_last_success_timestamp_seconds{task="snapshot"} > 2400` |
 | A job keeps failing | `hashi_indexer_job_last_run_ok == 0` for 10m |
 | Behind the chain | `min by (network, hostname)(hashi_indexer_events_caught_up) == 0` for 30m |
 | History not stored | `min by (network, hostname)(hashi_indexer_backfill_done) == 0` for 6h |
