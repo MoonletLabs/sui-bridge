@@ -21,8 +21,12 @@ services:
             POSTGRES_PASSWORD: ${HASHI_ADMIN_PASSWORD:?set HASHI_ADMIN_PASSWORD}
             HASHI_WRITER_PASSWORD: ${HASHI_WRITER_PASSWORD:?set HASHI_WRITER_PASSWORD}
             HASHI_READER_PASSWORD: ${HASHI_READER_PASSWORD:?set HASHI_READER_PASSWORD}
+            PGPORT: ${DB_PORT:-5433}
+        # Postgres listens on DB_PORT inside the container too (not 5432). Docker rewrites the destination
+        # port before the host firewall's DOCKER-USER chain, so the same number inside and out keeps a
+        # firewall rule for DB_PORT valid in both chains.
         command: >
-            postgres -c shared_buffers=64MB -c max_connections=20 -c work_mem=4MB
+            postgres -p ${DB_PORT:-5433} -c shared_buffers=64MB -c max_connections=20 -c work_mem=4MB
             -c log_min_duration_statement=500
         volumes:
             - hashi_pgdata:/var/lib/postgresql/data
@@ -30,9 +34,9 @@ services:
         # Local: loopback only. On a Hashi host set DB_BIND to the interface the dashboard
         # reaches (and firewall the port to the dashboard worker).
         ports:
-            - "${DB_BIND:-127.0.0.1}:${DB_PORT:-5544}:5432"
+            - "${DB_BIND:-127.0.0.1}:${DB_PORT:-5433}:${DB_PORT:-5433}"
         healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U hashi_admin -d hashi"]
+            test: ["CMD-SHELL", "pg_isready -p ${DB_PORT:-5433} -U hashi_admin -d hashi"]
             interval: 10s
             timeout: 5s
             retries: 10
@@ -52,7 +56,7 @@ services:
                 condition: service_healthy
         environment:
             NETWORK: ${NETWORK:?set NETWORK to mainnet or testnet}
-            DATABASE_URL: postgres://hashi_indexer:${HASHI_WRITER_PASSWORD}@hashi-db:5432/hashi
+            DATABASE_URL: postgres://hashi_indexer:${HASHI_WRITER_PASSWORD}@hashi-db:${DB_PORT:-5433}/hashi
             SNAPSHOT_SECONDS: ${SNAPSHOT_SECONDS:-600}
             EVENT_SECONDS: ${EVENT_SECONDS:-60}
             # Empty = the network's default (mainnet reads all history, testnet a few days)

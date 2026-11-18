@@ -53,10 +53,13 @@ before the first start on a host:
 - **Docker access.** If the Hashi node's own user is not in the docker group, use a dedicated user for this
   stack (docker access is root-equivalent, and the Hashi user holds the node's keys). The stack must
   not mount anything from `/opt/sui`.
-- **Env file** (`.env`, mode 600): `NETWORK`, strong passwords, and `DB_PORT=5433` on the testnet host
-  (5432 is taken by the bridge Postgres). Set `DB_BIND` to the interface the dashboard reaches.
-- **Firewall** the database port to the dashboard's Swarm worker only. Postgres uses scram passwords;
-  the dashboard uses the `hashi_reader` role (read-only, 8s statement timeout, 5 connections).
+- **Env file** (`.env`, mode 600): `NETWORK`, strong passwords, and `DB_PORT=5433` on **both** hosts.
+  Postgres listens on `DB_PORT` inside the container as well as on the host: Docker rewrites the
+  destination port before the host firewall's `DOCKER-USER` chain, so one number inside and out keeps a
+  firewall rule for it valid in both chains. Set `DB_BIND` to the interface the dashboard reaches.
+- **Firewall** (ansible `host_vars`): allow `tcp/5433` from the dashboard's Swarm IPs only (and the dev
+  environment's IPs if the dev dashboard should show Hashi history). Postgres uses scram passwords; the
+  dashboard uses the `hashi_reader` role (read-only, 8s statement timeout, 5 connections).
 - **Dashboard secrets** (Swarm): `sui-hashi-postgres-url` (mainnet) and
   `sui-hashi-testnet-postgres-url`, wired in `deployment/dashboard.yml` like the bridge ones.
 - **Testnet is busy** (millions of requests): leave `BACKFILL_DAYS` at its default (3 days). The indexer
