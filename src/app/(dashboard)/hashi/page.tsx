@@ -2,6 +2,7 @@
 
 import { Box, Typography } from '@mui/material'
 import { HashiCommitteeSummary } from 'src/components/hashi/hashi-committee'
+import { HashiHistoryCard } from 'src/components/hashi/hashi-history'
 import { HashiOverviewCards } from 'src/components/hashi/hashi-overview'
 import { HashiParameters } from 'src/components/hashi/hashi-parameters'
 import { HashiShell } from 'src/components/hashi/hashi-shell'
@@ -18,6 +19,10 @@ export default function HashiOverviewPage() {
                 loading={overview.isLoading}
                 committeeSize={committee.data?.members.filter(m => m.inCommittee).length}
             />
+
+            <Box sx={{ mt: 3 }}>
+                <HashiHistoryCard />
+            </Box>
 
             <Typography variant="h5" sx={{ mt: 4, mb: 2 }}>
                 Committee at a glance
