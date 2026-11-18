@@ -45,7 +45,7 @@ export const config = {
      * First run only: how far back to read events. 0 reads everything, which suits mainnet.
      * A busy network (testnet has millions of requests) needs a limit.
      */
-    backfillDays: int('BACKFILL_DAYS', network === 'testnet' ? 3 : 0),
+    backfillDays: int('BACKFILL_DAYS', network === 'testnet' ? 7 : 0),
     /** Event pages (50 events each) read per type per run, so a long backfill resumes next run */
     maxPagesPerRun: int('EVENTS_MAX_PAGES_PER_RUN', 100),
     heartbeatFile: process.env.HEARTBEAT_FILE || '/tmp/hashi-indexer.heartbeat',

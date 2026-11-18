@@ -64,7 +64,7 @@ before the first start on a host:
   dashboard uses the `hashi_reader` role (read-only, 8s statement timeout, 5 connections).
 - **Dashboard secrets** (Swarm): `sui-hashi-postgres-url` (mainnet) and
   `sui-hashi-testnet-postgres-url`, wired in `deployment/dashboard.yml` like the bridge ones.
-- **Testnet is busy** (millions of requests): leave `BACKFILL_DAYS` at its default (3 days). The indexer
+- **Testnet is busy** (millions of requests): leave `BACKFILL_DAYS` at its default (7 days, about 600,000 events and half a gigabyte, read in roughly an hour). The indexer
   reads at most `EVENTS_MAX_PAGES_PER_RUN` pages per type per run and logs a warning at the cap.
 - Limits are set in the compose file (indexer 256 MB / 0.5 CPU, Postgres 512 MB).
 
