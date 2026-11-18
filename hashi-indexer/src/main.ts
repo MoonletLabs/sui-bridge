@@ -1,4 +1,5 @@
-import { closeSync, openSync, utimesSync } from 'fs'
+import { closeSync, mkdirSync, openSync, utimesSync } from 'fs'
+import path from 'path'
 import { config } from './config'
 import { connect, withLock, type Sql } from './db'
 import { runEvents } from './events'
@@ -9,12 +10,17 @@ import { runSnapshot } from './snapshot'
 let stopping = false
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-/** The healthcheck looks at this file's age: it is touched whenever a job succeeds */
-const heartbeat = () => {
+/**
+ * The healthcheck looks at the age of one file per job, touched when that job succeeds. Both must
+ * be fresh: a job that keeps failing is not hidden by the other one succeeding.
+ */
+const heartbeat = (job: string) => {
     const now = new Date()
     try {
-        closeSync(openSync(config.heartbeatFile, 'a'))
-        utimesSync(config.heartbeatFile, now, now)
+        mkdirSync(config.heartbeatDir, { recursive: true })
+        const file = path.join(config.heartbeatDir, job)
+        closeSync(openSync(file, 'a'))
+        utimesSync(file, now, now)
     } catch {
         // A missing heartbeat only makes the healthcheck fail, which is the right signal
     }
@@ -37,7 +43,7 @@ async function runJob(sql: Sql, name: string, job: () => Promise<unknown>) {
             log('info', 'job skipped, another run holds the lock', { job: name })
             return
         }
-        heartbeat()
+        heartbeat(name)
         await recordRun(sql, name, null)
         log('info', 'job ok', { job: name, ms: Date.now() - started, result })
     } catch (error) {

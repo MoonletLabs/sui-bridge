@@ -258,11 +258,15 @@ export function buildRecentActivity(
     window: { fromMs: number; toMs: number },
 ): HashiActivityResponse {
     const end = Math.floor(window.toMs / RECENT_BUCKET_MS) * RECENT_BUCKET_MS
-    // Never allocate more than a day of buckets, whatever the window says
+    // Never allocate more than a day of buckets, whatever the window says. The same cutoff applies
+    // to the requests, the totals and the window we report, so every view describes one interval.
     const start = Math.max(
         Math.floor(window.fromMs / RECENT_BUCKET_MS) * RECENT_BUCKET_MS,
         end - 144 * RECENT_BUCKET_MS,
     )
+    deposits = deposits.filter(d => d.createdMs >= start)
+    withdrawals = withdrawals.filter(w => w.createdMs >= start)
+    window = { fromMs: start, toMs: window.toMs }
     const daily: HashiDailyPoint[] = []
     for (let t = start; t <= end; t += RECENT_BUCKET_MS) {
         daily.push({ day_ms: t, deposits: 0, deposit_sats: 0, withdrawals: 0, withdrawal_sats: 0 })

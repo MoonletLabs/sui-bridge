@@ -13,6 +13,10 @@ const EVENT_TYPES = [
     'withdrawal_queue::WithdrawalApproved',
     'withdrawal_queue::WithdrawalPickedForProcessing',
     'withdrawal_queue::WithdrawalConfirmed',
+    // Terminal outcomes of requests that are then removed from the on-chain tables: without
+    // them a stored row would stay "pending" or "approved" forever
+    'deposit::ExpiredDepositDeleted',
+    'withdrawal_queue::WithdrawalCancelled',
 ]
 
 const NODE = `sequenceNumber timestamp transaction { digest } contents { json }`
@@ -185,6 +189,29 @@ async function backfill(
     return stored
 }
 
+/**
+ * A request that expired or was cancelled disappears from the chain's tables, so a snapshot can
+ * no longer update its row. Its terminal event says what happened: apply it to the stored rows.
+ * Confirmed requests are never overwritten.
+ */
+async function reconcileTerminalStatuses(sql: Sql, network: string) {
+    const expired = await sql`
+        update hashi_deposits d set status = 'expired', updated_at = now()
+        from hashi_events e
+        where d.network = ${network} and e.network = d.network
+          and e.event_type = 'deposit::ExpiredDepositDeleted'
+          and e.payload->>'request_id' = d.id
+          and d.status not in ('confirmed', 'expired')`
+    const cancelled = await sql`
+        update hashi_withdrawals w set status = 'cancelled', updated_at = now()
+        from hashi_events e
+        where w.network = ${network} and e.network = w.network
+          and e.event_type = 'withdrawal_queue::WithdrawalCancelled'
+          and e.payload->>'request_id' = w.id
+          and w.status not in ('confirmed', 'cancelled')`
+    return { expired: expired.count, cancelled: cancelled.count }
+}
+
 export async function runEvents(sql: Sql, network: string) {
     const cfg = getHashiConfig(network)
     const stored: Record<string, number> = {}
@@ -215,6 +242,14 @@ export async function runEvents(sql: Sql, network: string) {
             failures.push(`${type}: ${String(error)}`)
             log('warn', 'event type failed', { type, error: String(error) })
         }
+    }
+
+    try {
+        const reconciled = await reconcileTerminalStatuses(sql, network)
+        if (reconciled.expired || reconciled.cancelled)
+            log('info', 'statuses reconciled', reconciled)
+    } catch (error) {
+        failures.push(`reconcile: ${String(error)}`)
     }
 
     // ...but the run is not a success: the job status and the healthcheck must show it
