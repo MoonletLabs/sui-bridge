@@ -98,11 +98,14 @@ Only repository admins can create, move or delete these tags (a ruleset enforces
 ## Deploying on a host
 
 There is no registry and no image to publish: a host checks out the release tag and builds from it. The
-repository is public, so cloning needs no credentials. The first time, as the user that runs docker:
+repository is public, so cloning needs no credentials. The first time, as the user that runs docker, clone
+into that user's home (`/opt` is root-owned, and `/opt/sui` holds the node's keys and config, so keep this
+checkout well away from it):
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/MoonletLabs/sui-bridge.git /opt/sui-bridge
-cd /opt/sui-bridge && git sparse-checkout set hashi-indexer src/utils src/config
+cd ~
+git clone --filter=blob:none --sparse https://github.com/MoonletLabs/sui-bridge.git
+cd sui-bridge && git sparse-checkout set hashi-indexer src/utils src/config
 cd hashi-indexer && cp .env.example .env && chmod 600 .env     # then edit .env (see the checklist)
 ```
 
@@ -110,7 +113,7 @@ cd hashi-indexer && cp .env.example .env && chmod 600 .env     # then edit .env 
 upgrade or rollback:
 
 ```bash
-cd /opt/sui-bridge/hashi-indexer
+cd ~/sui-bridge/hashi-indexer
 ./deploy.sh hashi-indexer-v1.0
 ```
 
