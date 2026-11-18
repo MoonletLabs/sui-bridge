@@ -76,7 +76,10 @@ before the first start on a host:
   characters in the password). **Create both secrets on a Swarm before deploying a stack that mounts them**:
   Swarm refuses to start a stack whose external secret is missing, and the deploy workflow runs on every merge to
   `main`. Without a working store the dashboard still runs (no history, live reads only). Each Swarm's workers
-  also need `tcp/5433` allowed on the Hashi host they read.
+  also need `tcp/5433` allowed on the Hashi host they read. A dashboard keeps at most 2 connections per Hashi
+  database and the `hashi_reader` role allows 5, so the dev and prod dashboards together use 4. The dashboard
+  trusts the store only while the events job has succeeded in the last 15 minutes; an indexer that stopped makes
+  the pages fall back to live reads instead of showing old data.
 - **Testnet is busy** (millions of requests): leave `BACKFILL_DAYS` at its default (7 days, about 600,000 events
   and half a gigabyte, read in roughly an hour). The indexer reads at most `EVENTS_MAX_PAGES_PER_RUN` pages per
   type per run and logs a warning at the cap.

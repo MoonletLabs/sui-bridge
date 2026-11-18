@@ -17,7 +17,9 @@ export function getHashiDb(network: string): Client | null {
     const url = key === 'testnet' ? SUI_HASHI_TESTNET_POSTGRES_URL : SUI_HASHI_POSTGRES_URL
     if (!url) return null
     if (!clients[key]) {
-        clients[key] = postgres(url, { max: 3, idle_timeout: 60, connect_timeout: 5 })
+        // The reader role allows 5 connections per database and the dev and prod dashboards both use it:
+        // 2 each leaves room for the other dashboard and one admin check
+        clients[key] = postgres(url, { max: 2, idle_timeout: 60, connect_timeout: 5 })
     }
     return clients[key] as Client
 }

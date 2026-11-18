@@ -201,7 +201,7 @@
             },
             "targets": [
                 {
-                    "expr": "min by (hostname, task)(hashi_indexer_job_last_run_ok{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"})",
+                    "expr": "min by (hostname, task)(label_replace(hashi_indexer_job_last_run_ok{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}, \"task\", \"$1\", \"exported_job\", \"(.+)\"))",
                     "legendFormat": "{{hostname}} {{task}}",
                     "refId": "A",
                     "instant": true
@@ -409,7 +409,7 @@
             },
             "targets": [
                 {
-                    "expr": "time() - hashi_indexer_job_last_success_timestamp_seconds{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "expr": "time() - label_replace(hashi_indexer_job_last_success_timestamp_seconds{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}, \"task\", \"$1\", \"exported_job\", \"(.+)\")",
                     "legendFormat": "{{hostname}} {{task}}",
                     "refId": "A"
                 }
@@ -466,7 +466,7 @@
             },
             "targets": [
                 {
-                    "expr": "histogram_quantile(0.95, sum by (le, task, hostname)(rate(hashi_indexer_job_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])))",
+                    "expr": "histogram_quantile(0.95, sum by (le, task, hostname)(label_replace(rate(hashi_indexer_job_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval]), \"task\", \"$1\", \"exported_job\", \"(.+)\")))",
                     "legendFormat": "{{hostname}} {{task}}",
                     "refId": "A"
                 }

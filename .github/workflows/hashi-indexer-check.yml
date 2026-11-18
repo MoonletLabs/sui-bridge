@@ -57,7 +57,7 @@ jobs:
             .
 
       # Starts the image against a throwaway Postgres and checks that it comes up: the schema is applied
-      # and /metrics answers with valid text. It does not need Sui to answer (the metrics server starts
+      # and /metrics answers with text that promtool parses. It does not need Sui to answer (the metrics server starts
       # first and the migration only needs the database), so a Sui outage cannot make this flaky.
       - name: Smoke test (starts, migrates, serves metrics)
         run: |
@@ -80,9 +80,10 @@ jobs:
           grep -q '^hashi_indexer_job_runs_total{result="error",task="events"} ' metrics.txt \
             || { echo "::error::job_runs_total is missing the task label"; exit 1; }
 
-          # Every sample line must be valid exposition text
-          bad=$(grep -vE '^(#|$)' metrics.txt | grep -vE '^[a-zA-Z_:][a-zA-Z0-9_:]*(\{.*\})? [-+0-9.eE]+$' || true)
-          test -z "$bad" || { echo "::error::malformed metrics lines:"; echo "$bad"; exit 1; }
+          # Parse it the way a Prometheus server does (and lint the metric names): a response a scraper
+          # could not ingest fails here. promtool comes from the official image, pinned to a version.
+          docker run --rm -i --entrypoint /bin/promtool prom/prometheus:v2.55.1 check metrics < metrics.txt \
+            || { echo "::error::/metrics is not valid Prometheus exposition text"; exit 1; }
 
           for i in $(seq 1 60); do
             docker logs ci-indexer 2>&1 | grep -q '"msg":"migration applied"' && break
