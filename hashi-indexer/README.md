@@ -81,10 +81,14 @@ page with the notes. Create one from an up-to-date `main`:
 git checkout main && git pull
 git tag -a hashi-indexer-v1.0 -m "Hashi indexer 1.0"
 git push origin hashi-indexer-v1.0
-gh release create hashi-indexer-v1.0 --verify-tag --title "Hashi indexer 1.0" --notes "What changed, and how to deploy"
+gh release create hashi-indexer-v1.0 --verify-tag --title "Hashi indexer 1.0" \
+    --notes-file hashi-indexer/release-notes/v1.0.md
 ```
 
+The release notes live in the repository (`hashi-indexer/release-notes/vX.Y.md`), so they are reviewed with the code
+and become the body of the GitHub Release. Write the notes for a new version in a PR before tagging it.
 Treat a tag that has been deployed as final: fix forward with a new version instead of moving it.
+Only repository admins can create, move or delete these tags (a ruleset enforces it).
 
 ## Deploying on a host
 
