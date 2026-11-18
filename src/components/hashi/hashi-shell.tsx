@@ -51,7 +51,8 @@ export function HashiShell({
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, maxWidth: 720 }}>
                     Hashi is Sui&apos;s native Bitcoin orchestrator: a committee of Sui validators
                     holds BTC with threshold signatures and mints hBTC on Sui against confirmed
-                    deposits. Everything here is read directly from Sui.
+                    deposits. Live figures are read from Sui; history and request details come from
+                    a store kept by the Hashi indexer.
                 </Typography>
                 <HashiStatusChips data={data} />
             </Box>
