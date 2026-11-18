@@ -1,0 +1,49 @@
+---
+# Preview environment (https://preview.suianalytics.io): the newest build of the dashboard, deployed
+# automatically on every merge to main, before it is promoted to production (see
+# .github/workflows/deploy-dashboard.yml). A separate stack from production on the same swarm and node,
+# so a preview deploy can never touch the production service.
+# Protected by Cloudflare Access; the ai-tools LB only serves it to requests that came through Cloudflare.
+version: "3.5"
+
+services:
+  dashboard:
+    image: ${DASHBOARD_IMAGE}
+    secrets:
+      # The same read-only database URLs as production (the secrets already exist on this swarm)
+      - source: SUI_BRIDGE_POSTGRES_URL
+        target: /run/secrets/sui-bridge-postgres-url
+      - source: SUI_BRIDGE_TESTNET_POSTGRES_URL
+        target: /run/secrets/sui-bridge-testnet-postgres-url
+      - source: SUI_HASHI_POSTGRES_URL
+        target: /run/secrets/sui-hashi-postgres-url
+      - source: SUI_HASHI_TESTNET_POSTGRES_URL
+        target: /run/secrets/sui-hashi-testnet-postgres-url
+    networks:
+      - net
+      # Attached so the ai-tools LB (preview.suianalytics.io vhost) can reach this service via overlay
+      # DNS as `sui_bridge_preview_dashboard:3000` (stack name + service name).
+      - load_balancer_net
+    deploy:
+      mode: replicated
+      replicas: 1
+      # Same placement as production
+      placement:
+        constraints:
+          - node.hostname==moonlet-aiswarm-worker-01
+
+networks:
+  net:
+    driver: overlay
+  load_balancer_net:
+    external: true
+
+secrets:
+  SUI_BRIDGE_POSTGRES_URL:
+    external: true
+  SUI_BRIDGE_TESTNET_POSTGRES_URL:
+    external: true
+  SUI_HASHI_POSTGRES_URL:
+    external: true
+  SUI_HASHI_TESTNET_POSTGRES_URL:
+    external: true
