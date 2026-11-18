@@ -67,9 +67,9 @@ before the first start on a host:
   destination port before the host firewall's `DOCKER-USER` chain, so one number inside and out keeps a
   firewall rule for it valid in both chains. Set `DB_BIND` to the interface the dashboard reaches.
 - **Firewall** (ansible `host_vars`): allow `tcp/5433` from the dashboard's Swarm IPs only (and the dev
-  environment's IPs if the dev dashboard should show Hashi history). Postgres uses scram passwords; the
+  environment's IPs if another dashboard should show Hashi history). Postgres uses scram passwords; the
   dashboard uses the `hashi_reader` role (read-only, 8s statement timeout, 5 connections).
-- **Dashboard secrets** (Swarm): `deployment/dashboard.yml` and `dashboard-dev.yml` mount the Swarm secrets
+- **Dashboard secrets** (Swarm): `deployment/dashboard.yml` and `dashboard-preview.yml` mount the Swarm secrets
   `SUI_HASHI_POSTGRES_URL` (mainnet) and `SUI_HASHI_TESTNET_POSTGRES_URL` as
   `/run/secrets/sui-hashi-postgres-url` and `/run/secrets/sui-hashi-testnet-postgres-url`. Each value is the
   reader URL, `postgres://hashi_reader:<HASHI_READER_PASSWORD>@<host>:5433/hashi` (percent-encode special
