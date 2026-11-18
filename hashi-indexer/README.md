@@ -45,6 +45,11 @@ Without these variables the dashboard simply has no history and reads live from 
 
 Reset a stack: `docker compose -p hashi-mainnet --env-file .env.local.mainnet down -v`.
 
+**Coming from an earlier version of this setup?** A `.env.local.*` file may still contain
+`COMPOSE_FILE=docker-compose.yml:docker-compose.build.yml` and `HASHI_INDEXER_IMAGE=...`. The override
+file no longer exists (the compose file builds by itself now), so delete those two lines or every
+`docker compose` command fails with a missing-file error.
+
 ## 2. The Hashi hosts (testnet host, mainnet host)
 
 Same files, one network per host (`NETWORK` in the env file), one Postgres per host. Checklist

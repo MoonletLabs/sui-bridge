@@ -15,8 +15,12 @@ if [[ ! "$TAG" =~ ^hashi-indexer-v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.]+)?$ ]]
     exit 1
 fi
 [[ -f .env ]] || { echo ".env is missing: copy .env.example and fill it in" >&2; exit 1; }
-if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-    echo "the checkout has local changes: refusing to deploy from a modified tree" >&2
+# Tracked changes AND untracked files both count: an untracked file such as a stray migration would
+# survive the tag checkout, be copied into the image and run on start. (.env and node_modules are
+# git-ignored, so they do not count.)
+if [[ -n "$(git status --porcelain)" ]]; then
+    echo "the checkout has local changes or untracked files: refusing to deploy from it" >&2
+    git status --short >&2
     exit 1
 fi
 
