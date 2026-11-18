@@ -11,7 +11,7 @@ Sui (GraphQL) ──► indexer ──► postgres ◄── dashboard (read-onl
 ```
 
 The indexer needs nothing from the Hashi node itself, only the Sui endpoint. It reads the same
-on-chain state the dashboard does (`src/utils/hashi-chain.ts`, shared at build time).
+on-chain state the dashboard does (`src/utils/hashi-chain.ts`, copied in at build time).
 
 ## What it stores
 
@@ -45,7 +45,7 @@ Without these variables the dashboard simply has no history and reads live from 
 
 Reset a stack: `docker compose -p hashi-mainnet --env-file .env.local.mainnet down -v`.
 
-## 2. Testnet Hashi host and 3. mainnet Hashi host
+## 2. The Hashi hosts (testnet host, mainnet host)
 
 Same files, one network per host (`NETWORK` in the env file), one Postgres per host. Checklist
 before the first start on a host:
@@ -53,6 +53,8 @@ before the first start on a host:
 - **Docker access.** If the Hashi node's own user is not in the docker group, use a dedicated user for this
   stack (docker access is root-equivalent, and the Hashi user holds the node's keys). The stack must
   not mount anything from `/opt/sui`.
+- **Outbound HTTPS** to `github.com` (the clone), Docker Hub (the `node` and `postgres` base images), the npm
+  registry (during the build) and the Sui GraphQL endpoint.
 - **Env file** (`.env`, mode 600): `NETWORK`, strong passwords (any characters: the indexer gets them as
   separate settings, and the init script quotes them; only the dashboard's own database URLs, which are
   real URLs, need the password percent-encoded), and `DB_PORT=5433` on **both** hosts.
@@ -64,60 +66,61 @@ before the first start on a host:
   dashboard uses the `hashi_reader` role (read-only, 8s statement timeout, 5 connections).
 - **Dashboard secrets** (Swarm): `sui-hashi-postgres-url` (mainnet) and
   `sui-hashi-testnet-postgres-url`, wired in `deployment/dashboard.yml` like the bridge ones.
-- **Testnet is busy** (millions of requests): leave `BACKFILL_DAYS` at its default (7 days, about 600,000 events and half a gigabyte, read in roughly an hour). The indexer
-  reads at most `EVENTS_MAX_PAGES_PER_RUN` pages per type per run and logs a warning at the cap.
+- **Testnet is busy** (millions of requests): leave `BACKFILL_DAYS` at its default (7 days, about 600,000 events
+  and half a gigabyte, read in roughly an hour). The indexer reads at most `EVENTS_MAX_PAGES_PER_RUN` pages per
+  type per run and logs a warning at the cap.
 - Limits are set in the compose file (indexer 256 MB / 0.5 CPU, Postgres 512 MB).
 
-## Releases: versioned, tagged images
+## Releases
 
-Hosts run **released versions**, never `main`. A release is a git tag:
-
-```bash
-git tag hashi-indexer-v1.0 && git push origin hashi-indexer-v1.0
-```
-
-The workflow `.github/workflows/hashi-indexer-image.yml` then typechecks, builds and publishes
-`ghcr.io/moonletlabs/hashi-indexer:1.0`, and creates a GitHub Release that lists the image and its
-digest. Pull requests and manual runs only build, so merging to `main` publishes nothing. The version
-is also baked into the image and logged when the indexer starts.
-
-This is a public repository, so triggering is limited on purpose:
-
-- pull requests build only when their branch lives in this repository (fork PRs are skipped);
-- publishing needs a **pushed tag** (a manual run on a tag does not publish) **and an approval** on the
-  `hashi-indexer-release` environment, whose required reviewers are the Moonlet team;
-- only the publish job has write permissions (`packages`, `contents`).
-
-Promote one version through the environments: local, then the testnet host, then the mainnet host.
-Versions are `MAJOR.MINOR` (for example `1.0`, then `1.1`), with an optional patch part; `-rc.1` style tags create a pre-release.
-
-## Getting it onto a host: the released image, no source
-
-A host needs only the compose file, the init script and a `.env`; no source and no build tools.
-Both files come out of the image, so they always match the version you run:
+Hosts run **release tags**, never a branch. A release is a tag named `hashi-indexer-vMAJOR.MINOR` (an
+optional patch part or a suffix such as `-rc.1` is allowed) on a commit of `main`, plus a GitHub Release
+page with the notes. Create one from an up-to-date `main`:
 
 ```bash
-IMAGE=ghcr.io/moonletlabs/hashi-indexer:1.0     # or the digest from the release page
-docker pull $IMAGE
-docker run --rm $IMAGE cat docker-compose.yml > docker-compose.yml
-mkdir -p initdb && docker run --rm $IMAGE cat initdb/01-roles.sh > initdb/01-roles.sh
-# create .env (mode 600): NETWORK, the three passwords, DB_PORT/DB_BIND and
-#   HASHI_INDEXER_IMAGE=$IMAGE
-docker compose --env-file .env up -d
+git checkout main && git pull
+git tag -a hashi-indexer-v1.0 -m "Hashi indexer 1.0"
+git push origin hashi-indexer-v1.0
+gh release create hashi-indexer-v1.0 --verify-tag --title "Hashi indexer 1.0" \
+    --notes-file hashi-indexer/release-notes/v1.0.md
 ```
 
-`HASHI_INDEXER_IMAGE` has no default on purpose, so a host can never run an unpinned image.
+The release notes live in the repository (`hashi-indexer/release-notes/vX.Y.md`), so they are reviewed with the code
+and become the body of the GitHub Release. Write the notes for a new version in a PR before tagging it.
+Treat a tag that has been deployed as final: fix forward with a new version instead of moving it.
+Only repository admins can create, move or delete these tags (a ruleset enforces it).
 
-- **Upgrade:** set the new version in `.env`, refresh the compose file from the new image (same two
-  `docker run ... cat` commands), then `docker compose --env-file .env pull && docker compose --env-file .env up -d`.
-  The database volume stays; new migrations apply on start. The init script only runs when a volume is
-  first created.
-- **Roll back:** put the previous version back and `up -d` (migrations are additive, so an older
-  indexer keeps working on a newer schema; check the release notes before relying on it).
-- **Package visibility:** the first publish creates the package. Make it public in the GitHub package
-  settings, or log the host in with a read-only token (`docker login ghcr.io`).
-- **No registry access from a host?** `docker save` the image, copy it through the jumpbox and
-  `docker load` it on the host.
+## Deploying on a host
+
+There is no registry and no image to publish: a host checks out the release tag and builds from it. The
+repository is public, so cloning needs no credentials. The first time, as the user that runs docker:
+
+```bash
+git clone --filter=blob:none --sparse https://github.com/MoonletLabs/sui-bridge.git /opt/sui-bridge
+cd /opt/sui-bridge && git sparse-checkout set hashi-indexer src/utils src/config
+cd hashi-indexer && cp .env.example .env && chmod 600 .env     # then edit .env (see the checklist)
+```
+
+`.env` is not tracked by git, so it survives every checkout. Then, for the first release and for every
+upgrade or rollback:
+
+```bash
+cd /opt/sui-bridge/hashi-indexer
+./deploy.sh hashi-indexer-v1.0
+```
+
+`deploy.sh` accepts only a release tag, refuses to run on a modified checkout, fetches the tags, checks
+the tag out (detached, so it can never sit on `main`), builds the image from that exact commit and
+starts the stack. Rolling back is the same command with the previous tag.
+
+- **Which release is running:** `git describe --tags --exact-match`, and the indexer logs its version when it starts
+  (`docker compose --env-file .env logs indexer | head`).
+- **The database stays** across upgrades; new migrations apply on start. The init script only runs when the
+  database volume is first created.
+- **The build** takes about a minute of CPU on the host. The base image is pinned by digest in the Dockerfile
+  (refresh it on purpose, not by accident) and the npm packages by the lockfile.
+- Migrations are additive, so an older release keeps working on a newer schema; check the release notes before
+  relying on that for a rollback.
 
 ## Checking that mainnet history is complete
 
