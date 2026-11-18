@@ -127,7 +127,7 @@ const jobLastOk = gauge('job_last_run_ok', '1 if the last run of the job succeed
 // from rate() and increase()
 const JOBS = ['snapshot', 'events']
 const OUTCOMES = ['ok', 'error', 'skipped'] as const
-JOBS.forEach(job => OUTCOMES.forEach(result => jobRuns.inc({ job, result }, 0)))
+JOBS.forEach(task => OUTCOMES.forEach(result => jobRuns.inc({ task, result }, 0)))
 
 const eventsStored = counter('events_stored_total', 'Events read from Sui and stored, by type')
 const eventsCaughtUp = gauge(
@@ -194,12 +194,14 @@ export function recordStart(version: string) {
     startTime.set(Math.floor(Date.now() / 1000))
 }
 
-export function recordJob(job: string, result: 'ok' | 'error' | 'skipped', seconds: number) {
-    jobRuns.inc({ job, result })
+// The label is `task`, not `job`: Prometheus and VictoriaMetrics use `job` for the scrape job, so a
+// metric's own `job` label is renamed to `exported_job` and queries on it silently match nothing
+export function recordJob(task: string, result: 'ok' | 'error' | 'skipped', seconds: number) {
+    jobRuns.inc({ task, result })
     if (result === 'skipped') return
-    jobDuration.observe(seconds, { job })
-    jobLastOk.set(result === 'ok' ? 1 : 0, { job })
-    if (result === 'ok') jobLastSuccess.set(Math.floor(Date.now() / 1000), { job })
+    jobDuration.observe(seconds, { task })
+    jobLastOk.set(result === 'ok' ? 1 : 0, { task })
+    if (result === 'ok') jobLastSuccess.set(Math.floor(Date.now() / 1000), { task })
 }
 
 export function recordEventType(

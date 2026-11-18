@@ -172,7 +172,7 @@ export function HashiVolumeChart({
                         ? `Requests per 10 minutes (UTC), ${dayjs(data.window?.fromMs).utc().format('MMM D HH:mm')} to ${dayjs(data.window?.toMs).utc().format('HH:mm')} UTC`
                         : hourlyView
                           ? 'Completed requests per hour (UTC), last 24 hours'
-                          : "Completed requests per day (UTC), read from Hashi's on-chain queues"
+                          : 'Completed requests per day (UTC)'
                 }
                 action={
                     <Stack direction="row" spacing={1}>

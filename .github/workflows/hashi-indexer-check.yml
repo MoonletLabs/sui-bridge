@@ -55,3 +55,48 @@ jobs:
             --build-arg VERSION=dev-${GITHUB_SHA::7} \
             --tag hashi-indexer:ci \
             .
+
+      # Starts the image against a throwaway Postgres and checks that it comes up: the schema is applied
+      # and /metrics answers with text that promtool parses. It does not need Sui to answer (the metrics server starts
+      # first and the migration only needs the database), so a Sui outage cannot make this flaky.
+      - name: Smoke test (starts, migrates, serves metrics)
+        run: |
+          docker run -d --name ci-db -p 5432:5432 \
+            -e POSTGRES_USER=hashi_indexer -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=hashi \
+            postgres:16-alpine
+          docker run -d --name ci-indexer --network host \
+            -e NETWORK=mainnet -e DB_HOST=127.0.0.1 -e DB_PORT=5432 -e DB_NAME=hashi \
+            -e DB_USER=hashi_indexer -e DB_PASSWORD=ci -e METRICS_PORT=9199 \
+            hashi-indexer:ci
+
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:9199/metrics -o metrics.txt && break
+            sleep 1
+          done
+          test -s metrics.txt || { echo "::error::/metrics did not answer within 60s"; exit 1; }
+
+          grep -q '^hashi_indexer_info{version="dev-' metrics.txt \
+            || { echo "::error::hashi_indexer_info is missing"; exit 1; }
+          grep -q '^hashi_indexer_job_runs_total{result="error",task="events"} ' metrics.txt \
+            || { echo "::error::job_runs_total is missing the task label"; exit 1; }
+
+          # Parse it the way a Prometheus server does (and lint the metric names): a response a scraper
+          # could not ingest fails here. promtool comes from the official image, pinned to a version.
+          docker run --rm -i --entrypoint /bin/promtool prom/prometheus:v2.55.1 check metrics < metrics.txt \
+            || { echo "::error::/metrics is not valid Prometheus exposition text"; exit 1; }
+
+          for i in $(seq 1 60); do
+            docker logs ci-indexer 2>&1 | grep -q '"msg":"migration applied"' && break
+            sleep 1
+          done
+          docker logs ci-indexer 2>&1 | grep -q '"msg":"migration applied"' \
+            || { echo "::error::the migration was not applied"; exit 1; }
+
+          test "$(docker inspect -f '{{.State.Running}}' ci-indexer)" = "true" \
+            || { echo "::error::the indexer container stopped"; exit 1; }
+
+      - name: Container logs
+        if: always()
+        run: |
+          docker logs ci-indexer 2>&1 | tail -30 || true
+          docker rm -f ci-indexer ci-db 2>/dev/null || true

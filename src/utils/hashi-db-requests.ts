@@ -4,6 +4,11 @@ import { getHashiDb } from 'src/utils/hashi-db'
 const DAY_MS = 86_400_000
 const MAX_DAYS = 30
 
+// The store is trusted only while the indexer keeps writing to it: its events job records the time of its
+// last success, and a store older than this falls back to reading the chain (an indexer that stopped
+// would otherwise leave Activity showing old requests and empty recent days)
+const MAX_STORE_AGE_MS = 15 * 60_000
+
 type DepositRow = {
     id: string
     sender: string
@@ -41,6 +46,13 @@ export async function getHashiRequestsFromDb(
     if (!sql) return null
 
     try {
+        const [run] = await sql`
+            select cursor from hashi_sync_state
+            where network = ${network} and name = 'job:events'`
+        const lastSuccess = Date.parse(run?.cursor ?? '')
+        if (!Number.isFinite(lastSuccess) || Date.now() - lastSuccess > MAX_STORE_AGE_MS)
+            return null
+
         const [first] = await sql`
             select (extract(epoch from min(ts)) * 1000)::float8 as ms
             from hashi_events
@@ -53,10 +65,15 @@ export async function getHashiRequestsFromDb(
         // MAX_DAYS limit is rounded up to a UTC midnight too: the day filters below (and the
         // daily buckets built from them) assume the window starts on a day boundary
         const now = Date.now()
+        const young = now - oldest < 2 * DAY_MS
         const nextDay = Math.ceil(oldest / DAY_MS) * DAY_MS
         const rollingStart = Math.ceil((now - MAX_DAYS * DAY_MS) / DAY_MS) * DAY_MS
-        const fromMs = Math.max(now - oldest < 2 * DAY_MS ? oldest : nextDay, rollingStart)
+        const fromMs = Math.max(young ? oldest : nextDay, rollingStart)
         const from = new Date(fromMs)
+        // Where the completed-request figures start: requests are read from `fromMs`, but a withdrawal
+        // takes about a day to confirm, so the first day's confirmations mostly belong to requests made
+        // before it and are left out (below). A store that young has nothing to spare: keep everything
+        const trimMs = young ? fromMs : fromMs + DAY_MS
 
         // Several small queries joined here, not one big join: the reader role has a short
         // statement timeout, and each of these takes well under a second
@@ -170,7 +187,7 @@ export async function getHashiRequestsFromDb(
                 } as HashiDeposit
             })
             // Same cut as for withdrawals below, so the series starts on one complete day
-            .filter(d => !d.confirmedMs || d.confirmedMs >= fromMs + DAY_MS)
+            .filter(d => !d.confirmedMs || d.confirmedMs >= trimMs)
             .sort((a, b) => b.createdMs - a.createdMs)
 
         const withdrawals: HashiWithdrawal[] = withdrawalRows
@@ -199,11 +216,12 @@ export async function getHashiRequestsFromDb(
             // A withdrawal takes about a day to confirm, so the first day's confirmations (and
             // burns) mostly belong to requests made before the window: they would show a day
             // far quieter than it was. Leave that day out
-            .filter(w => !w.confirmedMs || w.confirmedMs >= fromMs + DAY_MS)
-            .map(w => (w.burnedMs && w.burnedMs < fromMs + DAY_MS ? { ...w, burnedMs: null } : w))
+            .filter(w => !w.confirmedMs || w.confirmedMs >= trimMs)
+            .map(w => (w.burnedMs && w.burnedMs < trimMs ? { ...w, burnedMs: null } : w))
             .sort((a, b) => b.createdMs - a.createdMs)
 
-        return { deposits, withdrawals, fromMs }
+        // `fromMs` is where the figures start counting (what Activity reports as its coverage)
+        return { deposits, withdrawals, fromMs: trimMs }
     } catch (error) {
         console.error('hashi requests from the store failed:', error)
         return null

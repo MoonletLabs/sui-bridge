@@ -9,6 +9,12 @@ services:
         target: /run/secrets/sui-bridge-postgres-url
       - source: SUI_BRIDGE_TESTNET_POSTGRES_URL
         target: /run/secrets/sui-bridge-testnet-postgres-url
+      # Hashi analytics store (history, trend lines, testnet activity), read-only role. Optional
+      # for the app itself, but Swarm needs the secrets to exist before the stack is deployed.
+      - source: SUI_HASHI_POSTGRES_URL
+        target: /run/secrets/sui-hashi-postgres-url
+      - source: SUI_HASHI_TESTNET_POSTGRES_URL
+        target: /run/secrets/sui-hashi-testnet-postgres-url
     networks:
       - net
       # Attached so the ai-tools LB (suianalytics.io vhost) can reach this
@@ -31,4 +37,8 @@ secrets:
   SUI_BRIDGE_POSTGRES_URL:
     external: true
   SUI_BRIDGE_TESTNET_POSTGRES_URL:
+    external: true
+  SUI_HASHI_POSTGRES_URL:
+    external: true
+  SUI_HASHI_TESTNET_POSTGRES_URL:
     external: true
