@@ -93,7 +93,12 @@ export function HashiConcentrationChart({
         chart: { type: 'line', toolbar: { show: false }, animations: { enabled: false } },
         stroke: { width: 2, curve: 'smooth' },
         colors: ['#00A76F', '#F7931A', '#7635DC'],
-        xaxis: { categories: stats.map(s => `E${s.epoch}`), tickAmount: 8 },
+        // 'between' keeps the first point off the y axis, so the lines don't run over its labels
+        xaxis: {
+            categories: stats.map(s => `E${s.epoch}`),
+            tickAmount: 8,
+            tickPlacement: 'between',
+        },
         yaxis: { labels: { formatter: (v: number) => `${v.toFixed(0)}%` } },
         legend: { position: 'top', horizontalAlign: 'right' },
         tooltip: { y: { formatter: (v: number) => `${v.toFixed(2)}%` } },

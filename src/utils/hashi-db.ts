@@ -5,7 +5,12 @@ type Client = ReturnType<typeof postgres>
 
 // One small pool per network, created on first use. Without a configured URL there is no
 // store: callers get null and fall back to reading Sui directly.
-const clients: Partial<Record<'mainnet' | 'testnet', Client>> = {}
+// Kept on globalThis so a dev-server hot reload reuses the pool instead of leaking a new one
+// each time (the reader role allows only a few connections)
+const globalWithClients = globalThis as typeof globalThis & {
+    __hashiDbClients?: Partial<Record<'mainnet' | 'testnet', Client>>
+}
+const clients = (globalWithClients.__hashiDbClients ??= {})
 
 export function getHashiDb(network: string): Client | null {
     const key = network === 'testnet' ? 'testnet' : 'mainnet'

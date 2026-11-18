@@ -7,6 +7,7 @@ import {
     HashiDeposit,
     HashiWithdrawal,
 } from 'src/utils/hashi-chain'
+import { getHashiRequestsFromDb } from 'src/utils/hashi-db-requests'
 import { sendError, sendReply } from '../utils'
 
 const DAY_MS = 86_400_000
@@ -28,6 +29,8 @@ export type HashiDailyPoint = {
 export type HashiActivityResponse = {
     /** The network has too many requests to read from the chain directly */
     tooLarge?: boolean
+    /** Where the requests came from: the indexer's store, or the chain (the default) */
+    source?: 'database' | 'chain'
     /**
      * 'full': every completed request. 'recent': only the latest request events (large
      * networks), counted as requests, with no timing data.
@@ -332,6 +335,18 @@ export function buildRecentActivity(
 async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
         const { network } = getNetworkConfig({ req })
+        // Testnet is too large to read from the chain, but the indexer's store holds every
+        // request event: build the full picture from it, and read the chain only without a store
+        if (network === 'testnet') {
+            const stored = await getHashiRequestsFromDb(network)
+            if (stored) {
+                return sendReply(res, {
+                    ...buildActivity(stored.deposits, stored.withdrawals),
+                    tooLarge: false,
+                    source: 'database',
+                })
+            }
+        }
         const full = await getHashiRequests(network)
         if (full.tooLarge) {
             const latest = await getHashiRecentRequests(network)
@@ -353,4 +368,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 }
 
-export default withCache(handler, 120)
+export default withCache(handler, 120, { staleSeconds: 600 })

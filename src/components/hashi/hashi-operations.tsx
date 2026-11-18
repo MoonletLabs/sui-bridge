@@ -109,10 +109,12 @@ export function HashiBatchChart({ data, loading }: { data?: HashiOperations; loa
     const days = data?.batches?.daily ?? []
 
     const options = useChart({
-        chart: { type: 'bar', toolbar: { show: false }, animations: { enabled: false } },
+        chart: { type: 'area', toolbar: { show: false }, animations: { enabled: false } },
         colors: [metric === 'batches' ? '#00A76F' : '#F7931A'],
-        stroke: { width: 0 },
-        plotOptions: { bar: { borderRadius: 0 } },
+        // A line from zero, as on the activity chart: straight segments never dip below zero
+        stroke: { width: 2, curve: 'straight' },
+        fill: { type: 'solid', opacity: 0.12 },
+        markers: { size: days.length <= 45 ? 3 : 0, strokeWidth: 0, hover: { size: 5 } },
         dataLabels: { enabled: false },
         legend: { show: false },
         xaxis: {
@@ -124,7 +126,7 @@ export function HashiBatchChart({ data, loading }: { data?: HashiOperations; loa
                     (opts?.i ?? 0) % 2 === 0 ? value : '',
             },
         },
-        yaxis: { labels: { formatter: (v: number) => String(Math.round(v)) } },
+        yaxis: { min: 0, labels: { formatter: (v: number) => String(Math.round(v)) } },
         tooltip: {
             x: {
                 formatter: (_val: number, opts?: { dataPointIndex?: number }) => {
@@ -161,7 +163,7 @@ export function HashiBatchChart({ data, loading }: { data?: HashiOperations; loa
                     <Skeleton variant="rounded" height={280} />
                 ) : (
                     <Chart
-                        type="bar"
+                        type="area"
                         height={280}
                         options={options}
                         series={[

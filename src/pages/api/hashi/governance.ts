@@ -16,4 +16,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 }
 
-export default withCache(handler, 120)
+export default withCache(handler, 120, { staleSeconds: 600 })

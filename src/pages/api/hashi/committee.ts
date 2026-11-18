@@ -17,4 +17,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // The committee only changes at epoch boundaries (daily)
-export default withCache(handler, 600)
+export default withCache(handler, 600, { staleSeconds: 600 })

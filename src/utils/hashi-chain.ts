@@ -1207,22 +1207,9 @@ export async function getHashiHealth(network: string): Promise<HashiHealth> {
         detail: `Hashi and Sui are at epochs ${hashiEpoch} and ${suiEpoch}. The committee hands over at each Sui epoch change; it only counts as a problem when it has not finished two hours into the new epoch (this epoch is ${ageText(epochAgeMs)} old).${config.reconfigHold ? ' A reconfiguration hold is set.' : ''}`,
     })
 
-    checks.push({
-        key: 'online-weight',
-        group: 'Protocol state',
-        label: 'Online committee weight',
-        status: 'unavailable',
-        summary: 'Not checked yet',
-        detail: 'Needs a live probe of every operator endpoint, which will come with the scheduled data job.',
-    })
-    checks.push({
-        key: 'guardian',
-        group: 'Protocol state',
-        label: 'Guardian availability and capacity',
-        status: 'unavailable',
-        summary: 'Not checked yet',
-        detail: `Needs a live probe of the Guardian service${config.guardianUrl ? ` (${config.guardianUrl})` : ''}, planned with the scheduled data job.`,
-    })
+    // Two checks are left out until the indexer runs scheduled probes: the share of committee
+    // weight whose endpoint answers, and the Guardian service's availability and capacity. A
+    // dashboard request should not contact every operator, so they are not shown as "not checked".
 
     // --- Bridge progression
     if (requests.tooLarge) {
