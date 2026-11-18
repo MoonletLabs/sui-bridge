@@ -57,6 +57,8 @@ type Page = {
 //  - `backfill:<type>` where the backward read of the BACKFILL_DAYS window continues, or 'done'
 const FORWARD_NAME = (type: string) => `events:${type}`
 const BACKFILL_NAME = (type: string) => `backfill:${type}`
+//  - `backfill-cutoff:<type>` the lower edge of the window, fixed when the backfill starts
+const CUTOFF_NAME = (type: string) => `backfill-cutoff:${type}`
 const BACKFILL_DONE = 'done'
 
 async function getCursor(sql: Sql, network: string, name: string): Promise<string | null> {
@@ -120,11 +122,17 @@ async function forward(
 }
 
 /**
- * The BACKFILL_DAYS window, read backward from the newest event. The first call (`resume` null)
- * also sets the forward cursor at the newest event, so new events are picked up from there.
- * Each run reads at most maxPagesPerRun pages and saves where it stopped; the backfill is marked
- * done only once it reaches the cutoff or the start of history, so a window larger than one run
- * is finished over the following runs instead of being cut off.
+ * The BACKFILL_DAYS window, read backward from the newest event. Each run reads at most
+ * maxPagesPerRun pages and saves where it stopped; the backfill is marked done only once it
+ * reaches the cutoff or the start of history, so a window larger than one run is finished over the
+ * following runs instead of being cut off.
+ *
+ * Two things keep it safe to interrupt or resume:
+ *  - the cutoff is fixed when the backfill starts and reused until it finishes (a backfill that takes
+ *    hours must not have its lower boundary creep forward meanwhile);
+ *  - the forward cursor, which marks the type as initialised, is saved LAST, after the first page's
+ *    events and the backward state. If the first run dies earlier, the type simply initialises again
+ *    (inserts are idempotent) and no part of the window is ever skipped.
  */
 async function backfill(
     sql: Sql,
@@ -134,8 +142,17 @@ async function backfill(
     resume: string | null,
 ) {
     const cfg = getHashiConfig(network)
-    const cutoff = Date.now() - config.backfillDays * 86_400_000
+    const windowMs = config.backfillDays * 86_400_000
+    let cutoff = Date.now() - windowMs
+    if (resume === null) {
+        await saveCursor(sql, network, CUTOFF_NAME(type), String(cutoff))
+    } else {
+        const saved = await getCursor(sql, network, CUTOFF_NAME(type))
+        if (saved) cutoff = Number(saved)
+    }
+
     let before = resume
+    let newest: string | null = null
     let stored = 0
     for (let page = 0; page < config.maxPagesPerRun; page += 1) {
         const data: Page = await suiGraphql<Page>(cfg.graphql, BACKWARD, {
@@ -145,16 +162,24 @@ async function backfill(
         const { nodes, pageInfo } = data.events
         if (resume === null && page === 0) {
             if (!pageInfo.endCursor) return 0 // no events yet: start over next run
-            await saveCursor(sql, network, FORWARD_NAME(type), pageInfo.endCursor)
+            newest = pageInfo.endCursor
         }
         const recent = nodes.filter(n => Date.parse(n.timestamp) >= cutoff)
         stored += await saveEvents(sql, network, type, recent)
-        if (recent.length < nodes.length || !pageInfo.hasPreviousPage) {
+
+        const finished =
+            recent.length < nodes.length || !pageInfo.hasPreviousPage || !pageInfo.startCursor
+        if (finished) {
             await saveCursor(sql, network, BACKFILL_NAME(type), BACKFILL_DONE)
-            return stored
+        } else {
+            before = pageInfo.startCursor ?? null
+            await saveCursor(sql, network, BACKFILL_NAME(type), before)
         }
-        before = pageInfo.startCursor ?? null
-        await saveCursor(sql, network, BACKFILL_NAME(type), before)
+        if (newest) {
+            await saveCursor(sql, network, FORWARD_NAME(type), newest)
+            newest = null
+        }
+        if (finished) return stored
     }
     log('info', 'backfill continues next run', { type, stored })
     return stored
