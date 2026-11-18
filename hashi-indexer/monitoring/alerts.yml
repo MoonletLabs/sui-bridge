@@ -1,0 +1,109 @@
+# Alert rules for the Hashi indexer (Prometheus / vmalert format).
+#
+# The metrics come from the indexer's /metrics (port 9199 on the Hashi hosts), collected by the
+# Moonlet agent, which adds the `network` and `hostname` labels. The agent samples every 2 minutes,
+# so every `for:` below is several samples long.
+groups:
+    - name: hashi-indexer
+      rules:
+          - alert: HashiIndexerMetricsMissing
+            expr: absent_over_time(hashi_indexer_info[15m])
+            for: 5m
+            labels: { severity: critical }
+            annotations:
+                summary: "No Hashi indexer metrics for 15 minutes"
+                description: "Nothing is reporting hashi_indexer_info: the indexer is down, or the agent cannot reach port 9199 (check the port label mapping and `moonlet-agent stats`)."
+
+          - alert: HashiIndexerEventsStale
+            expr: time() - hashi_indexer_job_last_success_timestamp_seconds{job="events"} > 900
+            for: 5m
+            labels: { severity: critical }
+            annotations:
+                summary: "Hashi indexer ({{ $labels.network }}) has not read events for {{ $value | humanizeDuration }}"
+                description: "The events job last succeeded {{ $value | humanizeDuration }} ago on {{ $labels.hostname }}. The container's own healthcheck turns unhealthy at the same point."
+
+          - alert: HashiIndexerSnapshotStale
+            expr: time() - hashi_indexer_job_last_success_timestamp_seconds{job="snapshot"} > 2400
+            for: 5m
+            labels: { severity: critical }
+            annotations:
+                summary: "Hashi indexer ({{ $labels.network }}) has not taken a snapshot for {{ $value | humanizeDuration }}"
+                description: "The snapshot job (supply, reserve, queues, history charts) last succeeded {{ $value | humanizeDuration }} ago on {{ $labels.hostname }}."
+
+          - alert: HashiIndexerJobFailing
+            expr: hashi_indexer_job_last_run_ok == 0
+            for: 10m
+            labels: { severity: warning }
+            annotations:
+                summary: "Hashi indexer job {{ $labels.job }} keeps failing ({{ $labels.network }})"
+                description: "The last runs of {{ $labels.job }} on {{ $labels.hostname }} failed. See the container logs: `docker compose logs indexer`."
+
+          - alert: HashiIndexerNotCaughtUp
+            expr: min by (network, hostname)(hashi_indexer_events_caught_up) == 0
+            for: 30m
+            labels: { severity: warning }
+            annotations:
+                summary: "Hashi indexer ({{ $labels.network }}) is behind the chain"
+                description: "At least one event type has not reached the end of the chain for 30 minutes on {{ $labels.hostname }}: the indexer cannot keep up, or Sui GraphQL is slow."
+
+          - alert: HashiIndexerBackfillIncomplete
+            expr: min by (network, hostname)(hashi_indexer_backfill_done) == 0
+            for: 6h
+            labels: { severity: warning }
+            annotations:
+                summary: "Hashi indexer ({{ $labels.network }}) has not finished storing history"
+                description: "The history window is still being read after 6 hours on {{ $labels.hostname }}."
+
+          - alert: HashiSuiGraphqlErrors
+            expr: |
+                sum by (network, hostname)(rate(hashi_indexer_graphql_requests_total{result="error"}[10m]))
+                  / sum by (network, hostname)(rate(hashi_indexer_graphql_requests_total[10m])) > 0.2
+            for: 15m
+            labels: { severity: warning }
+            annotations:
+                summary: "Sui GraphQL errors for the Hashi indexer ({{ $labels.network }})"
+                description: "{{ $value | humanizePercentage }} of requests to Sui GraphQL failed over the last 10 minutes on {{ $labels.hostname }}."
+
+          - alert: HashiIndexerDatabaseDown
+            expr: hashi_indexer_db_up == 0
+            for: 5m
+            labels: { severity: critical }
+            annotations:
+                summary: "Hashi indexer cannot read its database ({{ $labels.network }})"
+                description: "The database check has failed for 5 minutes on {{ $labels.hostname }}."
+
+          - alert: HashiIndexerDatabaseLarge
+            expr: hashi_indexer_db_size_bytes > 10e9
+            for: 1h
+            labels: { severity: warning }
+            annotations:
+                summary: "Hashi database ({{ $labels.network }}) is over 10 GB"
+                description: "{{ $value | humanize1024 }}B on {{ $labels.hostname }}. Testnet stores about 50 MB a day: consider pruning old events."
+
+    - name: hashi-protocol
+      rules:
+          - alert: HashiPaused
+            expr: hashi_indexer_paused == 1
+            for: 5m
+            labels: { severity: critical }
+            annotations:
+                summary: "Hashi is paused ({{ $labels.network }})"
+                description: "The on-chain pause flag is set."
+
+          - alert: HashiBackingBelowSupply
+            expr: hashi_indexer_backing_ratio < 1
+            for: 15m
+            labels: { severity: critical }
+            annotations:
+                summary: "Hashi reserve is below the hBTC supply ({{ $labels.network }})"
+                description: "Reserve / supply is {{ $value | humanizePercentage }}. A short dip can happen while a withdrawal batch is in flight; 15 minutes is not that."
+
+          - alert: HashiWithdrawalsStuck
+            expr: |
+                hashi_indexer_pending_withdrawals{network="mainnet"} > 0
+                  and changes(hashi_indexer_processed_withdrawals{network="mainnet"}[12h]) == 0
+            for: 1h
+            labels: { severity: warning }
+            annotations:
+                summary: "Hashi mainnet withdrawals are waiting and none completed for 12 hours"
+                description: "{{ $value }} withdrawal request(s) are pending and the completed count has not moved."

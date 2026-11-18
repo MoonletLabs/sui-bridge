@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy a released version of the Hashi indexer on THIS host.
 #
-#   ./deploy.sh hashi-indexer-v1.0
+#   ./deploy.sh hashi-indexer-v2.0
 #
 # Run it from the checkout's hashi-indexer/ folder, with a .env next to it. It never uses a branch:
 # it fetches the tags, checks the requested release tag out (detached), builds the image from that

@@ -1,0 +1,1874 @@
+{
+    "uid": "sui-hashi-indexer",
+    "title": "Sui Hashi Indexer",
+    "tags": ["sui", "hashi", "indexer"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "editable": true,
+    "graphTooltip": 1,
+    "refresh": "1m",
+    "time": {
+        "from": "now-6h",
+        "to": "now"
+    },
+    "description": "Health, sync and Hashi state of the Hashi indexer (hashi_indexer_* metrics, collected by the Moonlet agent from port 9199).",
+    "templating": {
+        "list": [
+            {
+                "name": "datasource",
+                "label": "Data source",
+                "type": "datasource",
+                "query": "prometheus",
+                "current": {}
+            },
+            {
+                "name": "network",
+                "label": "Network",
+                "type": "query",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "${datasource}"
+                },
+                "query": "label_values(hashi_indexer_info, network)",
+                "refresh": 2,
+                "includeAll": true,
+                "multi": false,
+                "allValue": ".*",
+                "sort": 1,
+                "current": {
+                    "selected": true,
+                    "text": "All",
+                    "value": "$__all"
+                }
+            },
+            {
+                "name": "hostname",
+                "label": "Hostname",
+                "type": "query",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "${datasource}"
+                },
+                "query": "label_values(hashi_indexer_info{network=~\"$network\"}, hostname)",
+                "refresh": 2,
+                "includeAll": true,
+                "multi": true,
+                "allValue": ".*",
+                "sort": 1,
+                "current": {
+                    "selected": true,
+                    "text": "All",
+                    "value": "$__all"
+                }
+            }
+        ]
+    },
+    "panels": [
+        {
+            "id": 1,
+            "type": "row",
+            "title": "Core health",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "panels": []
+        },
+        {
+            "id": 2,
+            "type": "stat",
+            "title": "Uptime",
+            "description": "Time since the indexer process started.",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "time() - hashi_indexer_start_time_seconds{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 3,
+            "type": "stat",
+            "title": "Version",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_info{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} | {{version}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 4,
+            "type": "stat",
+            "title": "Jobs",
+            "description": "Whether the last run of each job succeeded.",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "min by (hostname, job)(hashi_indexer_job_last_run_ok{network=~\"$network\",hostname=~\"$hostname\"})",
+                    "legendFormat": "{{hostname}} {{job}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "FAILING",
+                                    "color": "red"
+                                },
+                                "1": {
+                                    "text": "OK",
+                                    "color": "green"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 5,
+            "type": "stat",
+            "title": "Reading Sui",
+            "description": "Every event type has reached the end of the chain (a run that stops at its page limit shows NO).",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 18,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "min by (hostname)(hashi_indexer_events_caught_up{network=~\"$network\",hostname=~\"$hostname\"})",
+                    "legendFormat": "{{hostname}} caught up",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "NO",
+                                    "color": "red"
+                                },
+                                "1": {
+                                    "text": "YES",
+                                    "color": "green"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 6,
+            "type": "stat",
+            "title": "History stored",
+            "description": "Every event type has its history window stored.",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 21,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "min by (hostname)(hashi_indexer_backfill_done{network=~\"$network\",hostname=~\"$hostname\"})",
+                    "legendFormat": "{{hostname}} backfill",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "NO",
+                                    "color": "red"
+                                },
+                                "1": {
+                                    "text": "YES",
+                                    "color": "green"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 7,
+            "type": "row",
+            "title": "Sync",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "panels": []
+        },
+        {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Time since last successful run",
+            "description": "Alerts fire when events pass 15 minutes or the snapshot passes 40 minutes.",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 6
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "time() - hashi_indexer_job_last_success_timestamp_seconds{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} {{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 9,
+            "type": "timeseries",
+            "title": "Job duration (p95)",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 6
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "histogram_quantile(0.95, sum by (le, job, hostname)(rate(hashi_indexer_job_duration_seconds_bucket{network=~\"$network\",hostname=~\"$hostname\"}[$__rate_interval])))",
+                    "legendFormat": "{{hostname}} {{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 10,
+            "type": "timeseries",
+            "title": "Events stored",
+            "description": "New events read from Sui and stored.",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 14
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "sum by (type)(increase(hashi_indexer_events_stored_total{network=~\"$network\",hostname=~\"$hostname\"}[$__rate_interval]))",
+                    "legendFormat": "{{type}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "normal",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 11,
+            "type": "timeseries",
+            "title": "Events in the database",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 14
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "sum by (type)(hashi_indexer_events_in_db{network=~\"$network\",hostname=~\"$hostname\"})",
+                    "legendFormat": "{{type}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 12,
+            "type": "row",
+            "title": "Sui GraphQL",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 22
+            },
+            "panels": []
+        },
+        {
+            "id": 13,
+            "type": "timeseries",
+            "title": "Requests per second",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 23
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "sum by (result)(rate(hashi_indexer_graphql_requests_total{network=~\"$network\",hostname=~\"$hostname\"}[$__rate_interval]))",
+                    "legendFormat": "{{result}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 14,
+            "type": "timeseries",
+            "title": "Latency",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 23
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "histogram_quantile(0.5, sum by (le)(rate(hashi_indexer_graphql_request_duration_seconds_bucket{network=~\"$network\",hostname=~\"$hostname\"}[$__rate_interval])))",
+                    "legendFormat": "p50",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "histogram_quantile(0.95, sum by (le)(rate(hashi_indexer_graphql_request_duration_seconds_bucket{network=~\"$network\",hostname=~\"$hostname\"}[$__rate_interval])))",
+                    "legendFormat": "p95",
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "histogram_quantile(0.99, sum by (le)(rate(hashi_indexer_graphql_request_duration_seconds_bucket{network=~\"$network\",hostname=~\"$hostname\"}[$__rate_interval])))",
+                    "legendFormat": "p99",
+                    "refId": "C"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 15,
+            "type": "row",
+            "title": "Hashi state (as of the last snapshot)",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 31
+            },
+            "panels": []
+        },
+        {
+            "id": 16,
+            "type": "stat",
+            "title": "Status",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_paused{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "Running",
+                                    "color": "green"
+                                },
+                                "1": {
+                                    "text": "PAUSED",
+                                    "color": "red"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 17,
+            "type": "stat",
+            "title": "Epoch",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_epoch{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 18,
+            "type": "stat",
+            "title": "Backing",
+            "description": "Reserve divided by supply: anything under 100% is worth a look.",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_backing_ratio{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percentunit",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 19,
+            "type": "stat",
+            "title": "Pending requests",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_pending_deposits{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} deposits",
+                    "refId": "A",
+                    "instant": true
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_pending_withdrawals{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} withdrawals",
+                    "refId": "B",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 20,
+            "type": "stat",
+            "title": "Operators",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_registered_members{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} registered",
+                    "refId": "A",
+                    "instant": true
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_utxos{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} UTXOs",
+                    "refId": "B",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 21,
+            "type": "timeseries",
+            "title": "Supply and reserve (BTC)",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 36
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_supply_sats{network=~\"$network\",hostname=~\"$hostname\"} / 1e8",
+                    "legendFormat": "{{hostname}} hBTC supply",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_reserve_sats{network=~\"$network\",hostname=~\"$hostname\"} / 1e8",
+                    "legendFormat": "{{hostname}} BTC held",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 22,
+            "type": "timeseries",
+            "title": "Pending requests",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 36
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_pending_deposits{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} deposits",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_pending_withdrawals{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} withdrawals",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 23,
+            "type": "timeseries",
+            "title": "Completed requests per hour",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 44
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "increase(hashi_indexer_processed_deposits{network=~\"$network\",hostname=~\"$hostname\"}[1h])",
+                    "legendFormat": "{{hostname}} deposits",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "increase(hashi_indexer_processed_withdrawals{network=~\"$network\",hostname=~\"$hostname\"}[1h])",
+                    "legendFormat": "{{hostname}} withdrawals",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 24,
+            "type": "timeseries",
+            "title": "Newest stored event",
+            "description": "Age of the newest event per type. A quiet type can be old without any problem: see 'Reading Sui' for sync.",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 44
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "time() - hashi_indexer_newest_event_timestamp_seconds{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{type}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 25,
+            "type": "row",
+            "title": "Database and process",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 52
+            },
+            "panels": []
+        },
+        {
+            "id": 26,
+            "type": "timeseries",
+            "title": "Database size",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 53
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_db_size_bytes{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 27,
+            "type": "timeseries",
+            "title": "Table sizes",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 53
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_db_table_bytes{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} {{table}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 28,
+            "type": "timeseries",
+            "title": "Memory",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 53
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_process_resident_memory_bytes{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} resident",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_process_heap_used_bytes{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}} heap",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 29,
+            "type": "timeseries",
+            "title": "CPU",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 61
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "rate(hashi_indexer_process_cpu_seconds_total{network=~\"$network\",hostname=~\"$hostname\"}[$__rate_interval])",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 30,
+            "type": "timeseries",
+            "title": "Event loop delay (p99)",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 61
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_process_event_loop_delay_seconds_p99{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 31,
+            "type": "timeseries",
+            "title": "Database reachable",
+            "description": "",
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 61
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${datasource}"
+                    },
+                    "expr": "hashi_indexer_db_up{network=~\"$network\",hostname=~\"$hostname\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        }
+    ]
+}

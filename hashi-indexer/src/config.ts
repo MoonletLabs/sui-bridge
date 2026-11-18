@@ -48,6 +48,8 @@ export const config = {
     backfillDays: int('BACKFILL_DAYS', network === 'testnet' ? 7 : 0),
     /** Event pages (50 events each) read per type per run, so a long backfill resumes next run */
     maxPagesPerRun: int('EVENTS_MAX_PAGES_PER_RUN', 100),
+    /** Where /metrics is served for the monitoring agent (0 turns it off) */
+    metricsPort: int('METRICS_PORT', 9199),
     /** One file per job is touched on each success: the healthcheck needs every job to be fresh */
     heartbeatDir: process.env.HEARTBEAT_DIR || '/tmp/hashi-indexer-heartbeat',
 }

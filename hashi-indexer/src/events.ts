@@ -3,6 +3,7 @@ import { suiGraphql } from 'src/utils/sui-graphql'
 import { config } from './config'
 import { inChunks, type Sql } from './db'
 import { log } from './log'
+import { recordEventType } from './metrics'
 
 // The request lifecycle. Each type is read independently, with its own cursors.
 const EVENT_TYPES = [
@@ -110,6 +111,7 @@ async function forward(
     const cfg = getHashiConfig(network)
     let cursor = start
     let stored = 0
+    let caughtUp = false
     for (let page = 0; page < config.maxPagesPerRun; page += 1) {
         const data: Page = await suiGraphql<Page>(cfg.graphql, FORWARD, {
             type: fullType,
@@ -120,9 +122,12 @@ async function forward(
         if (pageInfo.endCursor) cursor = pageInfo.endCursor
         // Persist after every page so a long read resumes where it stopped
         await saveCursor(sql, network, FORWARD_NAME(type), cursor)
-        if (!pageInfo.hasNextPage) break
+        if (!pageInfo.hasNextPage) {
+            caughtUp = true
+            break
+        }
     }
-    return stored
+    return { stored, caughtUp }
 }
 
 /**
@@ -222,14 +227,21 @@ export async function runEvents(sql: Sql, network: string) {
         try {
             const fwd = await getCursor(sql, network, FORWARD_NAME(type))
             let count = 0
+            // null: this run did not read new events (the first run of a backfill)
+            let caughtUp: boolean | null = null
             if (!fwd) {
                 // First run for this type
-                count +=
-                    config.backfillDays > 0
-                        ? await backfill(sql, network, type, fullType, null)
-                        : await forward(sql, network, type, fullType, null)
+                if (config.backfillDays > 0) {
+                    count += await backfill(sql, network, type, fullType, null)
+                } else {
+                    const first = await forward(sql, network, type, fullType, null)
+                    count += first.stored
+                    caughtUp = first.caughtUp
+                }
             } else {
-                count += await forward(sql, network, type, fullType, fwd)
+                const next = await forward(sql, network, type, fullType, fwd)
+                count += next.stored
+                caughtUp = next.caughtUp
                 // A backfill left unfinished by an earlier run carries on
                 const bf = await getCursor(sql, network, BACKFILL_NAME(type))
                 if (config.backfillDays > 0 && bf && bf !== BACKFILL_DONE) {
@@ -237,6 +249,14 @@ export async function runEvents(sql: Sql, network: string) {
                 }
             }
             stored[type] = count
+            const bf =
+                config.backfillDays > 0 ? await getCursor(sql, network, BACKFILL_NAME(type)) : null
+            recordEventType(
+                type,
+                count,
+                caughtUp,
+                config.backfillDays === 0 || bf === BACKFILL_DONE,
+            )
         } catch (error) {
             // One failing type must not stop the others...
             failures.push(`${type}: ${String(error)}`)

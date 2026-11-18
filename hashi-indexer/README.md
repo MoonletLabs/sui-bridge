@@ -84,10 +84,10 @@ page with the notes. Create one from an up-to-date `main`:
 
 ```bash
 git checkout main && git pull
-git tag -a hashi-indexer-v1.0 -m "Hashi indexer 1.0"
-git push origin hashi-indexer-v1.0
-gh release create hashi-indexer-v1.0 --verify-tag --title "Hashi indexer 1.0" \
-    --notes-file hashi-indexer/release-notes/v1.0.md
+git tag -a hashi-indexer-v2.0 -m "Hashi indexer 2.0"
+git push origin hashi-indexer-v2.0
+gh release create hashi-indexer-v2.0 --verify-tag --title "Hashi indexer 2.0" \
+    --notes-file hashi-indexer/release-notes/v2.0.md
 ```
 
 The release notes live in the repository (`hashi-indexer/release-notes/vX.Y.md`), so they are reviewed with the code
@@ -101,8 +101,8 @@ There is no registry and no image to publish: a host checks out the release tag 
 repository is public, so cloning needs no credentials. The first time, as the user that runs docker:
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/MoonletLabs/sui-bridge.git /opt/sui-bridge
-cd /opt/sui-bridge && git sparse-checkout set hashi-indexer src/utils src/config
+git clone --filter=blob:none --sparse https://github.com/MoonletLabs/sui-bridge.git ~/sui-bridge
+cd ~/sui-bridge && git sparse-checkout set hashi-indexer src/utils src/config
 cd hashi-indexer && cp .env.example .env && chmod 600 .env     # then edit .env (see the checklist)
 ```
 
@@ -110,8 +110,8 @@ cd hashi-indexer && cp .env.example .env && chmod 600 .env     # then edit .env 
 upgrade or rollback:
 
 ```bash
-cd /opt/sui-bridge/hashi-indexer
-./deploy.sh hashi-indexer-v1.0
+cd ~/sui-bridge/hashi-indexer
+./deploy.sh hashi-indexer-v2.0
 ```
 
 `deploy.sh` accepts only a release tag, refuses to run on a modified checkout, fetches the tags, checks
@@ -126,6 +126,49 @@ starts the stack. Rolling back is the same command with the previous tag.
   (refresh it on purpose, not by accident) and the npm packages by the lockfile.
 - Migrations are additive, so an older release keeps working on a newer schema; check the release notes before
   relying on that for a rollback.
+
+## Monitoring
+
+The indexer serves Prometheus metrics (`/metrics`) on `METRICS_PORT` (default **9199**). Compose publishes the
+port on the host's **loopback only**, so nothing outside the machine can reach it and no firewall rule is
+needed. The Moonlet agent finds it by itself (it scans the host's listening ports and reads `/metrics`), and
+re-exposes it with the server's labels (`network`, `hostname`, ...); VictoriaMetrics and Grafana take it from there.
+
+```
+indexer :9199/metrics  ->  moonlet-agent (autodiscovery, every 2 min)  ->  VictoriaMetrics  ->  Grafana + alerts
+```
+
+**Set up on each Hashi host** (once):
+
+1. Deploy a release that has metrics (`./deploy.sh hashi-indexer-v2.0`).
+2. In the admin UI, open the server's *Autodiscovery config* and add a port label mapping for **9199**, for
+   example `blockchain=sui`, `server_type=rpc`, `node_type=hashi-indexer`. Do not add a `network` mapping for the
+   port: the server-level mapping already sets it.
+3. Check it: `moonlet-agent stats` lists `http://127.0.0.1:9199/metrics` as a valid endpoint, and
+   `curl -s localhost:9199/metrics | head` shows the metrics.
+
+**Metrics** (all `hashi_indexer_*`; no `network` label, the agent adds it):
+
+| Group | Metrics |
+|---|---|
+| Process | `info{version}`, `start_time_seconds`, `process_resident_memory_bytes`, `process_heap_used_bytes`, `process_cpu_seconds_total`, `process_event_loop_delay_seconds_p99` |
+| Jobs (`snapshot`, `events`) | `job_runs_total{job,result}`, `job_duration_seconds` (histogram), `job_last_success_timestamp_seconds`, `job_last_run_ok` |
+| Events | `events_stored_total{type}`, `events_caught_up{type}`, `backfill_done{type}`, `events_in_db{type}`, `newest_event_timestamp_seconds{type}` |
+| Sui GraphQL | `graphql_requests_total{result}`, `graphql_request_duration_seconds` (histogram) |
+| Hashi state (last snapshot) | `supply_sats`, `reserve_sats`, `backing_ratio`, `utxos`, `pending_deposits`, `pending_withdrawals`, `processed_deposits`, `processed_withdrawals`, `epoch`, `paused`, `registered_members` |
+| Database | `db_up`, `db_size_bytes`, `db_table_bytes{table}`, `db_table_rows{table}` |
+
+Use `events_caught_up` (not the age of the newest event) to tell whether the indexer keeps up: a quiet event type
+can legitimately be hours old. The database figures are refreshed in the background at most once a minute, so a
+scrape never waits for Postgres.
+
+**Dashboard and alerts** are in `monitoring/`:
+
+- `grafana-dashboard.json`: in Grafana, *Dashboards > New > Import*, upload the file and pick the Prometheus
+  (VictoriaMetrics) data source. The `network` and `hostname` variables come from the agent's labels.
+- `alerts.yml`: Prometheus/vmalert rules (indexer down, a stale or failing job, not caught up, Sui errors,
+  database, and the protocol: paused, reserve below supply, withdrawals stuck on mainnet). The thresholds match the
+  container healthcheck. The agent samples every 2 minutes, so each `for:` spans several samples.
 
 ## Checking that mainnet history is complete
 

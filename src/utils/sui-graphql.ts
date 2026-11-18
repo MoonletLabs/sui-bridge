@@ -3,24 +3,39 @@
 
 type GraphqlResponse<T> = { data?: T; errors?: { message: string }[] }
 
+type Observer = (request: { ok: boolean; ms: number }) => void
+let observer: Observer | null = null
+
+/** Lets a long-running process (the indexer) count and time its requests; unused by the dashboard */
+export const setGraphqlObserver = (fn: Observer | null) => {
+    observer = fn
+}
+
 export async function suiGraphql<T>(
     endpoint: string,
     query: string,
     variables: Record<string, unknown> = {},
     timeoutMs = 15000,
 ): Promise<T> {
-    const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query, variables }),
-        signal: AbortSignal.timeout(timeoutMs),
-    })
-    if (!res.ok) throw new Error(`Sui GraphQL responded ${res.status}`)
-    const body = (await res.json()) as GraphqlResponse<T>
-    if (body.errors?.length || !body.data) {
-        throw new Error(body.errors?.[0]?.message || 'Sui GraphQL returned no data')
+    const started = Date.now()
+    try {
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ query, variables }),
+            signal: AbortSignal.timeout(timeoutMs),
+        })
+        if (!res.ok) throw new Error(`Sui GraphQL responded ${res.status}`)
+        const body = (await res.json()) as GraphqlResponse<T>
+        if (body.errors?.length || !body.data) {
+            throw new Error(body.errors?.[0]?.message || 'Sui GraphQL returned no data')
+        }
+        observer?.({ ok: true, ms: Date.now() - started })
+        return body.data
+    } catch (error) {
+        observer?.({ ok: false, ms: Date.now() - started })
+        throw error
     }
-    return body.data
 }
 
 const TABLE_QUERY = `
