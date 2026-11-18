@@ -163,8 +163,8 @@ Use `events_caught_up` (not the age of the newest event) to tell whether the ind
 can legitimately be hours old. The database figures are refreshed in the background at most once a minute, so a
 scrape never waits for Postgres.
 
-**Dashboard** (`monitoring/grafana-dashboard.json`): in Grafana, *Dashboards > New > Import*, upload the file and
-pick the Prometheus (VictoriaMetrics) data source. It has the same three dropdowns as the Sui Bridge Indexer
+**Dashboard** (`monitoring/grafana-dashboard.json`): in Grafana, *Dashboards > New > Import*, upload the file. It
+uses the default data source (no data source is set in the file). It has the same three dropdowns as the Sui Bridge Indexer
 dashboard: **Network**, **Hostname** and **Host** (the IP from `instance`), filtered by the labels above.
 
 **Suggested alerts** (create them where you manage alert rules; the agent samples every 2 minutes, so use a `for:` of
