@@ -387,12 +387,12 @@ export function HashiRecentRequests({
                                 <TableCell align="right">{fBtc(r.amountSats)}</TableCell>
                                 <TableCell>
                                     <MuiLink
-                                        href={suiAccountUrl(r.sender, network)}
+                                        href={suiAccountUrl(r.account, network)}
                                         target="_blank"
                                         rel="noopener"
                                         underline="hover"
                                     >
-                                        {shortAddress(r.sender)}
+                                        {shortAddress(r.account)}
                                     </MuiLink>
                                 </TableCell>
                                 <TableCell>

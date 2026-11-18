@@ -18,6 +18,19 @@ export type HashiStatusCount = { status: string; count: number; sats: number }
 
 export type HashiSupplyPoint = { day_ms: number; minted_sats: number; burned_sats: number }
 
+/** One Sui address and what it moved through Hashi (completed requests only) */
+export type HashiAccount = {
+    address: string
+    deposits: number
+    depositSats: number
+    withdrawals: number
+    withdrawalSats: number
+}
+
+export type HashiUsersPoint = { day_ms: number; users: number }
+
+const ACCOUNTS_SHOWN = 25
+
 export type HashiDailyPoint = {
     day_ms: number
     deposits: number
@@ -64,6 +77,11 @@ export type HashiActivityResponse = {
     depositStatus: HashiStatusCount[]
     withdrawalStatus: HashiStatusCount[]
     daily: HashiDailyPoint[]
+    /** Different people seen so far (cumulative), one point per `daily` bucket */
+    usersDaily: HashiUsersPoint[]
+    /** The busiest addresses by volume, and how many addresses there are in all */
+    accounts: HashiAccount[]
+    accountCount: number
     /** hBTC minted (deposit confirmed) and burned (withdrawal batch created) per UTC day */
     supplyDaily: HashiSupplyPoint[]
     /** The last 24 hours in hourly buckets, for the 1d range (full mode only) */
@@ -93,6 +111,55 @@ const userStats = (depositors: string[], withdrawers: string[]) => {
     const w = new Set(withdrawers)
     const both = Array.from(d).filter(address => w.has(address)).length
     return { uniqueUsers: d.size + w.size - both, twoWayUsers: both }
+}
+
+/** Completed requests grouped by Sui address, busiest first */
+const buildAccounts = (
+    deposits: { account: string; amountSats: number }[],
+    withdrawals: { account: string; amountSats: number }[],
+) => {
+    const byAddress = new Map<string, HashiAccount>()
+    const entry = (address: string) => {
+        let a = byAddress.get(address)
+        if (!a) {
+            a = { address, deposits: 0, depositSats: 0, withdrawals: 0, withdrawalSats: 0 }
+            byAddress.set(address, a)
+        }
+        return a
+    }
+    deposits.forEach(d => {
+        const a = entry(d.account)
+        a.deposits += 1
+        a.depositSats += d.amountSats
+    })
+    withdrawals.forEach(w => {
+        const a = entry(w.account)
+        a.withdrawals += 1
+        a.withdrawalSats += w.amountSats
+    })
+    const all = Array.from(byAddress.values()).sort(
+        (a, b) => b.depositSats + b.withdrawalSats - (a.depositSats + a.withdrawalSats),
+    )
+    return { accounts: all.slice(0, ACCOUNTS_SHOWN), accountCount: all.length }
+}
+
+/** People seen so far at the end of each bucket: an address counts from its first request */
+const buildUsersDaily = (
+    requests: { account: string; atMs: number }[],
+    buckets: { day_ms: number }[],
+    bucketMs: number,
+): HashiUsersPoint[] => {
+    const firstSeen = new Map<string, number>()
+    requests.forEach(r => {
+        const seen = firstSeen.get(r.account)
+        if (seen === undefined || r.atMs < seen) firstSeen.set(r.account, r.atMs)
+    })
+    const times = Array.from(firstSeen.values()).sort((a, b) => a - b)
+    let i = 0
+    return buckets.map(b => {
+        while (i < times.length && times[i] < b.day_ms + bucketMs) i += 1
+        return { day_ms: b.day_ms, users: i }
+    })
 }
 
 export function buildActivity(
@@ -199,6 +266,16 @@ export function buildActivity(
         }
     })
 
+    const usersDaily = buildUsersDaily(
+        [
+            ...doneDeposits.map(d => ({ account: d.account, atMs: d.confirmedMs as number })),
+            ...doneWithdrawals.map(w => ({ account: w.account, atMs: w.confirmedMs as number })),
+        ],
+        daily,
+        DAY_MS,
+    )
+    const { accounts, accountCount } = buildAccounts(doneDeposits, doneWithdrawals)
+
     const depositMs = doneDeposits.map(d => (d.confirmedMs as number) - d.createdMs)
     const approvalMs = doneDeposits
         .filter(d => d.approvedMs)
@@ -223,11 +300,11 @@ export function buildActivity(
             withdrawals: doneWithdrawals.length,
             depositSats: sum(depositAmounts),
             withdrawalSats: sum(withdrawalAmounts),
-            uniqueDepositors: new Set(doneDeposits.map(d => d.sender)).size,
-            uniqueWithdrawers: new Set(doneWithdrawals.map(w => w.sender)).size,
+            uniqueDepositors: new Set(doneDeposits.map(d => d.account)).size,
+            uniqueWithdrawers: new Set(doneWithdrawals.map(w => w.account)).size,
             ...userStats(
-                doneDeposits.map(d => d.sender),
-                doneWithdrawals.map(w => w.sender),
+                doneDeposits.map(d => d.account),
+                doneWithdrawals.map(w => w.account),
             ),
             avgDepositSats: depositAmounts.length ? sum(depositAmounts) / depositAmounts.length : 0,
             avgWithdrawalSats: withdrawalAmounts.length
@@ -248,6 +325,9 @@ export function buildActivity(
         depositStatus: statusCounts(deposits, ['pending', 'approved', 'confirmed']),
         withdrawalStatus: statusCounts(withdrawals, ['pending', 'approved', 'signed', 'confirmed']),
         daily,
+        usersDaily,
+        accounts,
+        accountCount,
         supplyDaily,
         hourly,
         recent,
@@ -308,11 +388,11 @@ export function buildRecentActivity(
             withdrawals: withdrawals.length,
             depositSats: sum(depositAmounts),
             withdrawalSats: sum(withdrawalAmounts),
-            uniqueDepositors: new Set(deposits.map(d => d.sender)).size,
-            uniqueWithdrawers: new Set(withdrawals.map(w => w.sender)).size,
+            uniqueDepositors: new Set(deposits.map(d => d.account)).size,
+            uniqueWithdrawers: new Set(withdrawals.map(w => w.account)).size,
             ...userStats(
-                deposits.map(d => d.sender),
-                withdrawals.map(w => w.sender),
+                deposits.map(d => d.account),
+                withdrawals.map(w => w.account),
             ),
             avgDepositSats: depositAmounts.length ? sum(depositAmounts) / depositAmounts.length : 0,
             avgWithdrawalSats: withdrawalAmounts.length
@@ -326,6 +406,9 @@ export function buildRecentActivity(
         depositStatus: [],
         withdrawalStatus: [],
         daily,
+        usersDaily: [],
+        accounts: [],
+        accountCount: 0,
         supplyDaily: [],
         hourly: [],
         recent,

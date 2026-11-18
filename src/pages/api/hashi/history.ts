@@ -12,6 +12,9 @@ export type HashiHistoryPoint = {
     pool_utxos: number
     pending_deposits: number
     pending_withdrawals: number
+    /** Requests completed so far (cumulative), for the trend lines on the overview cards */
+    processed_deposits: number
+    processed_withdrawals: number
 }
 
 export type HashiHistoryResponse = {
@@ -43,7 +46,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 pool_sats::float8 as pool_sats,
                 pool_utxos,
                 pending_deposits,
-                pending_withdrawals
+                pending_withdrawals,
+                processed_deposits::float8 as processed_deposits,
+                processed_withdrawals::float8 as processed_withdrawals
             from (
                 select *, to_timestamp(floor(extract(epoch from taken_at) / ${bucketSeconds}) * ${bucketSeconds}) as bucket
                 from hashi_snapshots

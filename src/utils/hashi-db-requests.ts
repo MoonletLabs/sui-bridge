@@ -7,6 +7,7 @@ const MAX_DAYS = 30
 type DepositRow = {
     id: string
     sender: string
+    account: string
     amount: number
     mints: boolean
     txid: string
@@ -65,6 +66,9 @@ export async function getHashiRequestsFromDb(
                     select
                         payload->>'request_id' as id,
                         payload->>'requester_address' as sender,
+                        case when jsonb_typeof(payload->'derivation_path') = 'string'
+                            then payload->>'derivation_path'
+                            else payload->>'requester_address' end as account,
                         (payload->>'amount')::float8 as amount,
                         (jsonb_typeof(payload->'derivation_path') = 'string') as mints,
                         coalesce(payload->'utxo_id'->>'txid', '') as txid,
@@ -155,6 +159,7 @@ export async function getHashiRequestsFromDb(
                 return {
                     id: d.id,
                     sender: d.sender,
+                    account: d.account,
                     amountSats: Number(d.amount),
                     mints: d.mints,
                     btcTxid: d.txid,
@@ -175,6 +180,7 @@ export async function getHashiRequestsFromDb(
                 return {
                     id: w.id,
                     sender: w.sender,
+                    account: w.sender,
                     amountSats: Number(w.amount),
                     btcTxid: w.txid,
                     // The store has no "signed" event: a request in a batch that is not yet

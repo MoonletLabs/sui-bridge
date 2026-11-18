@@ -102,7 +102,7 @@ export function HashiHistoryCard() {
         <Card>
             <CardHeader
                 title="Supply, reserve and queues over time"
-                subheader="From snapshots taken every few minutes, so history starts when collection began"
+                subheader="From snapshots taken every few minutes"
                 action={
                     <Stack direction="row" spacing={1}>
                         <ToggleButtonGroup
