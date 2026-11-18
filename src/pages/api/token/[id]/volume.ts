@@ -39,7 +39,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         const { fromInterval, toInterval } = computerIntervals(timePeriod, false)
-        const granularity = getGranularity(timePeriod)
+        // Optional override (daily / weekly view); 24h stays hourly
+        const requested = req.query.granularity
+        const granularity =
+            timePeriod !== 'Last 24h' && (requested === 'day' || requested === 'week')
+                ? requested
+                : getGranularity(timePeriod)
         const sql = db[networkConfig.network]
 
         const truncSpec = granularity === 'hour' ? 'hour' : granularity === 'week' ? 'week' : 'day'

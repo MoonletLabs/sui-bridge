@@ -127,8 +127,8 @@ export function TokenOverview({ data, isLoading }: Props) {
     const userPct = pctChange(data.totals.unique_senders, data.previous.unique_senders)
 
     const netUsd = data.direction.net_usd
-    const netLabel =
-        netUsd >= 0 ? `+${formatUsd(netUsd)} → SUI` : `${formatUsd(Math.abs(netUsd))} → ETH`
+    // Kept short so it stays on one line; the direction goes in the caption
+    const netLabel = `${netUsd > 0 ? '+' : ''}${formatUsd(netUsd)}`
 
     return (
         <Grid container spacing={2}>
@@ -166,7 +166,7 @@ export function TokenOverview({ data, isLoading }: Props) {
                 <StatCard
                     title="Net Flow"
                     value={netLabel}
-                    subValue={`Avg ${formatUsd(data.totals.avg_tx_usd)} / tx`}
+                    subValue={netUsd >= 0 ? 'net into Sui' : 'net out of Sui'}
                     icon="solar:routing-2-bold-duotone"
                     color={netUsd >= 0 ? 'success.main' : 'error.main'}
                 />
@@ -225,7 +225,7 @@ export function TokenOverview({ data, isLoading }: Props) {
                             ${fShortenNumber(data.price_usd) || '0'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            Decimals: {data.decimals}
+                            Typical transfer {formatUsd(data.totals.avg_tx_usd)}
                         </Typography>
                     </Stack>
                 </Card>

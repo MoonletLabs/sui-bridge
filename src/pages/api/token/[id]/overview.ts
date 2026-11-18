@@ -5,6 +5,7 @@ import { sendError, sendReply } from '../../utils'
 import db from '../../database'
 import { computerIntervals } from '../../cards'
 import { getPrices } from '../../prices'
+import { unwrapEvent } from 'src/utils/governance'
 
 export type TokenOverviewResponse = {
     token_id: number
@@ -36,6 +37,36 @@ export type TokenOverviewResponse = {
         total_tx_count: number
         unique_senders: number
     }
+    /**
+     * Contract identifiers, when the bridge's governance record of the token
+     * listing carries them (not every token's listing does)
+     */
+    contracts: { eth?: string; sui?: string }
+}
+
+/** Find this token's contract addresses in the AddEVMTokens / AddSuiTokens governance events */
+async function findContracts(sql: any, tokenId: number): Promise<{ eth?: string; sui?: string }> {
+    const rows = await sql`
+        SELECT action, data FROM public.governance_actions
+        WHERE action IN ('AddEVMTokens', 'AddSuiTokens')
+        ORDER BY timestamp_ms ASC
+    `
+    const contracts: { eth?: string; sui?: string } = {}
+    for (const row of rows as any[]) {
+        const d = unwrapEvent(row.data)
+        if (row.action === 'AddEVMTokens') {
+            // V2 lists several tokens at once, V1 has a single token
+            const ids: number[] =
+                d.token_i_ds ?? d.token_ids ?? (d.token_id !== undefined ? [d.token_id] : [])
+            const addrs: string[] =
+                d.token_addresses ?? (d.token_address !== undefined ? [d.token_address] : [])
+            const i = ids.map(Number).indexOf(tokenId)
+            if (i >= 0 && addrs[i]) contracts.eth = String(addrs[i])
+        } else if (row.action === 'AddSuiTokens' && Number(d.token_id) === tokenId && d.type_name) {
+            contracts.sui = String(d.type_name)
+        }
+    }
+    return contracts
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -63,7 +94,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const sql = db[networkConfig.network]
 
         // Run queries in parallel
-        const [priceRow, currentRow, directionRows, previousRow] = await Promise.all([
+        const [priceRow, currentRow, directionRows, previousRow, contracts] = await Promise.all([
             sql`
                 SELECT price, denominator
                 FROM public.prices
@@ -111,6 +142,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                   AND t.token_id = ${tokenId}
                   AND t.timestamp_ms BETWEEN ${prevFrom} AND ${prevTo}
             `,
+            findContracts(sql, tokenId),
         ])
 
         const cur = (currentRow as any[])[0] ?? {}
@@ -169,6 +201,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 total_tx_count: Number(prev.tx_count) || 0,
                 unique_senders: Number(prev.unique_senders) || 0,
             },
+            contracts,
         }
 
         sendReply(res, response)

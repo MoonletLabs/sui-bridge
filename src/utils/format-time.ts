@@ -3,11 +3,13 @@ import type { Dayjs, OpUnitType } from 'dayjs'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import utc from 'dayjs/plugin/utc'
 
 // ----------------------------------------------------------------------
 
 dayjs.extend(duration)
 dayjs.extend(relativeTime)
+dayjs.extend(utc)
 
 // ----------------------------------------------------------------------
 
@@ -266,4 +268,45 @@ export function fSub({
         .format()
 
     return result
+}
+
+// ----------------------------------------------------------------------
+
+/** output: 17 Apr 2022 12:00:05 UTC - blockchains and explorers speak UTC */
+export function fDateTimeUtc(date: DatePickerFormat) {
+    if (!date) {
+        return null
+    }
+
+    const d = dayjs.utc(date)
+    return d.isValid() ? `${d.format('DD MMM YYYY HH:mm:ss')} UTC` : 'Invalid time value'
+}
+
+// ----------------------------------------------------------------------
+
+/** Milliseconds as a compact duration: "3s", "13m 4s", "2h 5m", "3d 4h" */
+export function fDurationMs(ms: number | null | undefined) {
+    if (ms === null || ms === undefined || !Number.isFinite(ms)) {
+        return '—'
+    }
+
+    const sign = ms < 0 ? '-' : ''
+    const total = Math.round(Math.abs(ms) / 1000)
+    if (total < 60) return `${sign}${total}s`
+
+    const minutes = Math.floor(total / 60)
+    if (minutes < 60) {
+        const secs = total % 60
+        return `${sign}${minutes}m${secs ? ` ${secs}s` : ''}`
+    }
+
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) {
+        const mins = minutes % 60
+        return `${sign}${hours}h${mins ? ` ${mins}m` : ''}`
+    }
+
+    const days = Math.floor(hours / 24)
+    const hrs = hours % 24
+    return `${sign}${days}d${hrs ? ` ${hrs}h` : ''}`
 }

@@ -35,6 +35,7 @@ export const endpoints = {
     cards: '/api/cards',
     inflows: '/api/inflows',
     transactions: '/api/transactions',
+    search: '/api/search',
     userStats: '/api/user-stats',
     transaction: '/api/transaction',
     outflows: '/api/outflows',

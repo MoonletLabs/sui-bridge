@@ -126,6 +126,12 @@ export const removePrefix = (tx?: string) => {
     return finalTx?.startsWith('0x') || finalTx?.startsWith('0X') ? finalTx?.slice(2) : finalTx
 }
 
+/** `0x` + hex, or an empty string when there is no value (never a bare "0x") */
+export const withHexPrefix = (hex?: string | null) => {
+    const clean = removePrefix(hex ?? undefined)
+    return clean ? `0x${clean}` : ''
+}
+
 export function isHexadecimal(str: string): boolean {
     // This regex allows an optional "0x" prefix and then one or more hexadecimal digits.
     const hexRegex = /^(0x)?[0-9A-Fa-f]+$/
@@ -151,19 +157,28 @@ export const buildConditionalQuery = (
     {
         suiAddress,
         ethAddress,
+        address,
         flow = 'all',
         senders,
         recipients,
         amountFrom,
         amountTo,
+        tokenIds,
+        status,
     }: {
         suiAddress?: string
         ethAddress?: string
+        /** Any address (SUI or Ethereum) that is the sender or the recipient */
+        address?: string
         flow?: 'all' | 'inflow' | 'outflow'
         senders?: string[]
         recipients?: string[]
         amountFrom?: number
         amountTo?: number
+        /** Only these token ids */
+        tokenIds?: number[]
+        /** Lifecycle stage of the transfer (needs the `t` alias on token_transfer_data) */
+        status?: 'all' | 'completed' | 'awaiting_claim' | 'pending_approval'
     },
     networkConfig?: INetworkConfig,
 ) => {
@@ -178,6 +193,12 @@ export const buildConditionalQuery = (
     if (ethAddress) {
         conditions.push(
             sql`(sender_address = decode(${ethAddress}, 'hex') OR recipient_address = decode(${ethAddress}, 'hex'))`,
+        )
+    }
+
+    if (address) {
+        conditions.push(
+            sql`(sender_address = decode(${address}, 'hex') OR recipient_address = decode(${address}, 'hex'))`,
         )
     }
 
@@ -212,8 +233,38 @@ export const buildConditionalQuery = (
         conditions.push(sql`(t.amount::NUMERIC / p.denominator) * (p.price::FLOAT8) <= ${amountTo}`)
     }
 
+    // 6) tokens
+    if (tokenIds && tokenIds.length) {
+        conditions.push(sql`t.token_id IN ${sql(tokenIds)}`)
+    }
+
+    // 7) lifecycle stage, from the Approved / Claimed records in token_transfer
+    if (status === 'completed') {
+        conditions.push(sql`${transferHasStatus(sql, 'Claimed')}`)
+    } else if (status === 'awaiting_claim') {
+        conditions.push(
+            sql`(${transferHasStatus(sql, 'Approved')} AND NOT ${transferHasStatus(sql, 'Claimed')})`,
+        )
+    } else if (status === 'pending_approval') {
+        conditions.push(
+            sql`(NOT ${transferHasStatus(sql, 'Approved')} AND NOT ${transferHasStatus(sql, 'Claimed')})`,
+        )
+    }
+
     return conditions.length ? sql`AND (${joinSQL(sql, conditions, sql` AND `)})` : sql``
 }
+
+/**
+ * `EXISTS` check that a transfer (alias `t`) has reached a lifecycle status. Only
+ * finalized records count, so the list, filters and CSV agree with the detail page
+ * (which shows a not-yet-finalized approval / claim as still pending).
+ */
+export const transferHasStatus = (sql: any, status: 'Approved' | 'Claimed') =>
+    sql`EXISTS (
+        SELECT 1 FROM public.token_transfer s
+        WHERE s.chain_id = t.chain_id AND s.nonce = t.nonce AND s.status = ${status}
+          AND s.is_finalized = true
+    )`
 // ----------------------------------------------------------------------
 
 function isObject(item: any) {
@@ -330,13 +381,16 @@ export const transformTransfers = (
                     let sender_address = it.sender_address
                     let recipient_address = it.recipient_address
 
+                    // Both addresses are 0x-prefixed hex on every chain (Suiscan and
+                    // Etherscan both expect that form); only the tx hash differs
+                    sender_address = withHexPrefix(it.sender_address)
+                    recipient_address = withHexPrefix(it.recipient_address)
+
                     if (it.chain_id === networkConfig.config.networkId.ETH) {
                         tx_hash = `0x${it.tx_hash}`
-                        sender_address = `0x${it.sender_address}`
                     } else {
                         // For SUI transactions, convert only tx_hash to base58 format
                         tx_hash = base58Encode(it.tx_hash)
-                        recipient_address = `0x${it.recipient_address}`
                     }
                     return {
                         ...it,
@@ -362,9 +416,10 @@ export const transformHistory = (data: TransactionHistoryType[]) => {
         ?.map(it => {
             let tx_hash = it.tx_hash
             let txn_sender = it.txn_sender
+            // Senders are 0x-prefixed hex on both chains
+            txn_sender = withHexPrefix(it.txn_sender)
             if (it.data_source === 'ETH') {
                 tx_hash = `0x${it.tx_hash}`
-                txn_sender = `0x${it.txn_sender}`
             } else {
                 // For SUI transactions, convert only tx_hash to base58 format
                 tx_hash = base58Encode(it.tx_hash)

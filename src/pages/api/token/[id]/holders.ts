@@ -22,6 +22,11 @@ export type TokenHoldersResponse = {
     token_id: number
     period: TimePeriod
     total: number
+    /** Volume of all senders in the period: the denominator for each sender's share */
+    period_volume_usd: number
+    /** Share of that volume held by the 3 / 10 largest senders (0-100) */
+    top3_share: number
+    top10_share: number
     holders: TokenHolderRow[]
 }
 
@@ -49,7 +54,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 ? sql`tx_count DESC NULLS LAST`
                 : sql`total_volume_usd DESC NULLS LAST`
 
-        const [holdersQuery, countQuery] = await Promise.all([
+        const [holdersQuery, countQuery, concentrationQuery] = await Promise.all([
             sql`
                 WITH per_address AS (
                     SELECT
@@ -88,7 +93,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                   AND t.sender_address IS NOT NULL
                   AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
             `,
+            sql`
+                WITH per_address AS (
+                    SELECT
+                        t.sender_address,
+                        SUM((t.amount::NUMERIC / p.denominator) * p.price::FLOAT8) AS usd
+                    FROM public.token_transfer_data t
+                    JOIN public.prices p ON p.token_id = t.token_id
+                    WHERE t.is_finalized = true
+                      AND t.token_id = ${tokenId}
+                      AND t.sender_address IS NOT NULL
+                      AND t.timestamp_ms BETWEEN ${fromInterval} AND ${toInterval}
+                    GROUP BY 1
+                ),
+                ranked AS (
+                    SELECT usd, ROW_NUMBER() OVER (ORDER BY usd DESC) AS rn FROM per_address
+                )
+                SELECT
+                    COALESCE(SUM(usd), 0) AS total,
+                    COALESCE(SUM(usd) FILTER (WHERE rn <= 3), 0) AS top3,
+                    COALESCE(SUM(usd) FILTER (WHERE rn <= 10), 0) AS top10
+                FROM ranked
+            `,
         ])
+
+        const conc = (concentrationQuery as any[])[0] ?? {}
+        const periodVolume = Number(conc.total) || 0
+        const share = (v: unknown) => (periodVolume > 0 ? (Number(v) / periodVolume) * 100 : 0)
 
         const holders: TokenHolderRow[] = (holdersQuery as any[]).map((row: any, idx: number) => ({
             rank: offset + idx + 1,
@@ -107,6 +138,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             token_id: tokenId,
             period: timePeriod,
             total: Number((countQuery as any[])[0]?.total) || 0,
+            period_volume_usd: periodVolume,
+            top3_share: share(conc.top3),
+            top10_share: share(conc.top10),
             holders,
         } as TokenHoldersResponse)
     } catch (error) {
