@@ -59,6 +59,7 @@ export const endpoints = {
         governance: '/api/hashi/governance',
         operations: '/api/hashi/operations',
         health: '/api/hashi/health',
+        history: '/api/hashi/history',
     },
     flows: '/api/flows',
     sizeHistogram: '/api/size-histogram',

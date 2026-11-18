@@ -868,6 +868,46 @@ const median = (values: number[]) => {
     return sorted[Math.floor(sorted.length / 2)]
 }
 
+const batchFromJson = (j: BatchJson): HashiBatch => {
+    const inputSats = sumAmounts(j.inputs)
+    const outputSats = sumAmounts(j.withdrawal_outputs)
+    const changeSats = sumAmounts(j.change_outputs)
+    const confirmedMs = msOrNull(j.confirmed_timestamp_ms)
+    const signedMs = msOrNull(j.signed_timestamp_ms)
+    return {
+        id: j.id,
+        btcTxid: j.txid,
+        status: confirmedMs ? 'confirmed' : signedMs ? 'signed' : 'pending',
+        withdrawals: j.request_ids.length,
+        outputSats,
+        feeSats: Math.max(0, inputSats - outputSats - changeSats),
+        inputs: j.inputs.length,
+        createdMs: Number(j.created_timestamp_ms),
+        signedMs,
+        confirmedMs,
+    }
+}
+
+/** Every withdrawal batch (open and archived), newest first. Empty on networks too large to read. */
+export async function getHashiBatches(
+    network: string,
+): Promise<{ batches: HashiBatch[]; tooLarge: boolean }> {
+    const cfg = getHashiConfig(network)
+    const { bitcoin } = await readHashiState(cfg)
+    const q = bitcoin.withdrawal_queue
+    if ([q.withdrawal_txns, q.confirmed_txns].some(t => Number(t.size) > MAX_TABLE_ROWS)) {
+        return { batches: [], tooLarge: true }
+    }
+    const read = (table: TableRef) =>
+        readTable<BatchJson>(cfg.graphql, table.id, { pageSize: 20, size: Number(table.size) })
+    const [open, done] = await Promise.all([read(q.withdrawal_txns), read(q.confirmed_txns)])
+    const batches = [...open, ...done]
+        .filter(e => e.value)
+        .map(e => batchFromJson(e.value))
+        .sort((a, b) => b.createdMs - a.createdMs)
+    return { batches, tooLarge: false }
+}
+
 export async function getHashiOperations(network: string): Promise<HashiOperations> {
     const cfg = getHashiConfig(network)
     const { hashi, bitcoin } = await readHashiState(cfg)
@@ -896,25 +936,7 @@ export async function getHashiOperations(network: string): Promise<HashiOperatio
 
     let batches: HashiOperations['batches'] = null
     if (!tooLarge) {
-        const toBatch = (j: BatchJson): HashiBatch => {
-            const inputSats = sumAmounts(j.inputs)
-            const outputSats = sumAmounts(j.withdrawal_outputs)
-            const changeSats = sumAmounts(j.change_outputs)
-            const confirmedMs = msOrNull(j.confirmed_timestamp_ms)
-            const signedMs = msOrNull(j.signed_timestamp_ms)
-            return {
-                id: j.id,
-                btcTxid: j.txid,
-                status: confirmedMs ? 'confirmed' : signedMs ? 'signed' : 'pending',
-                withdrawals: j.request_ids.length,
-                outputSats,
-                feeSats: Math.max(0, inputSats - outputSats - changeSats),
-                inputs: j.inputs.length,
-                createdMs: Number(j.created_timestamp_ms),
-                signedMs,
-                confirmedMs,
-            }
-        }
+        const toBatch = batchFromJson
         const all = [...open, ...done]
             .filter(e => e.value)
             .map(e => toBatch(e.value))

@@ -1,4 +1,5 @@
 import useSWR from 'swr'
+import type { HashiHistoryResponse } from 'src/pages/api/hashi/history'
 import { getNetwork } from 'src/hooks/get-network-storage'
 import type { HashiActivityResponse } from 'src/pages/api/hashi/activity'
 import type { HashiCommitteeResponse } from 'src/pages/api/hashi/committee'
@@ -30,3 +31,13 @@ export const useHashiCommittee = () =>
 export const useHashiGovernance = () => useHashi<HashiGovernance>(endpoints.hashi.governance, 120)
 export const useHashiOperations = () => useHashi<HashiOperations>(endpoints.hashi.operations, 120)
 export const useHashiHealth = () => useHashi<HashiHealth>(endpoints.hashi.health, 60)
+
+/** Stored history (needs the Hashi analytics store). `available` is false without one. */
+export const useHashiHistory = (days: number) => {
+    const network = getNetwork()
+    return useSWR<HashiHistoryResponse>(
+        `${endpoints.hashi.history}?network=${network}&days=${days}`,
+        fetcher,
+        { revalidateOnFocus: false, dedupingInterval: 30000, refreshInterval: 60_000 },
+    )
+}
