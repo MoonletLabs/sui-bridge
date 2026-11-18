@@ -1,7 +1,7 @@
 # Hashi analytics store: a small Postgres plus ONE indexer, for ONE network (NETWORK in the env file).
 # Each Hashi host runs its own stack: testnet on the testnet host, mainnet on the mainnet host.
 #
-#   on a Hashi host:   ./deploy.sh hashi-indexer-v1.0     (checks out the tag, builds and starts)
+#   on a Hashi host:   ./deploy.sh hashi-indexer-v2.0     (checks out the tag, builds and starts)
 #   locally, one stack per network (separate databases, like production):
 #       docker compose -p hashi-mainnet --env-file .env.local.mainnet up -d --build
 #       docker compose -p hashi-testnet --env-file .env.local.testnet up -d --build
@@ -70,6 +70,11 @@ services:
             BACKFILL_DAYS: ${BACKFILL_DAYS:-}
             # Pages (50 events each) read per event type per run; empty = the default (100)
             EVENTS_MAX_PAGES_PER_RUN: ${EVENTS_MAX_PAGES_PER_RUN:-}
+            METRICS_PORT: ${METRICS_PORT:-9199}
+        # Prometheus metrics for the monitoring agent, which reads /metrics from ports on this host.
+        # Loopback only: it is never reachable from outside the machine.
+        ports:
+            - "127.0.0.1:${METRICS_PORT:-9199}:${METRICS_PORT:-9199}"
         mem_limit: 256m
         cpus: 0.5
         healthcheck:

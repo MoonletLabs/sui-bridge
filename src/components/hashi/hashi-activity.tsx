@@ -86,7 +86,7 @@ export function HashiVolumeChart({
                     },
                     {
                         name: 'Withdrawals (Sui → BTC)',
-                        data: days.map(d => -Number(satsToBtc(d.withdrawal_sats).toFixed(6))),
+                        data: days.map(d => Number(satsToBtc(d.withdrawal_sats).toFixed(6))),
                     },
                 ],
             }
@@ -95,7 +95,7 @@ export function HashiVolumeChart({
             categories: cats,
             series: [
                 { name: 'Deposits (BTC → Sui)', data: days.map(d => d.deposits) },
-                { name: 'Withdrawals (Sui → BTC)', data: days.map(d => -d.withdrawals) },
+                { name: 'Withdrawals (Sui → BTC)', data: days.map(d => d.withdrawals) },
             ],
         }
     }, [data, metric, rangeDays, hourlyView])
@@ -109,15 +109,16 @@ export function HashiVolumeChart({
 
     const options = useChart({
         chart: {
-            type: 'bar',
-            stacked: true,
+            type: 'area',
             toolbar: { show: false },
             animations: { enabled: false },
         },
         colors: ['#22C55E', '#F7931A'],
-        // No outline: empty days would otherwise show up as thin dashes at zero
-        stroke: { width: 0 },
-        plotOptions: { bar: { borderRadius: 0 } },
+        // Two lines from zero, so deposits and withdrawals compare directly. Straight segments:
+        // a smoothed curve would dip below zero between quiet days and busy ones
+        stroke: { width: 2, curve: 'straight' },
+        fill: { type: 'solid', opacity: 0.12 },
+        markers: { size: shown.length <= 45 ? 3 : 0, strokeWidth: 0, hover: { size: 5 } },
         dataLabels: { enabled: false },
         legend: { position: 'top', horizontalAlign: 'right' },
         // A category axis (like the other charts) keeps the hover band centred on the bar
@@ -131,9 +132,10 @@ export function HashiVolumeChart({
             },
         },
         yaxis: {
+            min: 0,
             labels: {
                 formatter: (v: number) =>
-                    metric === 'volume' ? Math.abs(v).toFixed(volumeDecimals) : String(Math.abs(v)),
+                    metric === 'volume' ? v.toFixed(volumeDecimals) : String(Math.round(v)),
             },
         },
         tooltip: {
@@ -151,8 +153,8 @@ export function HashiVolumeChart({
             y: {
                 formatter: (v: number) =>
                     metric === 'volume'
-                        ? `${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 6 })} BTC`
-                        : String(Math.abs(v)),
+                        ? `${v.toLocaleString(undefined, { maximumFractionDigits: 6 })} BTC`
+                        : String(v),
             },
         },
     })
@@ -204,7 +206,7 @@ export function HashiVolumeChart({
                 {loading ? (
                     <Skeleton variant="rounded" height={320} />
                 ) : (
-                    <Chart type="bar" series={series} options={options} height={320} />
+                    <Chart type="area" series={series} options={options} height={320} />
                 )}
             </Box>
         </Card>
@@ -385,12 +387,12 @@ export function HashiRecentRequests({
                                 <TableCell align="right">{fBtc(r.amountSats)}</TableCell>
                                 <TableCell>
                                     <MuiLink
-                                        href={suiAccountUrl(r.sender, network)}
+                                        href={suiAccountUrl(r.account, network)}
                                         target="_blank"
                                         rel="noopener"
                                         underline="hover"
                                     >
-                                        {shortAddress(r.sender)}
+                                        {shortAddress(r.account)}
                                     </MuiLink>
                                 </TableCell>
                                 <TableCell>

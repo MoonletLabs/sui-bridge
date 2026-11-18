@@ -1,0 +1,1650 @@
+{
+    "uid": "sui-hashi-indexer",
+    "title": "Sui Hashi Indexer",
+    "tags": ["sui", "hashi", "indexer"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "editable": true,
+    "graphTooltip": 1,
+    "refresh": "1m",
+    "time": {
+        "from": "now-6h",
+        "to": "now"
+    },
+    "description": "Health, sync and Hashi state of the Hashi indexer (hashi_indexer_* metrics, collected by the Moonlet agent from port 9199).",
+    "templating": {
+        "list": [
+            {
+                "name": "network",
+                "label": "Network",
+                "type": "query",
+                "definition": "label_values({blockchain=\"sui\", node_type=\"hashi-indexer\"},network)",
+                "query": {
+                    "query": "label_values({blockchain=\"sui\", node_type=\"hashi-indexer\"},network)",
+                    "refId": "network-variable-query",
+                    "qryType": 1
+                },
+                "regex": "",
+                "refresh": 1,
+                "sort": 0,
+                "includeAll": false,
+                "multi": false,
+                "allowCustomValue": true,
+                "hide": 0,
+                "skipUrlSync": false,
+                "options": [],
+                "current": {}
+            },
+            {
+                "name": "hostname",
+                "label": "Hostname",
+                "type": "query",
+                "definition": "label_values({blockchain=\"sui\", network=\"$network\", node_type=\"hashi-indexer\"},hostname)",
+                "query": {
+                    "query": "label_values({blockchain=\"sui\", network=\"$network\", node_type=\"hashi-indexer\"},hostname)",
+                    "refId": "hostname-variable-query",
+                    "qryType": 1
+                },
+                "regex": "",
+                "refresh": 1,
+                "sort": 0,
+                "includeAll": false,
+                "multi": false,
+                "allowCustomValue": true,
+                "hide": 0,
+                "skipUrlSync": false,
+                "options": [],
+                "current": {}
+            },
+            {
+                "name": "host",
+                "label": "Host",
+                "type": "query",
+                "definition": "label_values({hostname=\"$hostname\"},instance)",
+                "query": {
+                    "query": "label_values({hostname=\"$hostname\"},instance)",
+                    "refId": "host-variable-query",
+                    "qryType": 1
+                },
+                "regex": "/^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}):/",
+                "refresh": 1,
+                "sort": 0,
+                "includeAll": false,
+                "multi": false,
+                "allowCustomValue": true,
+                "hide": 0,
+                "skipUrlSync": false,
+                "options": [],
+                "current": {}
+            }
+        ]
+    },
+    "panels": [
+        {
+            "id": 1,
+            "type": "row",
+            "title": "Core health",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "panels": []
+        },
+        {
+            "id": 2,
+            "type": "stat",
+            "title": "Uptime",
+            "description": "Time since the indexer process started.",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "time() - hashi_indexer_start_time_seconds{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 3,
+            "type": "stat",
+            "title": "Version",
+            "description": "",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_info{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} | {{version}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 4,
+            "type": "stat",
+            "title": "Jobs",
+            "description": "Whether the last run of each job succeeded.",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "min by (hostname, job)(hashi_indexer_job_last_run_ok{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"})",
+                    "legendFormat": "{{hostname}} {{job}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "FAILING",
+                                    "color": "red"
+                                },
+                                "1": {
+                                    "text": "OK",
+                                    "color": "green"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 5,
+            "type": "stat",
+            "title": "Reading Sui",
+            "description": "Every event type has reached the end of the chain (a run that stops at its page limit shows NO).",
+            "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 18,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "min by (hostname)(hashi_indexer_events_caught_up{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"})",
+                    "legendFormat": "{{hostname}} caught up",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "NO",
+                                    "color": "red"
+                                },
+                                "1": {
+                                    "text": "YES",
+                                    "color": "green"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 6,
+            "type": "stat",
+            "title": "History stored",
+            "description": "Every event type has its history window stored.",
+            "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 21,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "min by (hostname)(hashi_indexer_backfill_done{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"})",
+                    "legendFormat": "{{hostname}} backfill",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "NO",
+                                    "color": "red"
+                                },
+                                "1": {
+                                    "text": "YES",
+                                    "color": "green"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 7,
+            "type": "row",
+            "title": "Sync",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "panels": []
+        },
+        {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Time since last successful run",
+            "description": "Alerts fire when events pass 15 minutes or the snapshot passes 40 minutes.",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 6
+            },
+            "targets": [
+                {
+                    "expr": "time() - hashi_indexer_job_last_success_timestamp_seconds{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} {{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 9,
+            "type": "timeseries",
+            "title": "Job duration (p95)",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 6
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum by (le, job, hostname)(rate(hashi_indexer_job_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])))",
+                    "legendFormat": "{{hostname}} {{job}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 10,
+            "type": "timeseries",
+            "title": "Events stored",
+            "description": "New events read from Sui and stored.",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 14
+            },
+            "targets": [
+                {
+                    "expr": "sum by (type)(increase(hashi_indexer_events_stored_total{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval]))",
+                    "legendFormat": "{{type}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "normal",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 11,
+            "type": "timeseries",
+            "title": "Events in the database",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 14
+            },
+            "targets": [
+                {
+                    "expr": "sum by (type)(hashi_indexer_events_in_db{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"})",
+                    "legendFormat": "{{type}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 12,
+            "type": "row",
+            "title": "Sui GraphQL",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 22
+            },
+            "panels": []
+        },
+        {
+            "id": 13,
+            "type": "timeseries",
+            "title": "Requests per second",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 23
+            },
+            "targets": [
+                {
+                    "expr": "sum by (result)(rate(hashi_indexer_graphql_requests_total{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval]))",
+                    "legendFormat": "{{result}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 14,
+            "type": "timeseries",
+            "title": "Latency",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 23
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.5, sum by (le)(rate(hashi_indexer_graphql_request_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])))",
+                    "legendFormat": "p50",
+                    "refId": "A"
+                },
+                {
+                    "expr": "histogram_quantile(0.95, sum by (le)(rate(hashi_indexer_graphql_request_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])))",
+                    "legendFormat": "p95",
+                    "refId": "B"
+                },
+                {
+                    "expr": "histogram_quantile(0.99, sum by (le)(rate(hashi_indexer_graphql_request_duration_seconds_bucket{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])))",
+                    "legendFormat": "p99",
+                    "refId": "C"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 15,
+            "type": "row",
+            "title": "Hashi state (as of the last snapshot)",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 31
+            },
+            "panels": []
+        },
+        {
+            "id": 16,
+            "type": "stat",
+            "title": "Status",
+            "description": "",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_paused{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [
+                        {
+                            "type": "value",
+                            "options": {
+                                "0": {
+                                    "text": "Running",
+                                    "color": "green"
+                                },
+                                "1": {
+                                    "text": "PAUSED",
+                                    "color": "red"
+                                }
+                            }
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 17,
+            "type": "stat",
+            "title": "Epoch",
+            "description": "",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_epoch{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 18,
+            "type": "stat",
+            "title": "Backing",
+            "description": "Reserve divided by supply: anything under 100% is worth a look.",
+            "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_backing_ratio{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percentunit",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 19,
+            "type": "stat",
+            "title": "Pending requests",
+            "description": "",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_pending_deposits{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} deposits",
+                    "refId": "A",
+                    "instant": true
+                },
+                {
+                    "expr": "hashi_indexer_pending_withdrawals{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} withdrawals",
+                    "refId": "B",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 20,
+            "type": "stat",
+            "title": "Operators",
+            "description": "",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 32
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_registered_members{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} registered",
+                    "refId": "A",
+                    "instant": true
+                },
+                {
+                    "expr": "hashi_indexer_utxos{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} UTXOs",
+                    "refId": "B",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "calcs": ["lastNotNull"],
+                    "fields": "",
+                    "values": false
+                },
+                "colorMode": "value",
+                "graphMode": "none",
+                "textMode": "value_and_name",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "id": 21,
+            "type": "timeseries",
+            "title": "Supply and reserve (BTC)",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 36
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_supply_sats{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"} / 1e8",
+                    "legendFormat": "{{hostname}} hBTC supply",
+                    "refId": "A"
+                },
+                {
+                    "expr": "hashi_indexer_reserve_sats{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"} / 1e8",
+                    "legendFormat": "{{hostname}} BTC held",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 22,
+            "type": "timeseries",
+            "title": "Pending requests",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 36
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_pending_deposits{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} deposits",
+                    "refId": "A"
+                },
+                {
+                    "expr": "hashi_indexer_pending_withdrawals{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} withdrawals",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 23,
+            "type": "timeseries",
+            "title": "Completed requests per hour",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 44
+            },
+            "targets": [
+                {
+                    "expr": "increase(hashi_indexer_processed_deposits{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[1h])",
+                    "legendFormat": "{{hostname}} deposits",
+                    "refId": "A"
+                },
+                {
+                    "expr": "increase(hashi_indexer_processed_withdrawals{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[1h])",
+                    "legendFormat": "{{hostname}} withdrawals",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 24,
+            "type": "timeseries",
+            "title": "Newest stored event",
+            "description": "Age of the newest event per type. A quiet type can be old without any problem: see 'Reading Sui' for sync.",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 44
+            },
+            "targets": [
+                {
+                    "expr": "time() - hashi_indexer_newest_event_timestamp_seconds{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{type}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 25,
+            "type": "row",
+            "title": "Database and process",
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 52
+            },
+            "panels": []
+        },
+        {
+            "id": 26,
+            "type": "timeseries",
+            "title": "Database size",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 53
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_db_size_bytes{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 27,
+            "type": "timeseries",
+            "title": "Table sizes",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 53
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_db_table_bytes{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} {{table}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 28,
+            "type": "timeseries",
+            "title": "Memory",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 53
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_process_resident_memory_bytes{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} resident",
+                    "refId": "A"
+                },
+                {
+                    "expr": "hashi_indexer_process_heap_used_bytes{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}} heap",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 29,
+            "type": "timeseries",
+            "title": "CPU",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 61
+            },
+            "targets": [
+                {
+                    "expr": "rate(hashi_indexer_process_cpu_seconds_total{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}[$__rate_interval])",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 30,
+            "type": "timeseries",
+            "title": "Event loop delay (p99)",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 61
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_process_event_loop_delay_seconds_p99{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 31,
+            "type": "timeseries",
+            "title": "Database reachable",
+            "description": "",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 61
+            },
+            "targets": [
+                {
+                    "expr": "hashi_indexer_db_up{blockchain=\"sui\",node_type=\"hashi-indexer\",network=\"$network\",hostname=\"$hostname\",instance=~\"$host:.*\"}",
+                    "legendFormat": "{{hostname}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "none",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "showPoints": "auto",
+                        "spanNulls": true,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        }
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "min": 0
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        }
+    ]
+}

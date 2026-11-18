@@ -1,4 +1,12 @@
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { SATS_PER_BTC } from 'src/config/hashi'
+
+dayjs.extend(utc)
+
+/** " · since Nov 13" for figures that cover only part of the history, "" for lifetime figures */
+export const sinceNote = (coverage?: { fromMs: number }) =>
+    coverage ? ` · since ${dayjs(coverage.fromMs).utc().format('MMM D')}` : ''
 
 export const satsToBtc = (sats: number) => sats / SATS_PER_BTC
 

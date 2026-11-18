@@ -4,8 +4,11 @@ import { config } from './config'
 import { connect, withLock, type Sql } from './db'
 import { runEvents } from './events'
 import { log } from './log'
+import { collectDbStats, recordGraphql, recordJob, recordStart } from './metrics'
 import { migrate } from './migrate'
+import { startMetricsServer } from './server'
 import { runSnapshot } from './snapshot'
+import { setGraphqlObserver } from 'src/utils/sui-graphql'
 
 let stopping = false
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -40,16 +43,23 @@ async function runJob(sql: Sql, name: string, job: () => Promise<unknown>) {
     try {
         const result = await withLock(sql, `hashi-indexer:${config.network}:${name}`, job)
         if (result === null) {
+            recordJob(name, 'skipped', (Date.now() - started) / 1000)
             log('info', 'job skipped, another run holds the lock', { job: name })
             return
         }
         heartbeat(name)
         await recordRun(sql, name, null)
+        // Only now: a failing recordRun lands in the catch below, so one invocation is one outcome
+        recordJob(name, 'ok', (Date.now() - started) / 1000)
         log('info', 'job ok', { job: name, ms: Date.now() - started, result })
     } catch (error) {
+        recordJob(name, 'error', (Date.now() - started) / 1000)
         log('error', 'job failed', { job: name, error: String(error) })
         await recordRun(sql, name, String(error)).catch(() => undefined)
     }
+    // After every run, whatever its outcome (throttled inside): the database figures
+    // and a failing job should both stay visible
+    collectDbStats(sql, config.network).catch(() => undefined)
 }
 
 async function loop(sql: Sql, name: string, everySeconds: number, job: () => Promise<unknown>) {
@@ -64,6 +74,9 @@ async function loop(sql: Sql, name: string, everySeconds: number, job: () => Pro
 
 async function main() {
     const sql = connect(config.database)
+    recordStart(process.env.HASHI_INDEXER_VERSION || 'dev')
+    setGraphqlObserver(recordGraphql)
+    startMetricsServer(config.metricsPort)
     log('info', 'starting', {
         version: process.env.HASHI_INDEXER_VERSION || 'dev',
         network: config.network,

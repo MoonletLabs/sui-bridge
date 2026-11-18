@@ -124,6 +124,8 @@ export type HashiOverview = {
     processedDeposits: number
     processedWithdrawals: number
     spentUtxos: number
+    /** The current Sui epoch (Hashi's committee changes with it); null if it could not be read */
+    chain: { suiEpoch: number; epochStartMs: number } | null
     fetchedAt: string
 }
 
@@ -148,7 +150,11 @@ async function readHashiState(cfg: HashiNetworkConfig) {
 
 export async function getHashiOverview(network: string): Promise<HashiOverview> {
     const cfg = getHashiConfig(network)
-    const { hashi, bitcoin, supplySats } = await readHashiState(cfg)
+    const [{ hashi, bitcoin, supplySats }, chain] = await Promise.all([
+        readHashiState(cfg),
+        // Only decoration (epoch progress): a failure must not break the overview
+        suiGraphql<ChainResponse>(cfg.graphql, CHAIN_QUERY).catch(() => null),
+    ])
 
     // The pool is small (a dozen UTXOs), so summing it directly is cheap
     const utxos = await readTable<{ utxo: { amount: string }; spent_by: unknown }>(
@@ -206,6 +212,12 @@ export async function getHashiOverview(network: string): Promise<HashiOverview> 
         processedDeposits: Number(bitcoin.deposit_queue.processed.size),
         processedWithdrawals,
         spentUtxos: Number(bitcoin.utxo_pool.spent_utxos.size),
+        chain: chain
+            ? {
+                  suiEpoch: Number(chain.epoch.epochId),
+                  epochStartMs: Date.parse(chain.epoch.startTimestamp),
+              }
+            : null,
         fetchedAt: new Date().toISOString(),
     }
 }
@@ -249,7 +261,13 @@ export type WithdrawalStatus = 'requested' | 'pending' | 'approved' | 'signed' |
 
 export type HashiDeposit = {
     id: string
+    /** Who submitted the request (often a relayer acting for the user) */
     sender: string
+    /**
+     * Who the request is for: the Sui address that receives the hBTC. Counting users and accounts
+     * by this, not by `sender`, matches how people use Hashi.
+     */
+    account: string
     amountSats: number
     /** False for a reserve-only deposit (no recipient): it adds BTC but mints no hBTC */
     mints: boolean
@@ -263,6 +281,8 @@ export type HashiDeposit = {
 export type HashiWithdrawal = {
     id: string
     sender: string
+    /** Same as `sender`: whoever asks for a withdrawal owns it */
+    account: string
     amountSats: number
     btcTxid: string | null
     status: WithdrawalStatus
@@ -314,6 +334,7 @@ export async function getHashiRequests(network: string) {
         return {
             id: d.id,
             sender: d.sender,
+            account: typeof d.utxo.derivation_path === 'string' ? d.utxo.derivation_path : d.sender,
             amountSats: Number(d.utxo.amount),
             mints: d.utxo.derivation_path != null,
             btcTxid: d.utxo.id.txid,
@@ -337,6 +358,7 @@ export async function getHashiRequests(network: string) {
         return {
             id: w.id,
             sender: w.sender,
+            account: w.sender,
             amountSats: Number(w.btc_amount),
             btcTxid: txn?.txid ?? null,
             status,
@@ -406,6 +428,10 @@ export async function getHashiRecentRequests(network: string) {
     const deposits: HashiDeposit[] = depositEvents.map(e => ({
         id: e.json.request_id,
         sender: e.json.requester_address,
+        account:
+            typeof e.json.derivation_path === 'string'
+                ? e.json.derivation_path
+                : e.json.requester_address,
         amountSats: Number(e.json.amount),
         mints: e.json.derivation_path != null,
         btcTxid: e.json.utxo_id?.txid ?? '',
@@ -417,6 +443,7 @@ export async function getHashiRecentRequests(network: string) {
     const withdrawals: HashiWithdrawal[] = withdrawalEvents.map(e => ({
         id: e.json.request_id,
         sender: e.json.requester_address,
+        account: e.json.requester_address,
         amountSats: Number(e.json.btc_amount),
         btcTxid: null,
         status: 'requested',
@@ -1207,22 +1234,9 @@ export async function getHashiHealth(network: string): Promise<HashiHealth> {
         detail: `Hashi and Sui are at epochs ${hashiEpoch} and ${suiEpoch}. The committee hands over at each Sui epoch change; it only counts as a problem when it has not finished two hours into the new epoch (this epoch is ${ageText(epochAgeMs)} old).${config.reconfigHold ? ' A reconfiguration hold is set.' : ''}`,
     })
 
-    checks.push({
-        key: 'online-weight',
-        group: 'Protocol state',
-        label: 'Online committee weight',
-        status: 'unavailable',
-        summary: 'Not checked yet',
-        detail: 'Needs a live probe of every operator endpoint, which will come with the scheduled data job.',
-    })
-    checks.push({
-        key: 'guardian',
-        group: 'Protocol state',
-        label: 'Guardian availability and capacity',
-        status: 'unavailable',
-        summary: 'Not checked yet',
-        detail: `Needs a live probe of the Guardian service${config.guardianUrl ? ` (${config.guardianUrl})` : ''}, planned with the scheduled data job.`,
-    })
+    // Two checks are left out until the indexer runs scheduled probes: the share of committee
+    // weight whose endpoint answers, and the Guardian service's availability and capacity. A
+    // dashboard request should not contact every operator, so they are not shown as "not checked".
 
     // --- Bridge progression
     if (requests.tooLarge) {

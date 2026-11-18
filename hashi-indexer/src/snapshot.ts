@@ -5,6 +5,7 @@ import {
     getHashiRequests,
 } from 'src/utils/hashi-chain'
 import { inChunks, type Sql } from './db'
+import { recordState } from './metrics'
 
 /**
  * One pass over Hashi's current on-chain state:
@@ -15,6 +16,7 @@ import { inChunks, type Sql } from './db'
  */
 export async function runSnapshot(sql: Sql, network: string) {
     const o = await getHashiOverview(network)
+    recordState(o)
     await sql`
         insert into hashi_snapshots (
             network, taken_at, epoch, paused, supply_sats, pool_sats, pool_utxos,
