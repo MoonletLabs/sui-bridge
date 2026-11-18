@@ -1,10 +1,8 @@
 # Hashi analytics store: a small Postgres plus ONE indexer, for ONE network (NETWORK in the env file).
 # Each Hashi host runs its own stack: testnet on the testnet host, mainnet on the mainnet host.
 #
-#   on a Hashi host (image only, no source needed):
-#       docker compose --env-file .env pull && docker compose --env-file .env up -d
-#   locally, one stack per network, building the image from this repository
-#   (the .env.local.* files set COMPOSE_FILE to include docker-compose.build.yml):
+#   on a Hashi host:   ./deploy.sh hashi-indexer-v1.0     (checks out the tag, builds and starts)
+#   locally, one stack per network (separate databases, like production):
 #       docker compose -p hashi-mainnet --env-file .env.local.mainnet up -d --build
 #       docker compose -p hashi-testnet --env-file .env.local.testnet up -d --build
 #
@@ -46,10 +44,14 @@ services:
             options: { max-size: "10m", max-file: "3" }
 
     indexer:
-        # Hosts run a released image: set HASHI_INDEXER_IMAGE to a version (or its digest) from the
-        # releases page. There is deliberately no default, so nothing runs an unpinned image.
-        # Locally, docker-compose.build.yml builds it from this repository instead.
-        image: ${HASHI_INDEXER_IMAGE:?set HASHI_INDEXER_IMAGE, e.g. ghcr.io/moonletlabs/hashi-indexer:1.0}
+        # Built from the checked-out repository (the build context is its root, because the indexer
+        # reuses the dashboard's Hashi readers). deploy.sh sets HASHI_INDEXER_VERSION from the tag.
+        build:
+            context: ..
+            dockerfile: hashi-indexer/Dockerfile
+            args:
+                VERSION: ${HASHI_INDEXER_VERSION:-dev}
+        image: hashi-indexer:${HASHI_INDEXER_VERSION:-local}
         restart: unless-stopped
         depends_on:
             hashi-db:

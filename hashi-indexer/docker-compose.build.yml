@@ -1,8 +1,0 @@
-# Local override: build the indexer image from this repository instead of pulling a published one.
-# The build context is the repository root, because the indexer reuses the dashboard's Hashi readers.
-services:
-    indexer:
-        build:
-            context: ..
-            dockerfile: hashi-indexer/Dockerfile
-        image: hashi-indexer:local

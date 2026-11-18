@@ -1,0 +1,57 @@
+name: Hashi indexer check
+
+# Typechecks the Hashi indexer and checks its image builds. Nothing is published: Hashi hosts
+# check out a release tag and build from it (see hashi-indexer/README.md).
+#
+# This is a public repository, so fork pull requests are skipped: only branches in this
+# repository run it.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "hashi-indexer/**"
+      - "src/utils/hashi-chain.ts"
+      - "src/utils/sui-graphql.ts"
+      - "src/config/hashi.ts"
+      - ".github/workflows/hashi-indexer-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository == 'MoonletLabs/sui-bridge' &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup nodejs
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.x"
+          cache: "npm"
+          cache-dependency-path: hashi-indexer/package-lock.json
+
+      - name: Typecheck
+        working-directory: hashi-indexer
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+
+      # The build context is the repository root: the image reuses the dashboard's Hashi readers
+      - name: Build image
+        run: |
+          docker build \
+            --file hashi-indexer/Dockerfile \
+            --build-arg VERSION=dev-${GITHUB_SHA::7} \
+            --tag hashi-indexer:ci \
+            .

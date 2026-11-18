@@ -1,6 +1,7 @@
-# Build context is the repository root (the indexer reuses the dashboard's Hashi readers):
-#   docker build -f hashi-indexer/Dockerfile .
-FROM node:22-alpine
+# Build context is the repository root (the indexer reuses the dashboard's Hashi readers).
+# Hosts build it from a checked-out release tag: see deploy.sh
+# Pinned by digest: update it on purpose (docker pull node:22-alpine, then copy the new digest)
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
 
 # Links the published package to the repository on GitHub
 LABEL org.opencontainers.image.source="https://github.com/MoonletLabs/sui-bridge"
