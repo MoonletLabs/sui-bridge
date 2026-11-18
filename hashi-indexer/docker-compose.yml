@@ -1,0 +1,91 @@
+# Hashi analytics store: a small Postgres plus ONE indexer, for ONE network (NETWORK in the env file).
+# Each Hashi host runs its own stack: testnet on the testnet host, mainnet on the mainnet host.
+#
+#   on a Hashi host:   ./deploy.sh hashi-indexer-v2.0     (checks out the tag, builds and starts)
+#   locally, one stack per network (separate databases, like production):
+#       docker compose -p hashi-mainnet --env-file .env.local.mainnet up -d --build
+#       docker compose -p hashi-testnet --env-file .env.local.testnet up -d --build
+#
+# The dashboard reads the database with the read-only role (hashi_reader).
+name: hashi-indexer
+
+services:
+    hashi-db:
+        image: postgres:16-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: hashi
+            POSTGRES_USER: hashi_admin
+            POSTGRES_PASSWORD: ${HASHI_ADMIN_PASSWORD:?set HASHI_ADMIN_PASSWORD}
+            HASHI_WRITER_PASSWORD: ${HASHI_WRITER_PASSWORD:?set HASHI_WRITER_PASSWORD}
+            HASHI_READER_PASSWORD: ${HASHI_READER_PASSWORD:?set HASHI_READER_PASSWORD}
+            PGPORT: ${DB_PORT:-5433}
+        # Postgres listens on DB_PORT inside the container too (not 5432). Docker rewrites the destination
+        # port before the host firewall's DOCKER-USER chain, so the same number inside and out keeps a
+        # firewall rule for DB_PORT valid in both chains.
+        command: >
+            postgres -p ${DB_PORT:-5433} -c shared_buffers=64MB -c max_connections=20 -c work_mem=4MB
+            -c log_min_duration_statement=500
+        volumes:
+            - hashi_pgdata:/var/lib/postgresql/data
+            - ./initdb:/docker-entrypoint-initdb.d:ro
+        # Local: loopback only. On a Hashi host set DB_BIND to the interface the dashboard
+        # reaches (and firewall the port to the dashboard worker).
+        ports:
+            - "${DB_BIND:-127.0.0.1}:${DB_PORT:-5433}:${DB_PORT:-5433}"
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -p ${DB_PORT:-5433} -U hashi_admin -d hashi"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        mem_limit: 512m
+        logging:
+            driver: json-file
+            options: { max-size: "10m", max-file: "3" }
+
+    indexer:
+        # Built from the checked-out repository (the build context is its root, because the indexer
+        # reuses the dashboard's Hashi readers). deploy.sh sets HASHI_INDEXER_VERSION from the tag.
+        build:
+            context: ..
+            dockerfile: hashi-indexer/Dockerfile
+            args:
+                VERSION: ${HASHI_INDEXER_VERSION:-dev}
+        image: hashi-indexer:${HASHI_INDEXER_VERSION:-local}
+        restart: unless-stopped
+        depends_on:
+            hashi-db:
+                condition: service_healthy
+        environment:
+            NETWORK: ${NETWORK:?set NETWORK to mainnet or testnet}
+            # Separate fields, not a URL: a password with / # ? or @ needs no percent-encoding
+            DB_HOST: hashi-db
+            DB_PORT: ${DB_PORT:-5433}
+            DB_NAME: hashi
+            DB_USER: hashi_indexer
+            DB_PASSWORD: ${HASHI_WRITER_PASSWORD}
+            SNAPSHOT_SECONDS: ${SNAPSHOT_SECONDS:-600}
+            EVENT_SECONDS: ${EVENT_SECONDS:-60}
+            # Empty = the network's default (mainnet reads all history, testnet a few days)
+            BACKFILL_DAYS: ${BACKFILL_DAYS:-}
+            # Pages (50 events each) read per event type per run; empty = the default (100)
+            EVENTS_MAX_PAGES_PER_RUN: ${EVENTS_MAX_PAGES_PER_RUN:-}
+            METRICS_PORT: ${METRICS_PORT:-9199}
+        # Prometheus metrics for the monitoring agent, which reads /metrics from ports on this host.
+        # Loopback only: it is never reachable from outside the machine.
+        ports:
+            - "127.0.0.1:${METRICS_PORT:-9199}:${METRICS_PORT:-9199}"
+        mem_limit: 256m
+        cpus: 0.5
+        healthcheck:
+            test: ["CMD", "node", "healthcheck.cjs"]
+            interval: 60s
+            timeout: 5s
+            retries: 3
+            start_period: 300s
+        logging:
+            driver: json-file
+            options: { max-size: "10m", max-file: "3" }
+
+volumes:
+    hashi_pgdata:

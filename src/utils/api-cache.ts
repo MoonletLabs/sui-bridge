@@ -1,6 +1,7 @@
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 
-type Entry = { expires: number; status: number; body: unknown }
+/** `staleUntil` is when the entry may no longer be served at all, even stale (>= expires) */
+type Entry = { expires: number; staleUntil: number; status: number; body: unknown }
 
 /** Hard cap so varying query strings can't grow the cache without bound */
 const MAX_ENTRIES = 500
@@ -17,13 +18,72 @@ const remember = (key: string, entry: Entry) => {
     store.set(key, entry)
 }
 
-const sendCached = (res: NextApiResponse, entry: Entry, ttlSeconds: number, hit: boolean) => {
+const sendCached = (
+    res: NextApiResponse,
+    entry: Entry,
+    ttlSeconds: number,
+    state: 'HIT' | 'MISS' | 'STALE',
+) => {
     res.setHeader(
         'Cache-Control',
         `public, s-maxage=${ttlSeconds}, stale-while-revalidate=${ttlSeconds * 5}`,
     )
-    res.setHeader('X-Cache', hit ? 'HIT' : 'MISS')
+    res.setHeader('X-Cache', state)
     res.status(entry.status).json(entry.body)
+}
+
+const newEntry = (
+    ttlSeconds: number,
+    staleSeconds: number,
+    status: number,
+    body: unknown,
+): Entry => {
+    const expires = Date.now() + ttlSeconds * 1000
+    return { expires, staleUntil: expires + staleSeconds * 1000, status, body }
+}
+
+/**
+ * Re-run a handler in the background and store its reply, while the caller is already being
+ * served the stale one. Handlers only reply through `res.status(code).json(body)`, so a minimal
+ * stand-in for `res` is enough. Does nothing if a refresh of this key is already running.
+ */
+const refreshInBackground = (
+    key: string,
+    handler: NextApiHandler,
+    req: NextApiRequest,
+    ttlSeconds: number,
+    staleSeconds: number,
+) => {
+    if (inflight.has(key)) return
+    let resolve: (e: Entry | null) => void = () => {}
+    inflight.set(key, new Promise<Entry | null>(r => (resolve = r)))
+    let status = 200
+    const stand: Record<string, unknown> = {
+        status: (code: number) => {
+            status = code
+            return stand
+        },
+        json: (body: unknown) => {
+            if (status === 200) {
+                const entry = newEntry(ttlSeconds, staleSeconds, status, body)
+                remember(key, entry)
+                resolve(entry)
+            } else {
+                resolve(null)
+            }
+            return stand
+        },
+        setHeader: () => stand,
+        getHeader: () => undefined,
+        end: () => stand,
+    }
+    Promise.resolve()
+        .then(() => handler(req, stand as unknown as NextApiResponse))
+        .catch(() => undefined)
+        .finally(() => {
+            resolve(null)
+            inflight.delete(key)
+        })
 }
 
 /**
@@ -38,7 +98,14 @@ const sendCached = (res: NextApiResponse, entry: Entry, ttlSeconds: number, hit:
  * The dashboards' data moves on a minutes scale, so 30-60s is invisible to
  * users but removes most repeated heavy queries.
  */
-export function withCache(handler: NextApiHandler, ttlSeconds = 60): NextApiHandler {
+export function withCache(
+    handler: NextApiHandler,
+    ttlSeconds = 60,
+    options: { staleSeconds?: number } = {},
+): NextApiHandler {
+    // With `staleSeconds`, an expired entry is still served at once (marked X-Cache: STALE) while a
+    // fresh one is fetched in the background, so only the very first request waits for the handler
+    const staleSeconds = Math.max(0, options.staleSeconds ?? 0)
     return async (req: NextApiRequest, res: NextApiResponse) => {
         if (req.method !== 'GET') return handler(req, res)
 
@@ -47,7 +114,12 @@ export function withCache(handler: NextApiHandler, ttlSeconds = 60): NextApiHand
 
         const cached = store.get(key)
         if (cached && cached.expires > now) {
-            sendCached(res, cached, ttlSeconds, true)
+            sendCached(res, cached, ttlSeconds, 'HIT')
+            return
+        }
+        if (cached && staleSeconds > 0 && cached.staleUntil > now) {
+            sendCached(res, cached, ttlSeconds, 'STALE')
+            refreshInBackground(key, handler, req, ttlSeconds, staleSeconds)
             return
         }
 
@@ -55,7 +127,7 @@ export function withCache(handler: NextApiHandler, ttlSeconds = 60): NextApiHand
         if (pending) {
             const entry = await pending
             if (entry) {
-                sendCached(res, entry, ttlSeconds, true)
+                sendCached(res, entry, ttlSeconds, 'HIT')
                 return
             }
             // The leader failed: fall through and run it ourselves
@@ -76,7 +148,7 @@ export function withCache(handler: NextApiHandler, ttlSeconds = 60): NextApiHand
         }
         res.json = (body: unknown) => {
             if (status === 200) {
-                const entry: Entry = { expires: Date.now() + ttlSeconds * 1000, status, body }
+                const entry = newEntry(ttlSeconds, staleSeconds, status, body)
                 remember(key, entry)
                 res.setHeader(
                     'Cache-Control',

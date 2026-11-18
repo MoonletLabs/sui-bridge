@@ -1,0 +1,8 @@
+# Only what the Dockerfile copies goes into the build context
+*
+!hashi-indexer
+hashi-indexer/node_modules
+hashi-indexer/.env*
+!src/config/hashi.ts
+!src/utils/hashi-chain.ts
+!src/utils/sui-graphql.ts
